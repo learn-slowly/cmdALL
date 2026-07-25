@@ -1711,6 +1711,12 @@ final class AppState {
         }
     }
 
+    /// 미리보기 탭을 편집기로 바꾼다(스펙 §4). Task 4에서 본 구현.
+    @MainActor
+    func reopenAsText(tabID: UUID) async {
+        // Task 4에서 채운다.
+    }
+
     /// 파일 트리·라이브러리에 나열할 파일인가.
     /// 파인더 대체(스펙 §3.5)로 **모든 파일**을 보여준다. 모르는 형식은
     /// DocumentKind가 .quickLook으로 갈라 애플 미리보기로 열리므로 눌러도 깨지지 않는다.
