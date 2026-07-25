@@ -2,10 +2,16 @@ import SwiftUI
 import AppKit
 import PDFKit
 
-/// 단독 PDF 보기. NSSplitView에 썸네일(좌)·검색필드+PDFView(우)를 엮는다.
+/// 단독 PDF 보기. 상단 가로바(검색필드+회전버튼) 아래로 PDFView가 전체 폭을 쓴다.
 /// PDFView가 페이지 이동·줌·맞춤·텍스트 선택/복사·회전을 제공하고,
-/// PDFThumbnailView가 페이지 썸네일·클릭 이동을, NSSearchField가 문서 내 검색을 담당.
+/// NSSearchField가 문서 내 검색을 담당.
 /// 로드 실패 시 플레이스홀더(크래시 금지).
+///
+/// 썸네일 칸(PDFThumbnailView)은 제거했다. 두 칸 분할이던 시절, 분할 폭 지정이
+/// 최초 1회만 걸리는 반면 load(url:)는 매번 분할 뷰를 새로 만들어서 — 두 번째 PDF부터
+/// 분할 폭이 미지정으로 남고 NSSplitView가 남는 폭을 첫 칸에 몰아줘 본문이 ~58pt로
+/// 눌리는 결함이 있었다(실측: 첫 PDF 160/611, 이후 713/58). 게다가 썸네일 뷰는
+/// 스크롤뷰 안에서 제약이 없어 프레임이 0x0이라 한 번도 그려진 적이 없었다.
 ///
 /// 탭 전환으로 같은 인스턴스가 재사용되므로, 로드 로직은 Coordinator.load(url:)로 빼서
 /// makeNSView가 항상 안정적인 container 하나를 반환하도록 한다(실패해도 같은 container를 유지하고,
@@ -36,7 +42,6 @@ struct PDFReaderView: NSViewRepresentable {
         var matches: [PDFSelection] = []
         var matchIndex: Int = 0
         var lastQuery: String = ""
-        var didSetDividerPosition = false
 
         private var observers: [NSObjectProtocol] = []
 
@@ -91,23 +96,13 @@ struct PDFReaderView: NSViewRepresentable {
                 return
             }
 
-            // 4) 성공: PDFView + 썸네일(좌) + 검색/PDFView(우) 구성.
+            // 4) 성공: 상단 가로바(검색+회전) + PDFView(전체 폭) 구성.
             let pdfView = PDFView()
             pdfView.autoScales = true
             pdfView.displayMode = .singlePageContinuous
             pdfView.translatesAutoresizingMaskIntoConstraints = false
             pdfView.document = document
             self.pdfView = pdfView
-
-            // 썸네일(좌).
-            let thumbnailView = PDFThumbnailView()
-            thumbnailView.pdfView = pdfView
-            thumbnailView.thumbnailSize = NSSize(width: 100, height: 130)
-            thumbnailView.translatesAutoresizingMaskIntoConstraints = false
-            let thumbScroll = NSScrollView()
-            thumbScroll.documentView = thumbnailView
-            thumbScroll.hasVerticalScroller = true
-            thumbScroll.translatesAutoresizingMaskIntoConstraints = false
 
             // 검색 필드(상).
             let search = NSSearchField()
@@ -144,37 +139,22 @@ struct PDFReaderView: NSViewRepresentable {
             topBar.spacing = 6
             topBar.translatesAutoresizingMaskIntoConstraints = false
 
-            // 우측: 상단 가로바 + PDFView 세로 스택.
-            let rightStack = NSStackView(views: [topBar, pdfView])
-            rightStack.orientation = .vertical
-            rightStack.spacing = 0
-            rightStack.edgeInsets = NSEdgeInsets(top: 6, left: 6, bottom: 0, right: 0)
-            rightStack.translatesAutoresizingMaskIntoConstraints = false
-            rightStack.setHuggingPriority(.defaultLow, for: .vertical)
+            // 상단 가로바 + PDFView 세로 스택(전체 폭).
+            let stack = NSStackView(views: [topBar, pdfView])
+            stack.orientation = .vertical
+            stack.spacing = 0
+            stack.edgeInsets = NSEdgeInsets(top: 6, left: 6, bottom: 0, right: 6)
+            stack.translatesAutoresizingMaskIntoConstraints = false
+            stack.setHuggingPriority(.defaultLow, for: .vertical)
             topBar.setContentHuggingPriority(.required, for: .vertical)
 
-            // 분할: 썸네일 | 우측.
-            let split = NSSplitView()
-            split.isVertical = true
-            split.dividerStyle = .thin
-            split.translatesAutoresizingMaskIntoConstraints = false
-            split.addArrangedSubview(thumbScroll)
-            split.addArrangedSubview(rightStack)
-
-            container.addSubview(split)
+            container.addSubview(stack)
             NSLayoutConstraint.activate([
-                split.topAnchor.constraint(equalTo: container.topAnchor),
-                split.bottomAnchor.constraint(equalTo: container.bottomAnchor),
-                split.leadingAnchor.constraint(equalTo: container.leadingAnchor),
-                split.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+                stack.topAnchor.constraint(equalTo: container.topAnchor),
+                stack.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+                stack.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+                stack.trailingAnchor.constraint(equalTo: container.trailingAnchor),
             ])
-            // 썸네일 패널 초기 폭(최초 1회만; 사용자가 드래그한 폭을 탭 전환 때 유지).
-            if !didSetDividerPosition {
-                didSetDividerPosition = true
-                DispatchQueue.main.async {
-                    split.setPosition(160, ofDividerAt: 0)
-                }
-            }
         }
 
         /// 검색어 변경 시: 일치 목록을 갱신하고 첫 일치로 이동.
