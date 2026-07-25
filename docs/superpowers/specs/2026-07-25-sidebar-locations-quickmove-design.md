@@ -14,7 +14,7 @@
 - **D. 기본 위치** — 사이드바에 홈·데스크탑·다운로드·문서가 없다. 즐겨찾기에 손으로 등록해야 나타난다.
 - **B. 빠른 이동** — 다른 폴더로 옮기려면 우클릭 → "폴더로 이동…" → macOS 폴더 선택 창이 뜨고 → 클릭으로 찾아 들어가야 한다. 자주 가는 곳도 매번 이 창을 연다.
 
-두 조각을 묶는 이유: **B가 필요로 하는 "자주 쓰는 폴더 목록"을 D가 만드는 목록과 그대로 공유**한다. 따로 만들면 목록이 두 벌 생겨 어긋난다.
+두 조각을 묶는 이유: 방향 문서(§3 순서 후보 ①)에서 원래 한 조각으로 묶였고, 둘 다 "아주 작음~작음"이라 함께 진행한다. 목적지 목록은 아래 4.1처럼 **B 전용으로 사용자가 직접 등록**하는 별도 목록이라 D와 저장소는 공유하지 않는다(2026-07-25 사용자 결정).
 
 ## 2. 실측 — 지금 구조 확인
 
@@ -37,11 +37,15 @@
 
 ### 4.1 목적지 목록 — 결정 사항
 
-`finder-preview-direction.md`가 미결로 남긴 질문("즐겨찾기 그대로 쓸지, 최근 기억할지, 따로 등록할지")에 대한 이번 설계의 답:
+`finder-preview-direction.md`가 미결로 남긴 질문("즐겨찾기 그대로 쓸지, 최근 기억할지, 따로 등록할지")에 대한 답 — **사용자 결정(2026-07-25): 따로 등록.**
 
-> **D의 기본 위치 4개 + 즐겨찾기 중 폴더인 것만**, 이 순서로 합쳐 하나의 목록으로 쓴다. 최근 이동 기록 같은 새 상태는 이번엔 만들지 않는다(범위 밖 — 필요해지면 다음 조각으로).
+> 즐겨찾기·기본 위치와 별개로, **"빠른 이동 목록"** 전용 목록을 새로 만든다. 사용자가 폴더를 우클릭해서 **"빠른 이동 목록에 추가"** 해야만 그 목록에 나타난다. 즐겨찾기에 있다고 자동으로 끼어들지 않는다 — 두 목록은 성격이 다르다(즐겨찾기="열어볼 곳", 빠른 이동="보낼 곳").
 
-이유: 이미 있는 데이터 두 개(D의 고정 위치 + 사용자가 이미 등록해 둔 즐겨찾기)를 합치기만 하면 되고, 새 저장소·새 UI(등록 화면)가 없어도 "자주 쓰는 폴더"가 자연히 채워진다. 즐겨찾기가 하나도 없어도 기본 위치 4개는 항상 있어 목록이 빈 채로 뜨는 일이 없다.
+새 모델 `QuickMoveFolder`(id·url·addedAt, `FavoriteItem`과 같은 모양이지만 별도 타입) + 새 저장 `AppState.quickMoveFolders`(`quickmove-folders.json`, 기존 `favorites` 저장·로드 관례 그대로 재사용 — 존재하지 않는 경로는 로드 시 필터링).
+
+**등록 진입점**: 폴더를 우클릭할 수 있는 모든 자리(사이드바 트리 `FileTreeContextMenu`, 즐겨찾기 목록 행, D의 기본 위치 행)에 "빠른 이동 목록에 추가" / 이미 있으면 "빠른 이동 목록에서 제거" 토글을 즐겨찾기 토글과 같은 자리에 나란히 둔다. 라이브러리 폴더 셀(`LibraryCellContextMenu`)에도 동일하게 추가(현재 그 메뉴엔 즐겨찾기 토글 자체가 없어 이번에 함께 신설).
+
+**목록이 비어있을 때**: 팝오버에 "등록된 폴더가 없습니다 — 폴더에서 우클릭 → 빠른 이동 목록에 추가"안내 + 기존 "다른 폴더로 이동…"(NSOpenPanel) 버튼은 팝오버 안에도 그대로 노출해 처음부터 막히지 않게 한다.
 
 ### 4.2 진입점
 
@@ -50,7 +54,7 @@
 
 ### 4.3 화면
 
-- 새 뷰 `QuickMovePopover`(가칭) — `.popover` 또는 작은 패널로 목적지 목록(이름+아이콘, D+즐겨찾기 합친 것)을 보여주고, 클릭하면 즉시 `appState.performBatchMove(urls:to:)` 호출 후 닫힌다.
+- 새 뷰 `QuickMovePopover`(가칭) — `.popover` 또는 작은 패널로 목적지 목록(`quickMoveFolders`, 등록 순서)을 보여주고, 클릭하면 즉시 `appState.performBatchMove(urls:to:)` 호출 후 닫힌다. 하단에 "다른 폴더로 이동…"(NSOpenPanel) 버튼 상시 노출.
 - 대상 파일 집합: 다중 선택 중이면 `fileSelection`, 아니면 우클릭/단축키 시점의 단일 파일.
 - 이동 실패(권한 등)는 기존 `reportBatchFailures` 경로 그대로 재사용 — 새 오류 처리 불필요.
 
@@ -60,29 +64,28 @@
 
 | 파일 | 책임 |
 |---|---|
-| `Sources/Views/QuickMovePopover.swift` | 목적지 목록 화면(D+즐겨찾기 합친 목록 계산 포함) |
-| `Tests/CmdMDTests/QuickMoveDestinationsTests.swift` | 목적지 목록 합치기 규칙(순수 함수) 단위테스트 |
+| `Sources/Models/QuickMoveFolder.swift` | `Identifiable·Equatable·Codable` 모델(id·url·addedAt) — `FavoriteItem`과 같은 모양, 별도 타입 |
+| `Sources/Views/QuickMovePopover.swift` | 목적지 목록 화면(`quickMoveFolders` 표시 + 빈 상태 안내 + "다른 폴더로 이동…" 버튼) |
+| `Tests/CmdMDTests/QuickMoveFolderStoreTests.swift` | 등록·제거·중복 등록 방지·존재하지 않는 경로 로드 시 필터링 |
 
 **손대는 기존 파일** (전부 최소 변경)
 
 | 파일 | 변경 |
 |---|---|
-| `Sources/Views/SidebarView.swift` | `FavoritesListView`에 "기본 위치" 섹션 추가 |
-| `Sources/Views/BatchSelectionMenu.swift` | "빠른 이동…" 버튼 추가 |
-| `Sources/Views/SidebarView.swift`(`FileTreeContextMenu`) | "빠른 이동…"·"다른 폴더로 이동…" 버튼 추가 |
-| `Sources/Views/LibraryView.swift`(`LibraryCellContextMenu`) | 위와 동일 |
+| `Sources/Views/SidebarView.swift` | `FavoritesListView`에 "기본 위치" 섹션 추가, `FileTreeContextMenu`에 "빠른 이동 목록에 추가/제거" 토글 + "빠른 이동…"·"다른 폴더로 이동…" 버튼 추가 |
+| `Sources/Views/BatchSelectionMenu.swift` | "빠른 이동…" 버튼 추가(기존 "폴더로 이동…"은 유지) |
+| `Sources/Views/LibraryView.swift`(`LibraryCellContextMenu`) | 폴더 셀에 "빠른 이동 목록에 추가/제거" 토글 신설 + "빠른 이동…"·"다른 폴더로 이동…" 버튼 추가 |
 | `Sources/Models/Shortcuts.swift` | `.quickMove` 케이스 + 기본 단축키 `⌥⌘M` |
-| `Sources/App/AppState.swift` | `promptQuickMove(urls:)`(목적지 목록 계산 후 팝오버 상태 세팅) — 실제 이동은 기존 `performBatchMove` 재사용, 새 이동 로직 없음 |
+| `Sources/App/AppState.swift` | `quickMoveFolders` 상태(로드·저장, `favorites` 관례 재사용) · `addToQuickMoveFolders`/`removeFromQuickMoveFolders` · `promptQuickMove(urls:)`(팝오버 상태 세팅) — 실제 이동은 기존 `performBatchMove` 재사용, 새 이동 로직 없음 |
 
 ## 6. 이번에 하지 않을 것
 
-- 최근 이동한 폴더 기억(자동 학습 목록) — 범위 밖, 필요해지면 별도 조각.
-- 목적지 직접 등록/관리 화면 — 즐겨찾기 관리로 이미 충분.
+- 최근 이동한 폴더 자동 기억(등록 없이 학습) — 범위 밖, 필요해지면 별도 조각.
 - C(두 폴더 나란히 보기)·E(폴더 전환 매끄럽게) — 각각 별도 조각.
 - 기존 "폴더로 이동…"(NSOpenPanel) 제거 — 그대로 유지.
 
 ## 7. 검증 계획
 
-- `QuickMoveDestinationsTests`: 기본 위치 4개 + 즐겨찾기 폴더만 필터링(파일 즐겨찾기 제외) + 중복 제거(같은 경로가 기본 위치·즐겨찾기 둘 다에 있으면 한 번만) + 없는 폴더 제외.
+- `QuickMoveFolderStoreTests`: 등록 시 목록에 추가·중복 등록 방지(같은 URL 재등록 무시)·제거·앱 재시작 시 존재하지 않는 경로 필터링(즐겨찾기 로드 관례와 동일).
 - 기존 `swift test` 전체 그린 유지(현재 기준선 872개 이상 — 조각 A 이후 갱신치 재확인 후 계획 문서에 명시).
-- 수동 스모크(자동 불가 영역): 사이드바에 기본 위치 4개 표시·클릭 시 폴더 전환, 단축키·우클릭 메뉴로 빠른 이동 팝오버 뜨고 클릭 시 실제 이동+되돌리기 동작.
+- 수동 스모크(자동 불가 영역): 사이드바에 기본 위치 4개 표시·클릭 시 폴더 전환, 폴더 우클릭 "빠른 이동 목록에 추가"로 등록 후 팝오버에 나타남, 단축키·우클릭 메뉴로 팝오버 뜨고 클릭 시 실제 이동+되돌리기 동작, 등록 안 한 상태에서 "다른 폴더로 이동…"으로 여전히 이동 가능.
