@@ -416,6 +416,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // F1b 파일 작업 키(⌘C/⌘V/⌥⌘V/⌘A/⌘⌫/⎋) — 로컬 모니터 + AppState 가드.
         // 전역 메뉴 .keyboardShortcut은 에디터의 시스템 복사/붙여넣기를 강탈하므로 금지(스펙 §5).
         fileOpsMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            // 빠른 보기가 먼저 — 떠 있을 때의 ⎋가 선택 해제로 새지 않게.
+            if AppState.shared?.handleQuickLookKeyEvent(event) == true { return nil }
             if AppState.shared?.handleFileOpsKeyEvent(event) == true { return nil }
             return event
         }

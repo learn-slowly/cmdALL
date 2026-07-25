@@ -61,4 +61,71 @@ final class AppQuickLookTests: XCTestCase {
         await appState.reopenAsText(tabID: UUID())
         XCTAssertTrue(appState.tabs.isEmpty)
     }
+
+    // MARK: - 스페이스바 빠른 보기(스펙 §5)
+
+    func test선택한파일들이화면순서대로후보가된다() {
+        let appState = AppState(dataDirectory: tempDir)
+        let a = URL(fileURLWithPath: "/tmp/가.png")
+        let b = URL(fileURLWithPath: "/tmp/나.pdf")
+        let c = URL(fileURLWithPath: "/tmp/다.zip")
+        appState.libraryOrderedURLs = [a, b, c]
+        appState.fileSelection = [c, a]
+
+        XCTAssertEqual(appState.quickLookCandidates(), [a, c],
+                       "화면에 보이는 순서를 따라야 한다")
+    }
+
+    func test선택이없으면후보가없다() {
+        let appState = AppState(dataDirectory: tempDir)
+        appState.libraryOrderedURLs = [URL(fileURLWithPath: "/tmp/가.png")]
+        appState.fileSelection = []
+
+        XCTAssertTrue(appState.quickLookCandidates().isEmpty)
+    }
+
+    func test열고닫기가상태를바꾼다() {
+        let appState = AppState(dataDirectory: tempDir)
+        let urls = [URL(fileURLWithPath: "/tmp/가.png"), URL(fileURLWithPath: "/tmp/나.zip")]
+
+        appState.openQuickLook(urls: urls)
+        XCTAssertTrue(appState.isQuickLookPresented)
+        XCTAssertEqual(appState.quickLookURLs, urls)
+        XCTAssertEqual(appState.quickLookIndex, 0)
+
+        appState.closeQuickLook()
+        XCTAssertFalse(appState.isQuickLookPresented)
+        XCTAssertTrue(appState.quickLookURLs.isEmpty)
+    }
+
+    func test좌우이동은양끝에서멈춘다() {
+        let appState = AppState(dataDirectory: tempDir)
+        appState.openQuickLook(urls: [URL(fileURLWithPath: "/tmp/가.png"),
+                                      URL(fileURLWithPath: "/tmp/나.zip")])
+
+        appState.stepQuickLook(by: -1)
+        XCTAssertEqual(appState.quickLookIndex, 0, "첫 항목에서 왼쪽은 제자리")
+
+        appState.stepQuickLook(by: 1)
+        XCTAssertEqual(appState.quickLookIndex, 1)
+
+        appState.stepQuickLook(by: 1)
+        XCTAssertEqual(appState.quickLookIndex, 1, "마지막에서 오른쪽은 제자리")
+    }
+
+    func test글자입력중이면스페이스를가로채지않는다() {
+        // 이 저장소에서 세 번 반복된 키 강탈 결함 방지(스펙 §5).
+        // NSTextField.currentEditor()는 창에 붙어 first responder가 돼야만 값이 생기므로
+        // 헤드리스 테스트에선 항상 nil — 대신 기존 F1b 테스트가 쓰는 헤드리스 NSTextView로
+        // 직접 검증한다(AppPasteboardActionsTests·AppNavigationHistoryTests와 같은 패턴).
+        XCTAssertTrue(AppState.responderYieldsFileKeys(NSTextView()),
+                      "글자 입력칸은 파일 키를 양보받아야 한다")
+    }
+
+    func test빈선택에서는빠른보기가열리지않는다() {
+        let appState = AppState(dataDirectory: tempDir)
+        appState.fileSelection = []
+        appState.openQuickLook(urls: appState.quickLookCandidates())
+        XCTAssertFalse(appState.isQuickLookPresented, "후보가 없으면 열리지 않는다")
+    }
 }

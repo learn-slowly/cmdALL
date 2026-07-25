@@ -88,6 +88,14 @@ final class AppState {
     /// (외부에서 추가된, 화면에 없는 파일이 ⌘A로 선택돼 ⌘⌫에 휩쓸리는 것을 방지).
     var libraryOrderedURLs: [URL] = []
 
+    // MARK: - 스페이스바 빠른 보기(스펙 §5)
+    /// 빠른 보기로 넘겨볼 파일들(화면 표시 순서).
+    var quickLookURLs: [URL] = []
+    /// 지금 보고 있는 항목 위치.
+    var quickLookIndex: Int = 0
+    /// 빠른 보기 오버레이가 떠 있는가.
+    var isQuickLookPresented: Bool = false
+
     // File System
     var vaults: [Vault] = []
     var drafts: [Draft] = []
@@ -2787,6 +2795,72 @@ final class AppState {
         default:
             return false
         }
+    }
+    // MARK: - 스페이스바 빠른 보기(스펙 §5)
+
+    /// 빠른 보기 후보 — 선택한 파일을 화면 표시 순서대로.
+    /// 표시 목록(libraryOrderedURLs)을 진실원으로 삼는다(F1b ⌘A 관례 — 화면에
+    /// 없는 파일이 선택에 새어 들어오는 것을 막는다).
+    func quickLookCandidates() -> [URL] {
+        guard !fileSelection.isEmpty else { return [] }
+        let ordered = libraryOrderedURLs.filter { fileSelection.contains($0) }
+        if !ordered.isEmpty { return ordered }
+        // 트리 ⌘클릭처럼 표시 목록 밖에서 고른 경우 — 경로순으로 안정 정렬.
+        return fileSelection.sorted { $0.path < $1.path }
+    }
+
+    func openQuickLook(urls: [URL]) {
+        guard !urls.isEmpty else { return }
+        quickLookURLs = urls
+        quickLookIndex = 0
+        isQuickLookPresented = true
+    }
+
+    func closeQuickLook() {
+        isQuickLookPresented = false
+        quickLookURLs = []
+        quickLookIndex = 0
+    }
+
+    /// 좌우 이동 — 양끝에서 멈춘다(감싸지 않는다).
+    func stepQuickLook(by delta: Int) {
+        guard !quickLookURLs.isEmpty else { return }
+        quickLookIndex = min(max(quickLookIndex + delta, 0), quickLookURLs.count - 1)
+    }
+
+    /// 빠른 보기 키 라우팅 — 로컬 NSEvent 모니터에서 **파일 키보다 먼저** 호출한다.
+    /// true = 소비. 전역 .keyboardShortcut은 쓰지 않는다(F1b에서 확립된 규칙).
+    func handleQuickLookKeyEvent(_ event: NSEvent) -> Bool {
+        guard let window = NSApp.keyWindow, window.canBecomeMain else { return false }
+        let flags = event.modifierFlags.intersection([.command, .option, .shift, .control])
+        guard flags.isEmpty else { return false }
+
+        // 떠 있을 때의 키는 먼저 처리한다 — 미리보기 부품이 먼저 먹지 않도록.
+        if isQuickLookPresented {
+            switch event.keyCode {
+            case 49, 53:            // 스페이스 · ⎋
+                closeQuickLook()
+                return true
+            case 123:               // ←
+                stepQuickLook(by: -1)
+                return true
+            case 124:               // →
+                stepQuickLook(by: 1)
+                return true
+            default:
+                return false
+            }
+        }
+
+        guard event.keyCode == 49 else { return false }   // 스페이스
+        // 글자 입력칸·미리보기(WKWebView)·PDF가 활성이면 양보한다.
+        // 스페이스는 띄어쓰기·스크롤에 쓰이므로 가로채면 즉시 치명적이다.
+        if Self.responderYieldsFileKeys(window.firstResponder) { return false }
+
+        let candidates = quickLookCandidates()
+        guard !candidates.isEmpty else { return false }
+        openQuickLook(urls: candidates)
+        return true
     }
 
     // MARK: - 다중 선택 (F1b)
