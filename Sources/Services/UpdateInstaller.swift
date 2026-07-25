@@ -2,8 +2,9 @@ import Foundation
 import CryptoKit
 
 /// 네트워크 경계 — 테스트에서 가짜로 갈아끼운다.
+/// `onProgress`는 델리게이트가 붙들어야 하므로 escaping이다.
 protocol UpdateFetching: Sendable {
-    func downloadFile(from url: URL, onProgress: @Sendable (Double) -> Void) async throws -> URL
+    func downloadFile(from url: URL, onProgress: @escaping @Sendable (Double) -> Void) async throws -> URL
     func data(from url: URL) async throws -> Data
 }
 
@@ -126,20 +127,19 @@ actor UpdateInstaller {
 // MARK: - 실제 구현체
 
 struct URLSessionFetcher: UpdateFetching {
-    func downloadFile(from url: URL, onProgress: @Sendable (Double) -> Void) async throws -> URL {
+    /// `URLSession.download(for:)`는 진행 상황을 주지 않아 0%에서 바로 완료로 튄다.
+    /// 실제 진행률을 보여주려고 다운로드 델리게이트를 직접 붙인다.
+    func downloadFile(from url: URL, onProgress: @escaping @Sendable (Double) -> Void) async throws -> URL {
         var request = URLRequest(url: url)
         request.setValue("cmdALL", forHTTPHeaderField: "User-Agent")
         request.timeoutInterval = 300
-        let (temp, response) = try await URLSession.shared.download(for: request)
-        if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
-            throw UpdateInstallError.downloadFailed("HTTP \(http.statusCode)")
-        }
-        // URLSession이 지우기 전에 우리 임시 위치로 옮긴다.
-        let kept = URL(fileURLWithPath: NSTemporaryDirectory())
+
+        let destination = URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent("cmdALL-update-\(UUID().uuidString).zip")
-        try FileManager.default.moveItem(at: temp, to: kept)
-        onProgress(1.0)
-        return kept
+        let delegate = DownloadProgressDelegate(destination: destination, onProgress: onProgress)
+        let session = URLSession(configuration: .ephemeral, delegate: delegate, delegateQueue: nil)
+        defer { session.finishTasksAndInvalidate() }
+        return try await delegate.run(session: session, request: request)
     }
 
     func data(from url: URL) async throws -> Data {
@@ -151,6 +151,72 @@ struct URLSessionFetcher: UpdateFetching {
             throw UpdateInstallError.downloadFailed("HTTP \(http.statusCode)")
         }
         return data
+    }
+}
+
+/// 다운로드 진행률을 보고하고, 완료 파일을 지정 위치로 옮긴다.
+/// `didFinishDownloadingTo`가 준 임시 파일은 그 메서드가 반환하는 즉시 사라지므로
+/// **델리게이트 안에서 동기적으로** 옮겨야 한다.
+private final class DownloadProgressDelegate: NSObject, URLSessionDownloadDelegate, @unchecked Sendable {
+    private let destination: URL
+    private let onProgress: @Sendable (Double) -> Void
+    private let lock = NSLock()
+    private var continuation: CheckedContinuation<URL, Error>?
+
+    init(destination: URL, onProgress: @escaping @Sendable (Double) -> Void) {
+        self.destination = destination
+        self.onProgress = onProgress
+    }
+
+    func run(session: URLSession, request: URLRequest) async throws -> URL {
+        try await withCheckedThrowingContinuation { continuation in
+            lock.lock()
+            self.continuation = continuation
+            lock.unlock()
+            session.downloadTask(with: request).resume()
+        }
+    }
+
+    /// 성공·실패를 정확히 한 번만 넘긴다(완료와 오류 콜백이 겹칠 수 있다).
+    private func finish(_ result: Result<URL, Error>) {
+        lock.lock()
+        let pending = continuation
+        continuation = nil
+        lock.unlock()
+        pending?.resume(with: result)
+    }
+
+    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask,
+                    didWriteData bytesWritten: Int64, totalBytesWritten written: Int64,
+                    totalBytesExpectedToWrite expected: Int64) {
+        guard expected > 0 else { return }
+        onProgress(min(1.0, Double(written) / Double(expected)))
+    }
+
+    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask,
+                    didFinishDownloadingTo location: URL) {
+        if let http = downloadTask.response as? HTTPURLResponse,
+           !(200..<300).contains(http.statusCode) {
+            finish(.failure(UpdateInstallError.downloadFailed("HTTP \(http.statusCode)")))
+            return
+        }
+        do {
+            try? FileManager.default.removeItem(at: destination)
+            try FileManager.default.moveItem(at: location, to: destination)
+            onProgress(1.0)
+            finish(.success(destination))
+        } catch {
+            finish(.failure(error))
+        }
+    }
+
+    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        // 성공 경로는 이미 finish로 소모됐다 — 남아 있으면 실패다.
+        if let error {
+            finish(.failure(error))
+        } else {
+            finish(.failure(UpdateInstallError.downloadFailed("응답을 받지 못했습니다")))
+        }
     }
 }
 

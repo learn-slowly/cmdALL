@@ -439,10 +439,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // 업데이트 후 "지금 다시 시작" — 종료가 실제로 진행될 때만 새 인스턴스를 띄운다.
         // applicationShouldTerminate의 저장 확인에서 취소하면 여기까지 오지 않으므로
         // 인스턴스가 두 개가 되는 일이 없다.
+        //
+        // 여기서 곧바로 open을 부르면 이 프로세스가 아직 살아 있는 채로 새 인스턴스가 떠서
+        // 둘이 같은 세션 파일을 함께 쓴다. 우리 PID가 사라질 때까지 기다렸다 띄우는
+        // 껍데기 프로세스에 맡긴다(우리가 죽으면 launchd가 입양하므로 살아남는다).
         if let bundle = AppState.shared?.pendingRelaunchBundleURL {
+            let pid = ProcessInfo.processInfo.processIdentifier
+            let script = """
+            while kill -0 \(pid) 2>/dev/null; do sleep 0.2; done
+            open "$1"
+            """
             let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/usr/bin/open")
-            process.arguments = ["-n", bundle.path]
+            process.executableURL = URL(fileURLWithPath: "/bin/sh")
+            process.arguments = ["-c", script, "sh", bundle.path]
             try? process.run()
         }
     }
