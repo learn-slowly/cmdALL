@@ -264,6 +264,11 @@ struct EditorSettingsView: View {
         .onChange(of: appState.settings) { _, _ in
             appState.saveUserData()
         }
+        .onChange(of: appState.settings.showHiddenFiles) { _, _ in
+            // 라이브러리는 folderKey에 이 값이 물려 있어 즉시 다시 열거되지만,
+            // 사이드바 트리는 loadFileTree()를 직접 불러야 반영된다(스펙 §3.5).
+            appState.loadFileTree()
+        }
     }
 }
 

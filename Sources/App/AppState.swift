@@ -4,6 +4,7 @@ import UniformTypeIdentifiers
 import PDFKit
 import AVFoundation
 import WebKit
+import Quartz
 
 @Observable
 final class AppState {
@@ -2755,13 +2756,14 @@ final class AppState {
     }
 
     /// 파일 키(⌘C 등)를 양보해야 하는 응답자인가 — 자체 복사/편집을 가진 뷰들.
-    /// NSText(에디터·필드 에디터) 외에 WKWebView(미리보기)·PDFView(PDF 리더)도 자체 copy 구현.
+    /// NSText(에디터·필드 에디터) 외에 WKWebView(미리보기)·PDFView(PDF 리더)·
+    /// QLPreviewView(애플 미리보기 — 조각 A)도 자체 복사/스크롤을 구현한다.
     /// 뷰 계층 상위에 있을 수 있어(웹뷰 내부 서브뷰가 firstResponder) 조상 체인을 걷는다.
     static func responderYieldsFileKeys(_ responder: NSResponder?) -> Bool {
         if responder is NSText { return true }   // NSTextView 포함(필드 에디터도)
         var view = responder as? NSView
         while let v = view {
-            if v is WKWebView || v is PDFView { return true }
+            if v is WKWebView || v is PDFView || v is QLPreviewView { return true }
             view = v.superview
         }
         return false

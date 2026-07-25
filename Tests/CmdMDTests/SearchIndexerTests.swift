@@ -58,4 +58,19 @@ final class SearchIndexerTests: XCTestCase {
         let count2 = await index.count()
         XCTAssertEqual(count2, 0)
     }
+
+    func test하위폴더자신은문서로색인되지않는다() async throws {
+        // 조각 A(QuickLook fallback)로 isListableInFileTree가 확장자 무관 항상 true가
+        // 되면서(회귀), 폴더 자신도 색인 대상으로 새는 결함이 있었다 — 실제 파일만
+        // 색인해야 한다.
+        let dir = tempDir()
+        let sub = dir.appendingPathComponent("하위폴더")
+        try FileManager.default.createDirectory(at: sub, withIntermediateDirectories: true)
+        try "내용".write(to: sub.appendingPathComponent("메모.md"), atomically: true, encoding: .utf8)
+        let index = SearchIndex(dbURL: tempDBURL())
+        let indexer = SearchIndexer(index: index, kordoc: KordocService())
+        await indexer.indexFolder(dir, progress: nil)
+        let count = await index.count()
+        XCTAssertEqual(count, 1, "하위 폴더 자신은 빼고 그 안의 파일 1개만 색인돼야 한다")
+    }
 }

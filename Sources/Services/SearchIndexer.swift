@@ -36,7 +36,12 @@ actor SearchIndexer {
         guard let en = fm.enumerator(at: canonicalFolder,
                                      includingPropertiesForKeys: [.isRegularFileKey, .contentModificationDateKey],
                                      options: [.skipsHiddenFiles, .skipsPackageDescendants]) else { return }
-        let urls = en.allObjects.compactMap { $0 as? URL }.filter { AppState.isListableInFileTree($0) }
+        // 조각 A(QuickLook fallback)로 isListableInFileTree가 확장자 무관 항상 true가
+        // 되면서, 폴더 자신도(기존엔 확장자 불일치로 우연히 걸러졌다) 통과해 문서처럼
+        // 색인되는 결함이 생겼다 — 실제 파일만(.isRegularFileKey) 남긴다.
+        let urls = en.allObjects.compactMap { $0 as? URL }
+            .filter { (try? $0.resourceValues(forKeys: [.isRegularFileKey]))?.isRegularFile == true }
+            .filter { AppState.isListableInFileTree($0) }
         let total = urls.count
         var done = 0
         var seen = Set<String>()
