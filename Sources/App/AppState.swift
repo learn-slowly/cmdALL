@@ -1700,9 +1700,10 @@ final class AppState {
         // selectedFolder를 건드리지 않는다(펼치기·새로고침·이름변경 시 호출될 수 있음).
         // 스냅샷을 메인에서 캡처 후 detached 태스크로 파일시스템 탐색(멈춤 방지).
         let snapshot = expandedFolders
+        let showHidden = settings.showHiddenFiles
         fileTreeTask?.cancel()
         fileTreeTask = Task.detached(priority: .userInitiated) { [weak self] in
-            let tree = AppState.buildFileTree(at: folder, expanded: snapshot)
+            let tree = AppState.buildFileTree(at: folder, expanded: snapshot, showHidden: showHidden)
             guard !Task.isCancelled, let self else { return }
             // 호출 인스턴스에 대입 — static shared 참조 제거(다중 인스턴스·테스트 안전).
             // let 재바인딩으로 Swift 6 'captured var self' 경고 해소.
@@ -1710,30 +1711,32 @@ final class AppState {
         }
     }
 
-    /// 사이드바 파일 트리에 표시할 파일인지 — 마크다운류(md/markdown/txt) + 이미지 + PDF + 오피스 + 미디어.
-    /// 각 확장자 집합은 DocumentKind(단일 판별원)를 따른다.
+    /// 파일 트리·라이브러리에 나열할 파일인가.
+    /// 파인더 대체(스펙 §3.5)로 **모든 파일**을 보여준다. 모르는 형식은
+    /// DocumentKind가 .quickLook으로 갈라 애플 미리보기로 열리므로 눌러도 깨지지 않는다.
+    /// (숨김 파일 제외는 열거 단계의 skipsHiddenFiles가 맡는다 — 여기 책임이 아니다.)
     static func isListableInFileTree(_ url: URL) -> Bool {
-        let ext = url.pathExtension.lowercased()
-        return ext == "md" || ext == "markdown" || ext == "txt"
-            || DocumentKind.imageExtensions.contains(ext)
-            || DocumentKind.pdfExtensions.contains(ext)
-            || DocumentKind.officeExtensions.contains(ext)
-            || DocumentKind.mediaExtensions.contains(ext)
+        true
     }
 
     /// 파일트리를 동기·순수하게 빌드한다. `Task.detached`에서 안전히 호출 가능.
     /// - Parameters:
     ///   - url: 탐색 루트 폴더 URL.
     ///   - expanded: 펼친 폴더 스냅샷(메인에서 캡처해 넘긴다).
+    ///   - showHidden: 숨김 파일(.으로 시작)을 포함할지 — 기본 false(기존 동작).
     ///   - depth: 재귀 깊이(내부용). depth ≥ 10이면 빈 배열 반환.
-    static func buildFileTree(at url: URL, expanded: Set<URL>, depth: Int = 0) -> [FileTreeItem] {
+    static func buildFileTree(at url: URL, expanded: Set<URL>,
+                             showHidden: Bool = false, depth: Int = 0) -> [FileTreeItem] {
         guard depth < 10 else { return [] }
 
         // F3 정렬용 메타(사용자 결정: 트리도 정렬 적용, 스캔 비용 감수) — 파일 크기·수정일.
+        var options: FileManager.DirectoryEnumerationOptions = []
+        if !showHidden { options.insert(.skipsHiddenFiles) }
+
         guard let contents = try? FileManager.default.contentsOfDirectory(
             at: url,
             includingPropertiesForKeys: [.isDirectoryKey, .fileSizeKey, .contentModificationDateKey],
-            options: [.skipsHiddenFiles]
+            options: options
         ) else { return [] }
 
         var items: [FileTreeItem] = []
@@ -1748,7 +1751,8 @@ final class AppState {
 
             if isDirectory {
                 let isExpanded = expanded.contains(itemURL)
-                let children = isExpanded ? buildFileTree(at: itemURL, expanded: expanded, depth: depth + 1) : []
+                let children = isExpanded ? buildFileTree(at: itemURL, expanded: expanded,
+                                                          showHidden: showHidden, depth: depth + 1) : []
                 items.append(FileTreeItem(url: itemURL, isDirectory: true, isExpanded: isExpanded,
                                           children: children, modifiedAt: modifiedAt))
             } else {

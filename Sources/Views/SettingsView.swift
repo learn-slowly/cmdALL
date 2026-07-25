@@ -253,6 +253,11 @@ struct EditorSettingsView: View {
             Section("Interface") {
                 Toggle("Show tab bar", isOn: $state.settings.showTabBar)
                 Toggle("Show status bar", isOn: $state.settings.showStatusBar)
+
+                Toggle("숨김 파일 표시", isOn: $state.settings.showHiddenFiles)
+                Text("점(.)으로 시작하는 파일과 폴더를 목록에 보여줍니다. 검색과 볼트 작업에는 영향이 없습니다.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)

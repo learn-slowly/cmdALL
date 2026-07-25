@@ -34,9 +34,11 @@ final class FileTreeListingTests: XCTestCase {
         }
     }
 
-    func testUnsupportedFilesAreNotListed() {
+    func test모르는형식도이제목록에보인다() {
+        // 조각 A(QuickLook fallback) 도입 이후: 모르는 형식은 제외가 아니라
+        // DocumentKind.quickLook(애플 미리보기)으로 열리도록 목록에 그대로 보인다.
         for ext in ["zip", "avi", "exe"] {
-            XCTAssertFalse(listable("doc.\(ext)"), "\(ext) should not be listed")
+            XCTAssertTrue(listable("doc.\(ext)"), "\(ext)도 목록에 보여야 한다")
         }
     }
 }

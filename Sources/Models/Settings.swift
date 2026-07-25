@@ -120,6 +120,8 @@ struct AppSettings: Codable, Equatable {
     // UI
     var showStatusBar: Bool = true
     var showTabBar: Bool = true
+    /// 숨김 파일(.으로 시작)을 트리·라이브러리에 표시할지. 보기 전용 — 검색 색인·볼트 작업은 영향 없다.
+    var showHiddenFiles: Bool = false
     var sidebarWidth: CGFloat = 250
     var restoreLastSession: Bool = true
     var confirmBeforeClosingDirtyTabs: Bool = true
@@ -177,6 +179,7 @@ struct AppSettings: Codable, Equatable {
         librarySorts = try c.decodeIfPresent([String: LibrarySort].self, forKey: .librarySorts) ?? d.librarySorts
         showStatusBar = try c.decodeIfPresent(Bool.self, forKey: .showStatusBar) ?? d.showStatusBar
         showTabBar = try c.decodeIfPresent(Bool.self, forKey: .showTabBar) ?? d.showTabBar
+        showHiddenFiles = try c.decodeIfPresent(Bool.self, forKey: .showHiddenFiles) ?? d.showHiddenFiles
         sidebarWidth = try c.decodeIfPresent(CGFloat.self, forKey: .sidebarWidth) ?? d.sidebarWidth
         restoreLastSession = try c.decodeIfPresent(Bool.self, forKey: .restoreLastSession) ?? d.restoreLastSession
         confirmBeforeClosingDirtyTabs = try c.decodeIfPresent(Bool.self, forKey: .confirmBeforeClosingDirtyTabs) ?? d.confirmBeforeClosingDirtyTabs

@@ -51,14 +51,16 @@ final class FileTreeBuildTests: XCTestCase {
         XCTAssertTrue(names.contains("photo.png"), "png 파일이 포함되어야 한다")
     }
 
-    func testNonListableFilesAreExcluded() {
+    func test모르는형식도이제포함된다() {
+        // 조각 A(QuickLook fallback) 도입 이후: zip·avi 같은 모르는 형식도
+        // 트리에 그대로 보이고, 열면 quickLook(애플 미리보기)으로 간다.
         makeFile("archive.zip")
         makeFile("clip.avi")
 
         let items = AppState.buildFileTree(at: tempDir, expanded: [])
         let names = items.map { $0.name }
-        XCTAssertFalse(names.contains("archive.zip"), "zip 파일은 제외되어야 한다")
-        XCTAssertFalse(names.contains("clip.avi"), "지원하지 않는 동영상 확장자는 제외되어야 한다")
+        XCTAssertTrue(names.contains("archive.zip"), "zip 파일도 이제 포함되어야 한다")
+        XCTAssertTrue(names.contains("clip.avi"), "avi 파일도 이제 포함되어야 한다")
     }
 
     func testDirectoriesAreIncluded() {

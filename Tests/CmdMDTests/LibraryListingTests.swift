@@ -110,13 +110,15 @@ final class LibraryListingTests: XCTestCase {
         }
     }
 
-    func testEntriesExcludesUnsupportedFileTypes() throws {
+    func test모르는형식도이제목록에보인다() throws {
+        // 조각 A(QuickLook fallback) 도입 이후: zip 같은 모르는 형식도 목록에
+        // 보이고, 열면 DocumentKind.quickLook으로 갈라 애플 미리보기로 연다.
         let file = tmpDir.appendingPathComponent("archive.zip")
         try "".write(to: file, atomically: true, encoding: .utf8)
 
         let result = LibraryListing.entries(of: tmpDir)
-        XCTAssertFalse(result.contains(where: { $0.name == "archive.zip" }),
-                       "지원하지 않는 확장자(.zip)는 제외해야 한다")
+        XCTAssertTrue(result.contains(where: { $0.name == "archive.zip" }),
+                      "모르는 확장자(.zip)도 목록에 보여야 한다")
     }
 
     // MARK: - ParaLens.sorted와 결합

@@ -27,7 +27,9 @@ final class MediaListingTests: XCTestCase {
     func testMediaIsListableInFileTree() {
         XCTAssertTrue(AppState.isListableInFileTree(URL(fileURLWithPath: "/tmp/a.mp3")))
         XCTAssertTrue(AppState.isListableInFileTree(URL(fileURLWithPath: "/tmp/a.MOV")))
-        XCTAssertFalse(AppState.isListableInFileTree(URL(fileURLWithPath: "/tmp/a.exe")))
+        // 조각 A(QuickLook fallback) 도입 이후: 모르는 형식(.exe)도 목록엔 보인다
+        // (열면 quickLook으로 갈라 애플 미리보기로 간다).
+        XCTAssertTrue(AppState.isListableInFileTree(URL(fileURLWithPath: "/tmp/a.exe")))
     }
 
     func testBuildFileTreeHidesCompanionNoteAndFlagsMedia() {

@@ -12,9 +12,10 @@ struct LibraryView: View {
         appState.selectedFolder ?? appState.currentFolder
     }
 
-    /// 폴더(또는 정렬 기준 currentFolder)가 바뀔 때, 그리고 파일 작업 후 재계산하기 위한 키.
+    /// 폴더(또는 정렬 기준 currentFolder)가 바뀔 때, 그리고 파일 작업 후·숨김 파일
+    /// 설정이 바뀔 때 재계산하기 위한 키.
     private var folderKey: String {
-        "\(displayFolder?.path ?? "∅")|\(appState.currentFolder?.path ?? "∅")|\(appState.fileOpsGeneration)"
+        "\(displayFolder?.path ?? "∅")|\(appState.currentFolder?.path ?? "∅")|\(appState.fileOpsGeneration)|\(appState.settings.showHiddenFiles)"
     }
 
     /// 캐시된 항목 목록. .task(id: folderKey)로 폴더 변경 시에만 갱신.
@@ -26,7 +27,7 @@ struct LibraryView: View {
             appState.libraryOrderedURLs = []
             return
         }
-        entries = LibraryListing.entries(of: folder)
+        entries = LibraryListing.entries(of: folder, showHidden: appState.settings.showHiddenFiles)
         applySort()
     }
 
