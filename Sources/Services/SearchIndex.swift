@@ -61,6 +61,25 @@ actor SearchIndex {
 
     deinit { sqlite3_close(db) }
 
+    /// 추출 규칙 판 번호. 올리면 등록 폴더를 한 번 다시 훑는다.
+    /// 0(또는 1) → 2: 글자 파일(json·swift·csv 등)을 본문 색인에 포함(스펙 §3.6).
+    static let currentExtractorVersion = 2
+
+    /// 이 색인 파일에 적힌 판 번호. 새 DB·옛 DB는 0.
+    var storedExtractorVersion: Int {
+        var stmt: OpaquePointer?
+        defer { sqlite3_finalize(stmt) }
+        guard sqlite3_prepare_v2(db, "PRAGMA user_version;", -1, &stmt, nil) == SQLITE_OK,
+              sqlite3_step(stmt) == SQLITE_ROW else { return 0 }
+        return Int(sqlite3_column_int(stmt, 0))
+    }
+
+    /// 판 번호를 적는다(다시 훑기를 건 뒤 호출).
+    /// PRAGMA는 바인딩을 받지 않아 문자열로 넣는다 — 값이 우리 상수(Int)라 안전하다.
+    func setExtractorVersion(_ version: Int) {
+        exec("PRAGMA user_version = \(version);")
+    }
+
     // SQLite 텍스트 바인딩은 SQLITE_TRANSIENT가 필요(스코프 종료 후 복사 보장).
     private let TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
 

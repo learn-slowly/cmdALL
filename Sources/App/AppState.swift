@@ -1610,13 +1610,25 @@ final class AppState {
         Task { _ = await searchIndex.removeUnder(folder: canonicalPath) }
     }
 
-    /// 인덱스 DB가 스키마 변경으로 재구성됐으면 등록된 모든 폴더를 재인덱싱한다.
+    /// 인덱스 DB가 스키마 변경으로 재구성됐거나 추출 규칙이 바뀌었으면 등록된 모든 폴더를 재인덱싱한다.
     @MainActor
     private func reindexAfterSchemaMigration() async {
-        guard await searchIndex.didResetForSchemaChange else { return }
+        let schemaChanged = await searchIndex.didResetForSchemaChange
+        // 추출 규칙이 넓어져도 파일 수정 시각은 그대로라 needsIndex만으로는 갱신되지
+        // 않는다 → 판 번호로 한 번 다시 훑는다(스펙 §3.6).
+        let extractorChanged = await searchIndex.storedExtractorVersion < SearchIndex.currentExtractorVersion
+        guard schemaChanged || extractorChanged else { return }
+        // 예전에 적어둔 mtime이 남아 있으면 다시 훑어도 needsIndex가 그대로 건너뛰어
+        // 넓어진 규칙이 반영 안 된다 → 비우고 처음부터 다시 채운다(스키마 재구성
+        // 경로는 이미 비어 있어 무해한 재확인일 뿐).
+        await searchIndex.clear()
+        // reindexFolder(fire-and-forget)가 아니라 searchIndexer를 직접 기다린다 —
+        // 판 번호를 실제 완주 전에 적으면, 중간에 종료됐을 때 다음 실행이 "이미
+        // 끝났다"고 오판해 다시 훑지 않는다(판 번호 도입 취지 자체가 무력화됨).
         for folder in settings.indexedFolders {
-            reindexFolder(folder)
+            await searchIndexer.indexFolder(URL(fileURLWithPath: folder), progress: nil)
         }
+        await searchIndex.setExtractorVersion(SearchIndex.currentExtractorVersion)
     }
 
     /// 한 폴더를 (재)인덱싱한다(진행률 표시).
