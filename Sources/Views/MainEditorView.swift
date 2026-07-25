@@ -45,7 +45,10 @@ struct MainEditorView: View {
             }
         }
 
-        if appState.settings.showStatusBar, appState.currentDocument != nil {
+        // 문서가 없어도(PDF·이미지·미디어 탭) 상태 표시줄을 보여준다 — 업데이트 알약이
+        // 여기 살기 때문. 문서 의존 항목(단어 수·커서 위치 등)은 StatusBarView 내부에서
+        // 이미 currentDocument로 가린다.
+        if appState.settings.showStatusBar {
             StatusBarView()
         }
     }

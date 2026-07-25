@@ -63,8 +63,46 @@ struct UpdateBadge: View {
     @State private var isHovering = false
 
     var body: some View {
+        switch appState.updateProgress {
+        case .idle:
+            installButton
+        case .downloading(let fraction):
+            busyLabel("받는 중 \(Int(fraction * 100))%")
+        case .verifying:
+            busyLabel("검증 중")
+        case .installing:
+            busyLabel("설치 중")
+        case .readyToRelaunch:
+            HStack(spacing: 6) {
+                Text("새 버전 준비됨")
+                    .font(.system(size: 11, weight: .medium))
+                Button("지금 다시 시작") { appState.relaunchForUpdate() }
+                    .buttonStyle(.link)
+                    .font(.system(size: 11))
+                Button("나중에") { appState.dismissUpdateProgress() }
+                    .buttonStyle(.link)
+                    .font(.system(size: 11))
+            }
+            .foregroundStyle(Color.cmdsAccent)
+        case .failed(let message):
+            Button { appState.dismissUpdateProgress() } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 10))
+                    Text(message)
+                        .font(.system(size: 11))
+                        .lineLimit(1)
+                }
+                .foregroundStyle(.orange)
+            }
+            .buttonStyle(.plain)
+            .help(message)
+        }
+    }
+
+    private var installButton: some View {
         Button {
-            if let url = appState.updateURL { NSWorkspace.shared.open(url) }
+            Task { await appState.startUpdateInstall() }
         } label: {
             HStack(spacing: 4) {
                 Image(systemName: "arrow.down.circle.fill")
@@ -80,7 +118,15 @@ struct UpdateBadge: View {
         }
         .buttonStyle(.plain)
         .onHover { isHovering = $0 }
-        .help("A new version is available — click to open the download page")
+        .help("새 버전이 있습니다 — 눌러서 설치")
+    }
+
+    private func busyLabel(_ text: String) -> some View {
+        HStack(spacing: 6) {
+            ProgressView().controlSize(.small)
+            Text(text).font(.system(size: 11, weight: .medium))
+        }
+        .foregroundStyle(Color.cmdsAccent)
     }
 }
 

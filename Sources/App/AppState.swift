@@ -142,6 +142,14 @@ final class AppState {
     var latestVersion: String?
     var updateURL: URL?
     var isCheckingForUpdate: Bool = false
+    /// 앱 내 설치 진행 상태(스펙 §5.5).
+    var updateProgress: UpdateProgress = .idle
+    /// GitHub 릴리스 태그 원본("v0.9.404"). 자산 URL 조립에 쓴다.
+    var latestTag: String?
+    /// 종료가 실제로 진행될 때 재실행할 번들. AppDelegate가 읽는다.
+    var pendingRelaunchBundleURL: URL?
+    /// 진행 중인 설치의 식별자. 완료 후 늦게 도착하는 진행률 보고를 버리는 데 쓴다.
+    private var installToken: UUID?
     /// Editor/preview width ratio in split view (runtime-only).
     var splitFraction: CGFloat = 0.5
     /// Non-empty while the Send sheet is operating on a batch of files
@@ -723,6 +731,7 @@ final class AppState {
                 }
 
                 UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: throttleKey)
+                latestTag = tag
                 latestVersion = tag.hasPrefix("v") ? String(tag.dropFirst()) : tag
                 updateURL = URL(string: (json["html_url"] as? String) ?? "https://github.com/learn-slowly/cmd-docu/releases/latest")
 
@@ -737,6 +746,66 @@ final class AppState {
                 if userInitiated { showToast("Couldn't check for updates") }
             }
         }
+    }
+
+    /// 설치 절차의 주입 지점. 기본값은 실제 `UpdateInstaller`.
+    typealias UpdateInstallWork = @Sendable (_ tag: String, _ version: String, _ bundle: URL,
+                                             _ report: @Sendable @escaping (UpdateProgress) -> Void) async throws -> Void
+
+    /// 알약·About 버튼이 부르는 진입점. 받기→검증→교체까지 하고 재시작 대기 상태로 둔다.
+    ///
+    /// `installToken`이 필요한 이유: 진행률 보고는 설치기(actor)에서 오므로 MainActor로
+    /// 건너뛰어야 하는데, 그 사이 설치가 끝나면 늦게 도착한 보고가 `.readyToRelaunch`를
+    /// 덮어써 "설치 중"으로 되돌린다. 토큰이 다르면 무시한다.
+    @MainActor
+    func startUpdateInstall(perform: UpdateInstallWork? = nil) async {
+        guard !updateProgress.isBusy else { return }
+        guard let tag = latestTag, let version = latestVersion else { return }
+
+        let bundle = Bundle.main.bundleURL
+        let token = UUID()
+        installToken = token
+        updateProgress = .downloading(fraction: 0)
+
+        let work: UpdateInstallWork = perform ?? { tag, version, bundle, report in
+            let installer = UpdateInstaller()
+            try await installer.install(tag: tag, expectedVersion: version,
+                                        targetBundle: bundle, onProgress: report)
+        }
+
+        do {
+            try await work(tag, version, bundle) { [weak self] progress in
+                Task { @MainActor in
+                    guard let self, self.installToken == token else { return }
+                    self.updateProgress = progress
+                }
+            }
+            installToken = nil          // 이후 도착하는 보고는 버린다
+            updateProgress = .readyToRelaunch
+        } catch let error as UpdateInstallError {
+            installToken = nil
+            updateProgress = .failed(UpdateAssets.message(for: error))
+        } catch {
+            installToken = nil
+            updateProgress = .failed(UpdateAssets.message(for: .downloadFailed(error.localizedDescription)))
+        }
+    }
+
+    /// "나중에"·오류 닫기 — 알약(updateAvailable)은 그대로 둔다.
+    func dismissUpdateProgress() {
+        updateProgress = .idle
+    }
+
+    /// 종료 시 재실행하도록 예약만 한다. 실제 실행은 applicationWillTerminate가 한다 —
+    /// 저장 확인에서 취소하면 종료가 취소되므로, 미리 띄우면 인스턴스가 두 개가 된다.
+    func armRelaunch(bundleURL: URL) {
+        pendingRelaunchBundleURL = bundleURL
+    }
+
+    /// "지금 다시 시작". 저장 안 된 문서 확인은 기존 applicationShouldTerminate가 맡는다.
+    func relaunchForUpdate() {
+        armRelaunch(bundleURL: Bundle.main.bundleURL)
+        NSApp.terminate(nil)
     }
 
     /// Copies the current document's filesystem path to the clipboard (⌥⌘C).

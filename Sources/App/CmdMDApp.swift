@@ -436,6 +436,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             NSEvent.removeMonitor(monitor)
             fileOpsMonitor = nil
         }
+        // 업데이트 후 "지금 다시 시작" — 종료가 실제로 진행될 때만 새 인스턴스를 띄운다.
+        // applicationShouldTerminate의 저장 확인에서 취소하면 여기까지 오지 않으므로
+        // 인스턴스가 두 개가 되는 일이 없다.
+        if let bundle = AppState.shared?.pendingRelaunchBundleURL {
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+            process.arguments = ["-n", bundle.path]
+            try? process.run()
+        }
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {

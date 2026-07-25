@@ -538,13 +538,18 @@ struct AboutView: View {
 
             // Update status / action
             if appState.updateAvailable {
-                Button {
-                    if let url = appState.updateURL { NSWorkspace.shared.open(url) }
-                } label: {
-                    Label("Update available: \(appState.latestVersion ?? "")", systemImage: "arrow.down.circle.fill")
+                if appState.updateProgress == .idle {
+                    Button {
+                        Task { await appState.startUpdateInstall() }
+                    } label: {
+                        Label("Update available: \(appState.latestVersion ?? "")", systemImage: "arrow.down.circle.fill")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.cmdsAccent)
+                } else {
+                    // 진행 중·완료·실패는 상태 표시줄과 같은 표시를 재사용한다.
+                    UpdateBadge()
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(.cmdsAccent)
             } else {
                 Button {
                     appState.checkForUpdates(userInitiated: true)
