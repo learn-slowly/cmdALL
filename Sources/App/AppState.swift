@@ -803,9 +803,27 @@ final class AppState {
     }
 
     /// "지금 다시 시작". 저장 안 된 문서 확인은 기존 applicationShouldTerminate가 맡는다.
+    ///
+    /// 재시작은 프로세스가 바뀌므로, 다음 실행에서 알릴 수 있게 표식을 남긴다 —
+    /// 재시작이 1초 안에 끝나고 탭까지 복원돼 화면이 똑같아 보이는 탓에 사용자가
+    /// 버튼을 먹통으로 여기고 계속 다시 누른 실사고가 있었다(2026-07-25).
     func relaunchForUpdate() {
+        if let version = latestVersion {
+            UserDefaults.standard.set(version, forKey: UpdateAssets.restartMarkerKey)
+        }
         armRelaunch(bundleURL: Bundle.main.bundleURL)
         NSApp.terminate(nil)
+    }
+
+    /// 실행 직후 1회 — 업데이트로 재시작한 것이면 알린다. 표식은 어느 경우든 지운다.
+    func announceUpdateRestartIfNeeded() {
+        let defaults = UserDefaults.standard
+        let marker = defaults.string(forKey: UpdateAssets.restartMarkerKey)
+        guard marker != nil else { return }
+        defaults.removeObject(forKey: UpdateAssets.restartMarkerKey)
+        if let notice = UpdateAssets.restartNotice(marker: marker, currentVersion: AppInfo.version) {
+            showToast(notice)
+        }
     }
 
     /// 종료가 취소됐을 때 재시작 예약을 거둔다.
@@ -880,6 +898,7 @@ final class AppState {
         Task { @MainActor in self.startFolderWatching() }
         restoreSessionIfNeeded()
         rebuildNoteIndex()
+        announceUpdateRestartIfNeeded()   // 업데이트로 재시작했으면 알린다
         checkForUpdates()   // silent, throttled to once per 6h
 
         NotificationCenter.default.addObserver(

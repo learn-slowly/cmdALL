@@ -35,6 +35,23 @@ enum UpdateAssets {
         return nil
     }
 
+    /// 업데이트 재시작을 표시해 두는 UserDefaults 키. 재시작은 프로세스가 바뀌므로
+    /// 메모리로는 전달할 수 없다.
+    static let restartMarkerKey = "pendingUpdateRestartVersion"
+
+    /// 업데이트로 재시작한 뒤 첫 실행에서 보여줄 안내(순수).
+    ///
+    /// 왜 필요한가(2026-07-25 실사고): "지금 다시 시작"을 누르면 앱이 꺼졌다 1초 안에
+    /// 켜지고 탭까지 복원돼 화면이 거의 똑같다. 아무 신호가 없어 사용자는 버튼이
+    /// 먹통이라 여기고 계속 다시 눌렀다(그때마다 실제로 재시작하고 있었다).
+    ///
+    /// 표식이 지금 버전과 같을 때만 알린다 — 다르면 교체가 제대로 안 된 것이므로
+    /// "업데이트됐다"고 잘못 알리지 않는다.
+    static func restartNotice(marker: String?, currentVersion: String) -> String? {
+        guard let marker, !marker.isEmpty, marker == currentVersion else { return nil }
+        return "cmdALL \(currentVersion)으로 업데이트했습니다."
+    }
+
     /// 사용자에게 보일 한국어 문구. 케이스마다 구분되게 쓴다.
     static func message(for error: UpdateInstallError) -> String {
         switch error {

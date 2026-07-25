@@ -54,6 +54,23 @@ final class UpdateAssetsTests: XCTestCase {
             .contains("/A/.b.app"))
     }
 
+    /// 실사고 회귀(2026-07-25): "지금 다시 시작"이 먹통으로 보였다. 실제로는 앱이 꺼졌다
+    /// 1초 안에 켜지며 탭까지 복원돼 화면이 똑같아 보인 것 — 아무 신호가 없어 사용자가
+    /// 계속 다시 눌렀다. 재시작 뒤 첫 실행에서 반드시 알린다.
+    func testRestartNoticeOnlyWhenMarkerMatchesCurrentVersion() {
+        XCTAssertNil(UpdateAssets.restartNotice(marker: nil, currentVersion: "0.9.407"),
+                     "표식이 없으면 평범한 실행 — 조용해야 한다")
+        XCTAssertNil(UpdateAssets.restartNotice(marker: "", currentVersion: "0.9.407"))
+        XCTAssertNil(UpdateAssets.restartNotice(marker: "0.9.406", currentVersion: "0.9.407"),
+                     "표식과 실제 버전이 다르면 업데이트가 제대로 안 된 것 — 잘못 알리지 않는다")
+
+        let notice = UpdateAssets.restartNotice(marker: "0.9.407", currentVersion: "0.9.407")
+        XCTAssertNotNil(notice)
+        XCTAssertTrue(notice!.contains("0.9.407"), "몇 버전이 됐는지 보여야 한다: \(notice!)")
+        XCTAssertTrue(notice!.range(of: "\\p{Hangul}", options: .regularExpression) != nil,
+                      "한국어 문구: \(notice!)")
+    }
+
     func testProgressEquatableAndBusy() {
         XCTAssertEqual(UpdateProgress.downloading(fraction: 0.5), .downloading(fraction: 0.5))
         XCTAssertNotEqual(UpdateProgress.idle, .verifying)
