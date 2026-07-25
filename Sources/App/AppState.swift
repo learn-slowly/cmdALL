@@ -1711,10 +1711,28 @@ final class AppState {
         }
     }
 
-    /// 미리보기 탭을 편집기로 바꾼다(스펙 §4). Task 4에서 본 구현.
+    /// 미리보기 탭을 편집기로 바꾼다(스펙 §4 탈출구).
+    /// 맥이 "글자 아님"이라 답했지만 실제로는 글자인 파일(.mdx 등)을 구제한다.
+    /// 그 탭이 살아 있는 동안만 유지된다 — 닫았다 열면 다시 미리보기다.
     @MainActor
     func reopenAsText(tabID: UUID) async {
-        // Task 4에서 채운다.
+        guard let index = tabs.firstIndex(where: { $0.id == tabID }),
+              tabs[index].kind == .quickLook,
+              let url = tabs[index].fileURL else { return }
+        do {
+            let document = try await fileService.loadDocument(from: url)
+            // await 뒤에는 탭 배열이 바뀌었을 수 있다 — 인덱스를 다시 찾는다.
+            guard let current = tabs.firstIndex(where: { $0.id == tabID }) else { return }
+            documents[document.id] = document
+            originalContents[document.id] = document.fullText
+            tabs[current].documentId = document.id
+            tabs[current].kind = .markdown
+            tabs[current].title = document.displayTitle
+            startWatchingFile(at: url, for: tabID)
+            harvestTags(from: document)
+        } catch {
+            errorMessage = "글로 열지 못했습니다: \(error.localizedDescription)"
+        }
     }
 
     /// 파일 트리·라이브러리에 나열할 파일인가.
