@@ -173,6 +173,9 @@ struct ContentView: View {
             }
         }
         .animation(.easeInOut(duration: 0.2), value: appState.claudePanelVisible)
+        .overlay {
+            QuickLookQuickPanel()
+        }
     }
 }
 

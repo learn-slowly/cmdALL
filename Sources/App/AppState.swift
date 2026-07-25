@@ -827,6 +827,10 @@ final class AppState {
         // 시트를 닫고 0.4초 뒤 terminate → shouldTerminate·willTerminate 거쳐 정상 종료).
         // 그래서 먼저 닫고, 실제로 사라진 뒤에 종료한다.
         showAbout = false
+        // 빠른 보기는 오버레이라 시트와 달리 종료를 막지 않는다. 그래도 종료
+        // 직전에 미리보기 자원(QLPreviewView)을 정리해 두려고 함께 닫는다
+        // (재실행은 새 프로세스라 상태가 어차피 초기화되지만, 정리는 지금 한다).
+        closeQuickLook()
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
             NSApp.terminate(nil)
