@@ -812,7 +812,26 @@ final class AppState {
             UserDefaults.standard.set(version, forKey: UpdateAssets.restartMarkerKey)
         }
         armRelaunch(bundleURL: Bundle.main.bundleURL)
-        NSApp.terminate(nil)
+
+        // ★ 시트가 떠 있으면 macOS가 앱 종료를 막는다. About 창이 시트라서, 거기서
+        // "지금 다시 시작"을 누르면 terminate가 조용히 무시돼 버튼이 먹통으로 보였다
+        // (프로세스 밖 최소 재현으로 확정: 시트 표시 중 terminate → 반환만 되고 종료 안 됨;
+        // 시트를 닫고 0.4초 뒤 terminate → shouldTerminate·willTerminate 거쳐 정상 종료).
+        // 그래서 먼저 닫고, 실제로 사라진 뒤에 종료한다.
+        showAbout = false
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+            NSApp.terminate(nil)
+        }
+
+        // 그래도 종료가 시작되지 않으면(다른 시트·모달이 떠 있는 등) 먹통처럼 보이지 않게
+        // 알리고 예약을 거둔다 — 예약이 남으면 나중에 앱을 끌 때 유령처럼 다시 켜진다.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+            guard let self, self.pendingRelaunchBundleURL != nil else { return }
+            self.pendingRelaunchBundleURL = nil
+            UserDefaults.standard.removeObject(forKey: UpdateAssets.restartMarkerKey)
+            self.showToast("다시 시작하지 못했습니다. 앱을 껐다 켜면 새 버전이 적용됩니다.")
+        }
     }
 
     /// 실행 직후 1회 — 업데이트로 재시작한 것이면 알린다. 표식은 어느 경우든 지운다.

@@ -73,17 +73,21 @@ struct UpdateBadge: View {
         case .installing:
             busyLabel("설치 중")
         case .readyToRelaunch:
-            HStack(spacing: 6) {
+            // HStack 전체에 색을 입히면 링크 버튼의 파란색까지 덮어써 두 버튼이 평범한
+            // 검은 글씨로 보인다 — 사용자가 "버튼인 줄 몰랐다"고 보고한 실사고. 색은
+            // 안내 문구에만 주고, 주 동작은 테두리 버튼으로 눈에 띄게 한다.
+            HStack(spacing: 8) {
                 Text("새 버전 준비됨")
                     .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Color.cmdsAccent)
                 Button("지금 다시 시작") { appState.relaunchForUpdate() }
-                    .buttonStyle(.link)
-                    .font(.system(size: 11))
+                    .buttonStyle(.borderedProminent)
+                    .tint(.cmdsAccent)
+                    .controlSize(.small)
                 Button("나중에") { appState.dismissUpdateProgress() }
-                    .buttonStyle(.link)
-                    .font(.system(size: 11))
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
             }
-            .foregroundStyle(Color.cmdsAccent)
         case .failed(let message):
             Button { appState.dismissUpdateProgress() } label: {
                 HStack(spacing: 4) {
