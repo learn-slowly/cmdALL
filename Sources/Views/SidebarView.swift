@@ -648,6 +648,59 @@ struct FileTreeContextMenu: View {
     }
 }
 
+/// 파인더처럼 항상 보이는 고정 위치 4개(스펙 §3). 저장하지 않고 매번 계산.
+private struct DefaultLocation: Identifiable {
+    let id: String
+    let name: String
+    let icon: String
+    let url: URL
+}
+
+private func defaultLocations() -> [DefaultLocation] {
+    let fm = FileManager.default
+    let candidates: [(String, String, URL?)] = [
+        ("Home", "house", fm.homeDirectoryForCurrentUser),
+        ("Desktop", "menubar.dock.rectangle", fm.urls(for: .desktopDirectory, in: .userDomainMask).first),
+        ("Downloads", "arrow.down.circle", fm.urls(for: .downloadsDirectory, in: .userDomainMask).first),
+        ("Documents", "doc.on.doc", fm.urls(for: .documentDirectory, in: .userDomainMask).first)
+    ]
+
+    return candidates
+        .compactMap { name, icon, url in url.map { (name, icon, $0) } }
+        .filter { fm.fileExists(atPath: $0.2.path) }
+        .map { DefaultLocation(id: $0.0, name: $0.0, icon: $0.1, url: $0.2) }
+}
+
+/// 기본 위치 행 — 클릭 시 작업 폴더 전환, 우클릭 시 빠른 이동 목록 등록 토글(스펙 §4.2).
+private struct DefaultLocationRow: View {
+    @Environment(AppState.self) private var appState
+    let location: DefaultLocation
+
+    var body: some View {
+        Label(location.name, systemImage: location.icon)
+            .onTapGesture {
+                appState.openFolder(at: location.url)
+            }
+            .contextMenu {
+                if appState.isQuickMoveFolder(location.url) {
+                    Button {
+                        if let entry = appState.quickMoveFolders.first(where: { $0.url == location.url }) {
+                            appState.removeFromQuickMoveFolders(entry)
+                        }
+                    } label: {
+                        Label("빠른 이동 목록에서 제거", systemImage: "bolt.slash")
+                    }
+                } else {
+                    Button {
+                        appState.addToQuickMoveFolders(location.url)
+                    } label: {
+                        Label("빠른 이동 목록에 추가", systemImage: "bolt")
+                    }
+                }
+            }
+    }
+}
+
 struct FavoritesListView: View {
     @Environment(AppState.self) private var appState
     
@@ -656,6 +709,12 @@ struct FavoritesListView: View {
             SidebarHeader(title: "Favorites") { EmptyView() }
 
             List {
+            ForEach(defaultLocations()) { location in
+                DefaultLocationRow(location: location)
+            }
+            if !defaultLocations().isEmpty {
+                Divider()
+            }
             ForEach(appState.favorites) { favorite in
                 FavoriteRow(favorite: favorite)
                     .onTapGesture {
