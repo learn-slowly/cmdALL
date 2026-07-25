@@ -12,7 +12,7 @@
 | 타겟 사용자 | 레고 1인 (개인용). 배포는 비목표 |
 | 기술 스택 | Swift/SwiftUI (앱) · Node 18+ (kordoc CLI) · SQLite FTS5 (검색 인덱스) · macOS 14+ |
 | 배포 환경 | 로컬 빌드(`swift build -c release`) → `.app`, 본인 머신 설치 |
-| 상태 | 구현 진행 — Phase 0~10 완료(2026-07-02) |
+| 상태 | 구현 진행 — Phase 0~10 완료(2026-07-02), **Phase 11 자동 업데이트 완료(2026-07-25)** |
 
 원본 리포: https://github.com/johnfkoo951/CmdMD (MIT, 최신 v1.4.6) 엔진: kordoc https://github.com/chrisryugj/kordoc (MIT) 아이디어 참고: Docufinder https://github.com/chrisryugj/Docufinder (BSL 1.1 — 코드 차용 금지, 아이디어만)
 
@@ -108,6 +108,16 @@ CmdMD는 "리뷰 우선" 마크다운 리더이자 Obsidian 볼트 라우터다.
 - **후속(A안·선택, 2026-07-01 조사 메모 — 코드 외 실측)**: 임베딩 업그레이드 — `NLEmbedding`은 한국어 미지원이라 `NLContextualEmbedding` CJK(무설치·512차원) 또는 Ollama `bge-m3`(고품질·설치 부담) 후보. **sqlite-vec는 macOS 시스템 SQLite에서 로드 불가** → 임베딩 BLOB 저장 + Swift 브루트포스 코사인(vDSP)이 현실적.
 - 우선순위: 완료 / 티어 3 (Phase 9)
 
+### 3.12 앱 내 자동 업데이트 (버튼 하나로 설치)
+
+- **설명**: 기존 "Check for Updates"는 알림 + 브라우저 열기까지였다. 이제 앱이 직접 릴리스 zip을 **받고 → 검증하고 → 자기 자신을 교체하고 → 재시작 여부를 묻는다.** 진입점은 상태 표시줄의 업데이트 알약과 About 창 버튼(둘 다 같은 경로).
+- **설계를 뒤집은 실측(2026-07-25)**: ad-hoc 서명·비샌드박스·`LSFileQuarantineEnabled` 미설정 앱 번들이 `URLSession`으로 받은 파일에는 **quarantine이 붙지 않는다**(실제 앱 번들 프로브로 확인 — `com.apple.provenance`만). 즉 **Apple 공증(연 $99) 없이도 Gatekeeper 차단 없이 자동 설치가 성립한다.** 그전 메모의 "직접 구현하려면 quarantine 자동해제 편법 필요"는 사실이 아니며 이 문서로 정정한다.
+- **안전장치**: ① 릴리스의 `SHA256SUMS.txt`와 대조(불일치 시 중단) ② 교체 전 `codesign` 검증 + 번들 버전 대조 ③ **원자적 교체** — 기존 앱을 백업으로 옮기고 새 앱을 제자리에, 실패하면 즉시 원복(앱이 사라지지 않음) ④ 옛 번들은 삭제하지 않고 **휴지통**(삭제 금지 원칙) ⑤ 설치 위치에 쓰기 권한이 없으면 다운로드 전에 중단하고 터미널 설치를 안내.
+- **재시작**: 종료가 실제로 진행될 때만(`applicationWillTerminate`) 새 인스턴스를 띄운다 — 저장 확인에서 취소해도 인스턴스가 둘이 되지 않는다. 옛 프로세스가 사라진 뒤 여는 껍데기 프로세스에 위임해 세션 파일 경합도 막는다. **떠 있는 시트(About 창)가 `NSApp.terminate`를 막으므로 먼저 닫고 종료**(실측·변이 시험으로 확정).
+- **구성**: 전부 별도 파일 — 순수(`UpdateProgress`·`UpdateInstallError`·`UpdateAssets`) + 파일시스템(`BundleReplacer`) + actor(`UpdateInstaller`, 네트워크·서명 검증은 프로토콜 주입). **새 패키지 의존성 0**(CryptoKit·Foundation·AppKit은 시스템).
+- **배포 경로 두 갈래**: 앱 내 업데이트(격리 없음) / 브라우저 다운로드(격리 붙음 → `xattr` 해제 또는 `scripts/install_latest.sh` curl 설치). 후자를 위해 패키징에서 번들 리소스에 쓰기 권한을 준다 — 0444로 배포되면 `xattr -dr`이 Permission denied로 실패해 **앱 본체 격리가 남는다**(실측).
+- 우선순위: 완료 / 티어 3 (Phase 11)
+
 ## 4. 기술 아키텍처
 
 ### 4.1 기술 스택
@@ -152,6 +162,8 @@ CleanupPlan:      [ { from, to, action: move|rename, reason } ]
 MainMode:         reader | library                       # 메인 영역 모드(리더/라이브러리)
 LibraryLayout:    list | grid                            # 폴더별 표시 기억(URL→layout)
 RagSource:        { index, path, snippet, location(line|page|unknown) }  # RAG 근거 — [n] 클릭 시 줄/페이지 점프(오피스는 파일 열기)
+UpdateProgress:   idle | downloading(비율) | verifying | installing | readyToRelaunch | failed(사유)
+UpdateInstallError: 쓰기권한없음 | 다운로드실패 | 체크섬불일치 | 해제실패 | 번들검증실패 | 교체실패(원복됨) | 교체실패(백업남음)
 ```
 
 - Claude 응답은 영구 저장하지 않음(세션 표시 + 노트 삽입 옵션). 보관은 claude.ai가 아니라 볼트 마크다운으로.
@@ -238,6 +250,15 @@ RagSource:        { index, path, snippet, location(line|page|unknown) }  # RAG �
 
 **Phase 10: 다듬기 & 배포** — 단축키·설정 정리, `package_app.sh` 패키징·ad-hoc 서명·격리 해제, README 포크판 갱신(출처·라이선스) — **완료(2026-07-02)**: cmdALL 겉면 개명·단축키 4종·Tools 설정 탭·0.9.0 DMG·README 갱신.
 
+**Phase 11: 앱 내 자동 업데이트** — **완료(2026-07-25, §3.12)**. 순수 헬퍼(진행 상태·오류·자산 URL·체크섬 파싱) → 원자적 교체기(실패 시 원복·휴지통) → 오케스트레이터(actor, 네트워크·서명 검증 프로토콜 주입) → `AppState` 배선·UI 순으로 4태스크 TDD. 실제 릴리스를 상대로 전 과정 실측(진행률 8%→100%·체크섬·codesign·교체·잔여물 0), 실행 중 앱의 이름 변경·휴지통 이동도 실측. v0.9.404→409로 실기 검증.
+
+- [x] 릴리스 자산 URL·`SHA256SUMS.txt` 파싱·한국어 오류 문구(순수)
+- [x] 원자적 번들 교체 — 백업→교체, 2단계 실패 시 즉시 원복, 옛 번들 휴지통
+- [x] 다운로드(진행률 델리게이트)·SHA-256 대조·`ditto` 해제·번들 검증(버전+codesign)
+- [x] 상태 표시줄 알약·About 버튼 배선, 재시작 예약(`applicationWillTerminate`에서만 실행)
+- [x] **실사용 사고 수정** — 떠 있는 시트가 `NSApp.terminate`를 막는 것을 최소 재현·변이 시험으로 확정 → 시트를 먼저 닫고 종료, 2초 내 미종료 시 안내 + 예약 해제. 버튼이 링크 색을 잃어 평범한 글씨로 보이던 것도 수정
+- [x] 배포 안내 정정 — 패키징에 번들 리소스 쓰기 권한 부여(`xattr -dr`이 실제로 듣게), README에 curl 설치(`install_latest.sh`) 최우선 안내 신설
+
 ## 7. UI/UX 가이드
 
 - 데스크탑 전용. 원본의 "리뷰 우선·키보드 중심" 톤 유지.
@@ -276,7 +297,8 @@ RagSource:        { index, path, snippet, location(line|page|unknown) }  # RAG �
 
 **기술**
 
-- 비샌드박스 유지(샌드박스면 `Process` CLI 호출 막힘).
+- 비샌드박스 유지(샌드박스면 `Process` CLI 호출 막힘). **자동 업데이트도 비샌드박스·`LSFileQuarantineEnabled` 미설정이 전제** — 샌드박스로 바꾸거나 그 키를 켜면 앱이 받은 파일에도 격리가 붙어 Gatekeeper 차단이 되살아난다(§3.12).
+- **ad-hoc 서명(비공증)의 대가**: 브라우저·AirDrop·메시지로 받은 배포본은 항상 격리 표시가 붙어 "악성 코드 확인 불가"로 차단된다. 해소는 ① 앱 내 업데이트(격리 없음) ② `scripts/install_latest.sh` curl 설치 ③ `xattr -dr` 수동 해제. Apple Developer ID 서명·공증(연 $99)을 도입하면 근본 해소되며, 지금 구조는 공증을 나중에 붙여도 그대로 쓸 수 있다(`release.yml`에 `HAS_SIGNING` 경로 예비됨).
 - Node 18+ 필요(kordoc). LibreOffice보다 가벼움.
 - kordoc HWP5 쓰기는 패치(텍스트)만, 새 문서는 HWPX. 한글 충실도는 레고 실파일로 먼저 테스트.
 - 내용 검색(티어 3)은 규모가 커서 분리. 키워드(FTS5)는 Phase 7, RAG는 Phase 9에서 임베딩 없이(B안) 구현 완료. 시맨틱·임베딩(A안)은 선택 후속.
