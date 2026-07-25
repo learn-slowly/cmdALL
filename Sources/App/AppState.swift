@@ -808,6 +808,18 @@ final class AppState {
         NSApp.terminate(nil)
     }
 
+    /// 종료가 취소됐을 때 재시작 예약을 거둔다.
+    ///
+    /// 실사고(2026-07-25): "지금 다시 시작"을 눌렀는데 저장 확인 대화상자에서 종료가
+    /// 취소되면 앱은 그대로 남는데 예약만 살아 있었다. 사용자에겐 버튼이 "먹통"으로
+    /// 보이고, 나중에 직접 앱을 끄면 유령처럼 다시 켜졌다. 예약을 거두고 이유를 알린다.
+    /// 설치 자체는 이미 끝났으므로 `updateProgress`는 건드리지 않는다 — 다시 누를 수 있다.
+    func cancelPendingRelaunch() {
+        guard pendingRelaunchBundleURL != nil else { return }   // 평범한 종료 취소는 조용히
+        pendingRelaunchBundleURL = nil
+        showToast("다시 시작하지 않았습니다 — 저장 확인에서 취소했습니다.")
+    }
+
     /// Copies the current document's filesystem path to the clipboard (⌥⌘C).
     func copyCurrentFilePath() {
         guard let url = currentDocument?.fileURL else {

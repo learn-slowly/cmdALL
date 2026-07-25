@@ -489,6 +489,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         case .alertSecondButtonReturn:
             return .terminateNow
         default:
+            // 종료를 취소했으면 업데이트 재시작 예약도 거둔다 — 안 그러면 나중에
+            // 사용자가 직접 앱을 끌 때 유령처럼 다시 켜진다(2026-07-25 실사고).
+            appState.cancelPendingRelaunch()
             return .terminateCancel
         }
     }

@@ -75,6 +75,31 @@ final class AppUpdateInstallTests: XCTestCase {
         XCTAssertEqual(state.pendingRelaunchBundleURL?.path, "/Applications/cmdALL.app")
     }
 
+    /// 실사고 회귀(2026-07-25): "지금 다시 시작"을 눌렀는데 저장 확인에서 종료가 취소되면
+    /// 예약이 남아, 나중에 사용자가 직접 앱을 끌 때 유령처럼 다시 켜졌다.
+    func testCancelPendingRelaunchClearsArmedURLAndExplains() {
+        state.armRelaunch(bundleURL: URL(fileURLWithPath: "/Applications/cmdALL.app"))
+        state.cancelPendingRelaunch()
+        XCTAssertNil(state.pendingRelaunchBundleURL, "예약이 지워져야 나중에 저절로 켜지지 않는다")
+        XCTAssertNotNil(state.toastMessage, "왜 아무 일도 없었는지 알려야 한다")
+    }
+
+    /// 업데이트와 무관한 평범한 종료 취소에서는 조용해야 한다.
+    func testCancelPendingRelaunchIsSilentWhenNotArmed() {
+        state.toastMessage = nil
+        state.cancelPendingRelaunch()
+        XCTAssertNil(state.pendingRelaunchBundleURL)
+        XCTAssertNil(state.toastMessage, "예약이 없으면 안내를 띄우지 않는다")
+    }
+
+    /// 취소돼도 설치 자체는 끝난 상태이므로 다시 시작 버튼은 남아 있어야 한다.
+    func testCancelPendingRelaunchKeepsReadyState() {
+        state.updateProgress = .readyToRelaunch
+        state.armRelaunch(bundleURL: URL(fileURLWithPath: "/Applications/cmdALL.app"))
+        state.cancelPendingRelaunch()
+        XCTAssertEqual(state.updateProgress, .readyToRelaunch, "다시 누를 수 있어야 한다")
+    }
+
     /// 진행률 보고는 MainActor로 건너뛰므로 완료 뒤에 도착할 수 있다.
     /// 그때 `.readyToRelaunch`를 덮어써 "설치 중"으로 되돌리면 안 된다.
     func testLateProgressReportDoesNotClobberReadyState() async {
