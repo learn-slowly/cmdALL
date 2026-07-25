@@ -94,6 +94,7 @@ enum AppShortcut: String, CaseIterable, Identifiable {
     case navigateBack
     case navigateForward
     case navigateUp
+    case quickMove
 
     var id: String { rawValue }
 
@@ -125,6 +126,7 @@ enum AppShortcut: String, CaseIterable, Identifiable {
         case .navigateBack:    return "Back (폴더 뒤로)"
         case .navigateForward: return "Forward (폴더 앞으로)"
         case .navigateUp:      return "Enclosing Folder (상위 폴더)"
+        case .quickMove:       return "Quick Move… (빠른 이동)"
         }
     }
 
@@ -156,6 +158,7 @@ enum AppShortcut: String, CaseIterable, Identifiable {
         case .navigateBack:    return KeyBinding(key: "[", command: true)
         case .navigateForward: return KeyBinding(key: "]", command: true)
         case .navigateUp:      return KeyBinding(key: "ArrowUp", command: true)
+        case .quickMove:       return KeyBinding(key: "m", command: true, option: true)  // ⌥⌘M
         }
     }
 }

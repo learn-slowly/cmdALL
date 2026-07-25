@@ -51,4 +51,23 @@ final class AppQuickMoveTests: XCTestCase {
         let reloaded = AppState(dataDirectory: tempData)
         XCTAssertTrue(reloaded.quickMoveFolders.isEmpty)
     }
+
+    func test빠른이동단축키는옵션커맨드M이다() {
+        let binding = AppShortcut.quickMove.defaultBinding
+        XCTAssertEqual(binding.key, "m")
+        XCTAssertTrue(binding.command)
+        XCTAssertTrue(binding.option)
+        XCTAssertFalse(binding.shift)
+    }
+
+    func test빠른이동단축키는다른커맨드와겹치지않는다() {
+        let quickMove = AppShortcut.quickMove.defaultBinding
+        for shortcut in AppShortcut.allCases where shortcut != .quickMove {
+            let other = shortcut.defaultBinding
+            let same = other.key == quickMove.key && other.command == quickMove.command
+                && other.shift == quickMove.shift && other.option == quickMove.option
+                && other.control == quickMove.control
+            XCTAssertFalse(same, "\(shortcut)와 단축키가 겹친다")
+        }
+    }
 }
