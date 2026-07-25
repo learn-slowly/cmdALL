@@ -226,6 +226,13 @@ cat > "$PLIST" <<'PLIST'
 </plist>
 PLIST
 
+# 소유자 쓰기 권한 부여 — SwiftPM 체크아웃에서 온 리소스(Highlightr 번들의 *.css 등)가
+# 0444로 들어와 그대로 배포되면, 받는 사람이 README대로 격리 해제를 해도
+# `xattr -dr com.apple.quarantine`이 Permission denied로 실패하고 **앱 본체의 격리
+# 표시가 남아 계속 차단된다**(실측 재현: dmg·zip 양쪽 동일, 잔존 1개).
+# 서명 전에 모드만 바꾸므로 codesign 결과는 영향 없다(chmod 후 서명 유효 실측).
+chmod -R u+w "$APP_DIR"
+
 if command -v codesign >/dev/null 2>&1; then
   echo "Ad-hoc signing $BUNDLE_NAME.app..."
   codesign --force --deep --sign - "$APP_DIR"

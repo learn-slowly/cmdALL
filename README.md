@@ -87,19 +87,43 @@ read connects onward: content search, ask-your-corpus (RAG), PARA routing, file 
 
 ## Install
 
-### Download (recommended)
+### Terminal (recommended)
+
+Files fetched with `curl` never get the quarantine flag, so this path installs with **no Gatekeeper
+prompt at all**. It grabs the latest release zip, checks its SHA‑256 against `SHA256SUMS.txt`, and
+installs into `/Applications`:
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/learn-slowly/cmd-docu/main/scripts/install_latest.sh
+bash install_latest.sh
+```
+
+### Download from Releases
 
 Grab the latest build from the [**Releases**](../../releases) page:
 
 - **`cmdALL-<version>.dmg`** — open it and drag `cmdALL.app` onto the **Applications** shortcut.
 - **`cmdALL-macos.zip`** — unzip and move `cmdALL.app` to `/Applications` (same thing, no mount).
 
-The app is **ad‑hoc signed**, so on first launch Gatekeeper may warn. Either right‑click →
-**Open**, or clear the quarantine flag:
+The app is **ad‑hoc signed** (not notarized), so anything downloaded through a browser carries the
+quarantine flag and macOS refuses to launch it. On macOS 15+ the warning only offers *Move to Trash*
+— the old right‑click → **Open** bypass no longer works. Clear the flag first:
 
 ```bash
 xattr -dr com.apple.quarantine /Applications/cmdALL.app
 ```
+
+> 이전 버전(≤0.9.403) zip·dmg는 번들 안 리소스가 읽기 전용(0444)으로 들어 있어 위 명령이
+> `Permission denied`로 실패하고 **앱 본체의 격리 표시가 남아 계속 차단된다**. 그때는 쓰기 권한을
+> 먼저 준다 — 서명은 유지된다:
+>
+> ```bash
+> chmod -R u+w /Applications/cmdALL.app
+> xattr -dr com.apple.quarantine /Applications/cmdALL.app
+> ```
+
+Or allow it once in **System Settings → Privacy & Security**, where the blocked app appears with an
+*Open Anyway* button.
 
 ### Build from source
 
