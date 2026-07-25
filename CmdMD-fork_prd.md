@@ -1,6 +1,7 @@
 # cmd-docu PRD (v2)
 
 > CmdMD(MIT, 구요한/CMDSPACE)를 포크해 만든다. 리더(마크다운·PDF·이미지·HWP·오피스) + Claude 연동 + 한글문서 읽기·쓰기(kordoc) + 내용 검색(Docufinder 아이디어) + 파일 정리. 이 문서는 Claude Code에 그대로 넘기는 개발 지시서다. v1 대비 kordoc·내용검색을 추가하고 단계를 우선순위 3티어로 재정리했다.
+> **병합 기록(2026-07-25)**: `cmd-docu_개선작업_문서.md`(속도 개선·미디어 플레이어+짝꿍 노트·PDF 폭 버그 등 실사용 기록)의 내용을 이 문서에 합쳤다 — §3.13(미디어)·§3.1 PDF 버그 수정·Phase 8.6 신설. 원본 문서는 상세 진단 과정(왜·어떻게 찾았는지) 기록용으로 그대로 둔다.
 
 ## 1. 개요
 
@@ -12,7 +13,7 @@
 | 타겟 사용자 | 레고 1인 (개인용). 배포는 비목표 |
 | 기술 스택 | Swift/SwiftUI (앱) · Node 18+ (kordoc CLI) · SQLite FTS5 (검색 인덱스) · macOS 14+ |
 | 배포 환경 | 로컬 빌드(`swift build -c release`) → `.app`, 본인 머신 설치 |
-| 상태 | 구현 진행 — Phase 0~10 완료(2026-07-02), **Phase 11 자동 업데이트 완료(2026-07-25)** |
+| 상태 | 구현 진행 — Phase 0~10 완료(2026-07-02, Phase 8.6 미디어 플레이어+짝꿍 노트 포함), **Phase 11 자동 업데이트 완료(2026-07-25)**, PDF 리더 본문 폭 버그 수정(2026-07-25) |
 
 원본 리포: https://github.com/johnfkoo951/CmdMD (MIT, 최신 v1.4.6) 엔진: kordoc https://github.com/chrisryugj/kordoc (MIT) 아이디어 참고: Docufinder https://github.com/chrisryugj/Docufinder (BSL 1.1 — 코드 차용 금지, 아이디어만)
 
@@ -28,8 +29,9 @@ CmdMD는 "리뷰 우선" 마크다운 리더이자 Obsidian 볼트 라우터다.
 
 ### 3.1 PDF 리더 (PDFKit) — 보기
 
-- `.pdf`를 PDFKit 뷰어로 연다. 페이지 이동·썸네일·문서 내 검색·텍스트 선택/복사·줌/맞춤·회전.
+- `.pdf`를 PDFKit 뷰어로 연다. 페이지 이동·문서 내 검색·텍스트 선택/복사·줌/맞춤·회전.
 - PDF의 "보기"는 PDFKit, "내용 추출(검색·AI·마크다운화)"은 3.3 kordoc이 맡는다(역할 분리).
+- **버그 수정(2026-07-25)**: 원래 있던 페이지 썸네일 칸(왼쪽)을 열 때마다 통째로 새로 만드는 구조라, 두 번째로 여는 PDF부터 폭 지정이 안 걸려 본문이 오른쪽 끝 ~55pt로 눌리는 결함이 있었다(실측: 첫 PDF 160/611, 이후 713/58). 게다가 그 썸네일 칸은 애초에 한 번도 제대로 그려진 적이 없었다(프레임 0×0). 사용자 결정으로 **썸네일 칸 자체를 없애고** 본문이 항상 화면 전체 폭을 쓰게 했다(실측 760pt).
 - 우선순위: 필수 / 티어 1
 
 ### 3.2 이미지 리더 — 보기
@@ -118,6 +120,17 @@ CmdMD는 "리뷰 우선" 마크다운 리더이자 Obsidian 볼트 라우터다.
 - **배포 경로 두 갈래**: 앱 내 업데이트(격리 없음) / 브라우저 다운로드(격리 붙음 → `xattr` 해제 또는 `scripts/install_latest.sh` curl 설치). 후자를 위해 패키징에서 번들 리소스에 쓰기 권한을 준다 — 0444로 배포되면 `xattr -dr`이 Permission denied로 실패해 **앱 본체 격리가 남는다**(실측).
 - 우선순위: 완료 / 티어 3 (Phase 11)
 
+### 3.13 미디어 플레이어 + 짝꿍 노트 (음악·동영상)
+
+- **설명**: 음악(mp3·m4a·aac·wav·aiff·flac)·동영상(mp4·mov·m4v)을 열면 플레이어와 "짝꿍 마크다운 노트"가 한 화면에 뜬다. 목표는 재생이 아니라 **재생하지 않고도 그 파일이 뭔지 아는 것** — cmd-docu의 뿌리가 마크다운 노트 도구이므로 "이 mp3에 대한 메모"도 결국 마크다운 문서 하나로 다룬다.
+- **짝꿍 노트 규칙**: 미디어 파일 옆에 같은 이름 + `.md`를 더한 노트를 둔다(예: `삐약이_데모.mp3` ↔ `삐약이_데모.mp3.md`). DB가 아니라 파일 옆 평문 노트라서 Dropbox 동기화·볼트 이동에 그대로 따라가고, cmd-docu 밖(옵시디언 등)에서도 그냥 열린다.
+- **자동 메타데이터**: 노트를 처음 만들 때 AVFoundation으로 **재생하지 않고도** 길이·포맷·생성일·내장 제목을 읽어 frontmatter에 채운다. 나머지(왜 중요한지 등)는 사람이 메모로 채운다.
+- **화면**: 동영상=좌우 분할(플레이어/노트), 음악=상단 재생바+아래 노트. 미리보기⇄편집 전환, 노트 없으면 "메모 만들기" 버튼(레이스 안전).
+- **목록·검색**: 짝꿍 노트는 목록에서 숨기고 미디어 행에 배지+한 줄 요약 부제로 존재를 표시한다. 노트도 마크다운이라 기존 내용 검색 색인에 자동으로 들어간다 — 몇 달 뒤 파일명이 아니라 그때 적어 둔 메모 문구로 그 음원/영상을 찾아낼 수 있다.
+- **안전장치**: 원본 미디어 파일은 절대 바꾸지 않는다(쓰기는 짝꿍 `.md`뿐). 새 패키지 의존성 0(AVKit/AVFoundation은 시스템 제공).
+- **실사용 수정**: SPM 실행 파일에서 SwiftUI `VideoPlayer`를 쓰려면 `AVKit.framework`를 명시적으로 링크해야 한다(자동 링크만으론 즉시 종료) — `Package.swift`에 반영. 창 닫기(메뉴바 상주 앱이라 창이 파괴 안 됨)·탭 전환 시 재생 상태 관리를 소유권 정리(탭당 단일 공유 플레이어)로 수정.
+- 우선순위: 완료 / 티어 2 (2026-07-02, Phase 8.6)
+
 ## 4. 기술 아키텍처
 
 ### 4.1 기술 스택
@@ -155,7 +168,8 @@ CmdMD/
 별도 서버·외부 DB 없음. 모든 입력은 로컬 파일.
 
 ```
-DocumentKind:  markdown | pdf | image | office   # office = kordoc 경유 렌더
+DocumentKind:  markdown | pdf | image | office | media   # office = kordoc 경유 렌더, media = 음악·동영상(AVKit)
+CompanionNote: 미디어 파일 옆 `파일명.ext.md` 짝꿍 노트 — frontmatter(길이·포맷·생성일 자동) + 자유 메모, DB 아님
 SearchIndex (SQLite FTS5, trigram):  { path, title, bodyMarkdown, mtime, kind }
 RouteSuggestion:  { folder, filename?, reason }          # 노트 1건 분류
 CleanupPlan:      [ { from, to, action: move|rename, reason } ]
@@ -184,7 +198,7 @@ UpdateInstallError: 쓰기권한없음 | 다운로드실패 | 체크섬불일치
 
 **Phase 1: 이미지 리더** — 디스패치에 image 분기, 뷰 구현, 줌/팬, 최소 테스트
 
-**Phase 2: PDF 리더 (PDFKit)** — `PDFView` 래핑, 탭 표시, 페이지/썸네일/검색/선택·복사/줌/회전
+**Phase 2: PDF 리더 (PDFKit)** — `PDFView` 래핑, 탭 표시, 페이지/검색/선택·복사/줌/회전. (썸네일 칸은 시도했으나 결함 발견 후 제거 — §3.1 2026-07-25 버그 수정 참고.)
 
 **Phase 3: 한글·오피스 읽기 (kordoc)**
 
@@ -233,6 +247,8 @@ UpdateInstallError: 쓰기권한없음 | 다운로드실패 | 체크섬불일치
 **Phase 8: 폴더 정리 (배치)** — 폴더 선택 → 메타데이터(+모호 파일만 내용) → `CleanupPlan` → 미리보기·승인 → `FileManager` 이동, 로그·undo
 
 **Phase 8.5: PARA 라이브러리 뷰 (리더 ⇄ 라이브러리)** — `AppState.mainMode`(reader/library) + `MainEditorView` 분기 + 툴바 모드 세그먼트(하위토글 Source·Split·Preview ⇄ List·Grid). `selectedFolder` 선택 개념 신설(**Phase 8과 공유** — 폴더 선택·미리보기 기반 재사용). detail에 `LazyVGrid`/`List`(썸네일=QuickLook `QLThumbnailGenerator` lazy+`NSCache`). 사이드바 PARA 렌즈(`legoSeed` 그룹·Archive dim·Projects 또렷). 폴더별 뷰 기억(URL→layout). 클릭이 모드 견인+토글 우선. **읽기 전용(이동은 Phase 8 몫)**. 단계: ①PARA 렌즈 → ②메인 그리드+모드토글 → ③뷰 기억·다듬기.
+
+**Phase 8.6: 미디어 플레이어 + 짝꿍 노트** — **완료(2026-07-02)**. 상세는 §3.13. 순서: ①본다(플레이어+짝꿍 노트 표시, 없으면 "메모 만들기") ②쓴다(메타데이터 자동 채움·Inspector에서 편집) ③찾는다(목록 배지+검색 색인 통합). 실파일 수동 스모크가 결함 3건 포착·수정(AVKit 프레임워크 명시 링크 누락으로 즉시 종료가 가장 심각).
 
 **Phase 8.7: 미리보기 속도 다듬기** — 코드 검증(2026-06-30, 5렌즈)으로 확정된 것만. **8.5 다음·9 앞**, 작업 전후 `swift test` 통과 확인. 신규 분은 별도 파일/모듈로 분리.
 
