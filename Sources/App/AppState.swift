@@ -101,6 +101,7 @@ final class AppState {
     var vaults: [Vault] = []
     var drafts: [Draft] = []
     var favorites: [FavoriteItem] = []
+    var quickMoveFolders: [QuickMoveFolder] = []
     var recentFiles: [URL] = []
     var currentFolder: URL?
     var fileTree: [FileTreeItem] = []
@@ -3101,6 +3102,24 @@ final class AppState {
         saveUserData()
     }
 
+    // MARK: - Quick Move
+
+    func addToQuickMoveFolders(_ url: URL) {
+        guard !quickMoveFolders.contains(where: { $0.url == url }) else { return }
+        quickMoveFolders.append(QuickMoveFolder(url: url))
+        saveUserData()
+        showToast("빠른 이동 목록에 추가했습니다")
+    }
+
+    func removeFromQuickMoveFolders(_ folder: QuickMoveFolder) {
+        quickMoveFolders.removeAll { $0.id == folder.id }
+        saveUserData()
+    }
+
+    func isQuickMoveFolder(_ url: URL) -> Bool {
+        quickMoveFolders.contains(where: { $0.url == url })
+    }
+
     // MARK: - Office Conversion
 
     /// office 탭 변환을 시작/재시도한다(로딩 표시 후 비동기 변환).
@@ -3984,6 +4003,9 @@ final class AppState {
         if let loaded = load([FavoriteItem].self, from: "favorites.json") {
             favorites = loaded.filter { FileManager.default.fileExists(atPath: $0.url.path) }
         }
+        if let loaded = load([QuickMoveFolder].self, from: "quickmove-folders.json") {
+            quickMoveFolders = loaded.filter { FileManager.default.fileExists(atPath: $0.url.path) }
+        }
         if let loaded = load([Draft].self, from: "drafts.json") { drafts = loaded }
     }
 
@@ -4004,6 +4026,7 @@ final class AppState {
         save(templates, to: "templates.json")
         save(routingRules, to: "rules.json")
         save(favorites, to: "favorites.json")
+        save(quickMoveFolders, to: "quickmove-folders.json")
         persistDrafts()
     }
 
