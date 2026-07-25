@@ -28,10 +28,36 @@ final class WikiPageListerTests: XCTestCase {
         touch("claims/c1.md")
         touch("notes.txt")                       // 비md 제외
         let pages = WikiPageLister.relativePages(under: root)
-        XCTAssertEqual(pages, ["claims/c1.md",
-                               "index.md",
-                               "references/신진욱2011.md",
-                               "references/Baker_1993.md"])
+
+        // 집합: 하위 폴더 재귀·상대경로·비md 제외.
+        XCTAssertEqual(Set(pages), ["claims/c1.md",
+                                    "index.md",
+                                    "references/신진욱2011.md",
+                                    "references/Baker_1993.md"])
+        XCTAssertEqual(pages.count, 4)
+
+        // 순서: 한글↔라틴 혼합 정렬은 로캘 종속이라 단정하지 않는다(정렬이 쓰는
+        // localizedStandardCompare가 현재 로캘을 따른다). 실측: "Baker_1993.md" vs
+        // "신진욱2011.md"만 ko에서 뒤·en에서 앞으로 뒤집히고 나머지 쌍은 전 로캘 고정 —
+        // 그래서 한글 이름을 섞은 채 전체 배열을 단정하면 개발기(ko)는 통과·CI(en)는
+        // 실패한다(T2 로캘 함정, 같은 파일 testExcludesRuleFilesFromTargets의 회피와 동일).
+        // 로캘 무관하게 고정인 것만 검증한다.
+        XCTAssertEqual(pages[0], "claims/c1.md")
+        XCTAssertEqual(pages[1], "index.md")
+        XCTAssertTrue(pages.dropFirst(2).allSatisfy { $0.hasPrefix("references/") })
+    }
+
+    func testSortsNaturallyWithinLocaleStableNames() {
+        // "정렬된다"의 실질 검증 — localizedStandardCompare의 숫자 자연정렬(a2 < a10)을
+        // 로캘에 흔들리지 않는 ASCII 이름으로 고정 검증한다(위 테스트가 순서 단정을
+        // 뺀 만큼을 여기서 메운다). 실측: ko·en·POSIX 전부 같은 순서.
+        touch("a10.md")
+        touch("a2.md")
+        touch("a1.md")
+        touch("b/a2.md")
+        touch("b/a10.md")
+        XCTAssertEqual(WikiPageLister.relativePages(under: root),
+                       ["a1.md", "a2.md", "a10.md", "b/a2.md", "b/a10.md"])
     }
 
     func testExcludesHiddenDirectoriesAndFiles() {
