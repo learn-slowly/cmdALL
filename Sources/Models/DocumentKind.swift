@@ -7,6 +7,8 @@ enum DocumentKind: String, Codable {
     case pdf
     case office
     case media
+    /// 우리가 모르는 형식 — 애플 미리보기(QuickLook)로 보여준다. 읽기 전용.
+    case quickLook
 }
 
 extension DocumentKind {
@@ -53,20 +55,23 @@ extension DocumentKind {
         videoExtensions.contains(url.pathExtension.lowercased())
     }
 
-    /// 종류 정렬 순위(F3) — 문서(markdown) → office → pdf → image → media.
-    /// 비문서 확장자는 init(from:)이 .markdown으로 폴백하므로 같은 종류 안에서는
+    /// 종류 정렬 순위(F3) — 문서(markdown) → office → pdf → image → media → quickLook.
+    /// 글자로 인식되는 비문서 확장자는 init(from:)이 .markdown으로 폴백하고,
+    /// 글자로 인식되지 않는 나머지는 .quickLook(맨 끝)으로 간다 — 같은 종류 안에서는
     /// pathExtension 사전순이 2차 키(LibrarySorting 몫).
     var sortRank: Int {
         switch self {
-        case .markdown: return 0
-        case .office:   return 1
-        case .pdf:      return 2
-        case .image:    return 3
-        case .media:    return 4
+        case .markdown:  return 0
+        case .office:    return 1
+        case .pdf:       return 2
+        case .image:     return 3
+        case .media:     return 4
+        case .quickLook: return 5
         }
     }
 
-    /// 확장자(대소문자 무시): 이미지 → PDF → 오피스 → 미디어 → 마크다운(기본).
+    /// 확장자(대소문자 무시): 이미지 → PDF → 오피스 → 미디어 → 글자 → 미리보기.
+    /// 앞 네 갈래를 먼저 확정해야 기존 종류가 새 갈래로 새지 않는다(스펙 §3).
     init(from url: URL) {
         let ext = url.pathExtension.lowercased()
         if DocumentKind.imageExtensions.contains(ext) {
@@ -77,8 +82,10 @@ extension DocumentKind {
             self = .office
         } else if DocumentKind.mediaExtensions.contains(ext) {
             self = .media
-        } else {
+        } else if QuickLookRouting.opensAsText(extension: ext) {
             self = .markdown
+        } else {
+            self = .quickLook
         }
     }
 }

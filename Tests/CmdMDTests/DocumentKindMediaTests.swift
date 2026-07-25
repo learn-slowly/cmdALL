@@ -31,6 +31,11 @@ final class DocumentKindMediaTests: XCTestCase {
         XCTAssertEqual(DocumentKind(from: URL(fileURLWithPath: "/tmp/a.pdf")), .pdf)
         XCTAssertEqual(DocumentKind(from: URL(fileURLWithPath: "/tmp/a.hwp")), .office)
         XCTAssertEqual(DocumentKind(from: URL(fileURLWithPath: "/tmp/a.md")), .markdown)
-        XCTAssertEqual(DocumentKind(from: URL(fileURLWithPath: "/tmp/제목없음")), .markdown)
+    }
+
+    func test확장자없는파일은quickLook갈래다() {
+        // 조각 A(QuickLook fallback) 도입 이후: 확장자 없는 파일은 markdown이 아니라
+        // quickLook(애플 미리보기)으로 간다 — DocumentKindTests의 동일 취지 테스트와 짝.
+        XCTAssertEqual(DocumentKind(from: URL(fileURLWithPath: "/tmp/제목없음")), .quickLook)
     }
 }

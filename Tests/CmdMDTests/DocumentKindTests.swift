@@ -23,9 +23,11 @@ final class DocumentKindTests: XCTestCase {
         }
     }
 
-    func testUnknownAndNoExtensionFallBackToMarkdown() {
-        XCTAssertEqual(kind("data.xyz"), .markdown)
-        XCTAssertEqual(kind("README"), .markdown)
+    func testUnknownAndNoExtensionFallBackToQuickLook() {
+        // 조각 A(QuickLook fallback) 도입 이후: 모르는 형식·확장자 없음은
+        // 더 이상 markdown으로 새지 않고 quickLook(애플 미리보기)으로 간다.
+        XCTAssertEqual(kind("data.xyz"), .quickLook)
+        XCTAssertEqual(kind("README"), .quickLook)
     }
 
     func testImageExtensionsSetMatchesMapping() {

@@ -43,6 +43,7 @@ enum FileInfoService {
         case .pdf: return "PDF 문서"
         case .office: return "\(ext) 오피스 문서"
         case .media: return DocumentKind.isVideo(url) ? "\(ext) 동영상" : "\(ext) 오디오"
+        case .quickLook: return ext.isEmpty ? "파일" : "\(ext) 파일"
         }
     }
 
@@ -68,7 +69,7 @@ enum FileInfoService {
             let metadata = await MediaMetadataService.load(url: url)
             let duration = MediaMetadataService.formatDuration(metadata.durationSeconds)
             return duration.isEmpty ? nil : "길이 \(duration)"
-        case .markdown, .office:
+        case .markdown, .office, .quickLook:
             return nil
         }
     }
