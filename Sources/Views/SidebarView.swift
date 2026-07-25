@@ -525,6 +525,10 @@ struct FileTreeContextMenu: View {
     private var isFavorited: Bool {
         appState.favorites.contains(where: { $0.url == item.url })
     }
+
+    private var isQuickMoveFolder: Bool {
+        appState.isQuickMoveFolder(item.url)
+    }
     
     var body: some View {
         if appState.fileSelection.count > 1 && appState.fileSelection.contains(item.url) {
@@ -545,6 +549,11 @@ struct FileTreeContextMenu: View {
             appState.fileInfoRequest = FileInfoRequest(url: item.url)
         } label: {
             Label("정보 보기", systemImage: "info.circle")
+        }
+        Button {
+            appState.promptQuickMove(urls: [item.url])
+        } label: {
+            Label("빠른 이동…", systemImage: "bolt.badge.a")
         }
         if !item.isDirectory {
             Button {
@@ -583,6 +592,22 @@ struct FileTreeContextMenu: View {
                 appState.showSendToVault = true
             } label: {
                 Label("Send Folder to Vault…", systemImage: "paperplane")
+            }
+
+            if isQuickMoveFolder {
+                Button {
+                    if let entry = appState.quickMoveFolders.first(where: { $0.url == item.url }) {
+                        appState.removeFromQuickMoveFolders(entry)
+                    }
+                } label: {
+                    Label("빠른 이동 목록에서 제거", systemImage: "bolt.slash")
+                }
+            } else {
+                Button {
+                    appState.addToQuickMoveFolders(item.url)
+                } label: {
+                    Label("빠른 이동 목록에 추가", systemImage: "bolt")
+                }
             }
 
             Divider()
@@ -730,6 +755,25 @@ struct FavoritesListView: View {
                         }
                     }
                     .contextMenu {
+                        var isDirectory: ObjCBool = false
+                        let exists = FileManager.default.fileExists(atPath: favorite.url.path, isDirectory: &isDirectory)
+                        if exists && isDirectory.boolValue {
+                            if appState.isQuickMoveFolder(favorite.url) {
+                                Button {
+                                    if let entry = appState.quickMoveFolders.first(where: { $0.url == favorite.url }) {
+                                        appState.removeFromQuickMoveFolders(entry)
+                                    }
+                                } label: {
+                                    Label("빠른 이동 목록에서 제거", systemImage: "bolt.slash")
+                                }
+                            } else {
+                                Button {
+                                    appState.addToQuickMoveFolders(favorite.url)
+                                } label: {
+                                    Label("빠른 이동 목록에 추가", systemImage: "bolt")
+                                }
+                            }
+                        }
                         Button(role: .destructive) {
                             appState.removeFromFavorites(favorite)
                         } label: {

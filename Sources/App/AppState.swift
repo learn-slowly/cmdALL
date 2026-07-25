@@ -117,6 +117,8 @@ final class AppState {
     // Modals & Dialogs
     var showCommandPalette: Bool = false
     var showSendToVault: Bool = false
+    var showQuickMove: Bool = false
+    var quickMoveTargets: [URL] = []
     var showVaultManager: Bool = false
     var showQuickCapture: Bool = false
     var showOmnisearch: Bool = false
@@ -3118,6 +3120,14 @@ final class AppState {
 
     func isQuickMoveFolder(_ url: URL) -> Bool {
         quickMoveFolders.contains(where: { $0.url == url })
+    }
+
+    /// "빠른 이동…" — 선택 파일을 등록된 목적지 목록에서 고르게 한다. urls nil이면 현재 선택.
+    func promptQuickMove(urls: [URL]? = nil) {
+        let targets = urls ?? Array(fileSelection)
+        guard !targets.isEmpty else { return }
+        quickMoveTargets = targets
+        showQuickMove = true
     }
 
     // MARK: - Office Conversion

@@ -70,4 +70,31 @@ final class AppQuickMoveTests: XCTestCase {
             XCTAssertFalse(same, "\(shortcut)와 단축키가 겹친다")
         }
     }
+
+    func test빠른이동요청하면대상과시트상태가세팅된다() {
+        appState.fileSelection = [folder]
+        appState.promptQuickMove()
+        XCTAssertTrue(appState.showQuickMove)
+        XCTAssertEqual(appState.quickMoveTargets, [folder])
+    }
+
+    func test선택이비어있으면빠른이동요청은무시된다() {
+        appState.fileSelection = []
+        appState.promptQuickMove()
+        XCTAssertFalse(appState.showQuickMove)
+    }
+
+    func test목적지선택하면기존배치이동을탄다() async {
+        let dest = FileManager.default.temporaryDirectory
+            .appendingPathComponent("quickmove-dest-\(UUID().uuidString)")
+        try? FileManager.default.createDirectory(at: dest, withIntermediateDirectories: true)
+        let file = folder.appendingPathComponent("a.txt")
+        try? "x".write(to: file, atomically: true, encoding: .utf8)
+
+        appState.promptQuickMove(urls: [file])
+        _ = await appState.performBatchMove(urls: appState.quickMoveTargets, to: dest)
+
+        XCTAssertTrue(FileManager.default.fileExists(atPath: dest.appendingPathComponent("a.txt").path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: file.path))
+    }
 }

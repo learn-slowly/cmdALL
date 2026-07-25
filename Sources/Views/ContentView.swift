@@ -126,6 +126,9 @@ struct ContentView: View {
         .sheet(isPresented: $state.showFileOpsHistory) {
             FileOpsHistoryView()
         }
+        .sheet(isPresented: $state.showQuickMove) {
+            QuickMoveSheet()
+        }
         .alert(
             "Something went wrong",
             isPresented: Binding(

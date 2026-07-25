@@ -21,6 +21,11 @@ struct BatchSelectionMenu: View {
         } label: {
             Label("\(count)개 항목 폴더로 이동…", systemImage: "folder")
         }
+        Button {
+            appState.promptQuickMove(urls: targets)
+        } label: {
+            Label("빠른 이동…", systemImage: "bolt.badge.a")
+        }
         // 폴더 셀 위에서 우클릭했고 페이스트보드에 파일이 있으면 붙여넣기(단건 메뉴 패리티).
         if item.isDirectory && !FilePasteboard.readFileURLs().isEmpty {
             Button {

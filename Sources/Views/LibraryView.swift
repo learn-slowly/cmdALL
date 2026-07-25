@@ -421,6 +421,11 @@ struct LibraryCellContextMenu: View {
         } label: {
             Label("정보 보기", systemImage: "info.circle")
         }
+        Button {
+            appState.promptQuickMove(urls: [item.url])
+        } label: {
+            Label("빠른 이동…", systemImage: "bolt.badge.a")
+        }
         if !item.isDirectory {
             Button {
                 appState.requestWikiIngest(source: item.url)
@@ -439,6 +444,21 @@ struct LibraryCellContextMenu: View {
                     appState.pasteFromPasteboard(move: false, into: item.url)
                 } label: {
                     Label("이 폴더에 붙여넣기", systemImage: "doc.on.clipboard")
+                }
+            }
+            if appState.isQuickMoveFolder(item.url) {
+                Button {
+                    if let entry = appState.quickMoveFolders.first(where: { $0.url == item.url }) {
+                        appState.removeFromQuickMoveFolders(entry)
+                    }
+                } label: {
+                    Label("빠른 이동 목록에서 제거", systemImage: "bolt.slash")
+                }
+            } else {
+                Button {
+                    appState.addToQuickMoveFolders(item.url)
+                } label: {
+                    Label("빠른 이동 목록에 추가", systemImage: "bolt")
                 }
             }
         }

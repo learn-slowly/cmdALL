@@ -188,6 +188,11 @@ struct CmdMDApp: App {
                 }
                 .appShortcut(appState.keyBinding(for: .fileInfo))
 
+                Button("빠른 이동…") {
+                    appState.promptQuickMove()
+                }
+                .appShortcut(appState.keyBinding(for: .quickMove))
+
                 Button("파일 작업 기록") {
                     appState.showFileOpsHistory = true
                 }
