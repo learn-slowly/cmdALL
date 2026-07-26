@@ -1,56 +1,55 @@
 import SwiftUI
 import AppKit
 
-// MARK: - CMDS Brand Color System (mirrors vault "CMDS Color System" v2.5)
+// MARK: - CMDS Brand Color System (cmdALL fork palette)
 //
-// Single source of truth for CMDSPACE branding inside CmdMD. Corporate Identity
-// is Dark Green (#134538), pinned for all CI touchpoints. Dark mode promotes
-// Pink (#E985A2) to the accent slot. Everything accent-colored in the UI should
-// resolve through `Color.cmdsAccent` so the whole app follows the active
-// appearance automatically — light → green, dark → pink — with no per-call-site
-// `colorScheme` branching.
+// Single source of truth for the cmdALL brand color system inside CmdMD. This
+// fork uses a dusty blue palette rather than the upstream CMDSPACE CI colors.
+// Light mode accent is dusty blue (#3d6a8a); dark mode accent is a lighter
+// dusty blue (#7aa2c9). Everything accent-colored in the UI should resolve
+// through `Color.cmdsAccent` so the whole app follows the active appearance
+// automatically — with no per-call-site `colorScheme` branching.
 
 enum CMDSBrand {
-    // Corporate Identity — fixed across light/dark.
-    static let green       = Color(hex: "134538")
-    static let greenHover  = Color(hex: "1a5d4b")
-    static let greenBright = Color(hex: "22896a")
-    static let greenGlow   = Color(hex: "2fb488")
-    static let green50     = Color(hex: "f1f7f4")
-    static let green100    = Color(hex: "dcebe3")
-    static let green200    = Color(hex: "bad9c9")
+    // Light-mode accent family (dusty blue).
+    static let green       = Color(hex: "3d6a8a")   // 예전 134538 — 이제 라이트모드 accent
+    static let greenHover  = Color(hex: "4a7fa3")   // 예전 1a5d4b
+    static let greenBright = Color(hex: "5b93b8")   // 예전 22896a
+    static let greenGlow   = Color(hex: "6fabd1")   // 예전 2fb488
+    static let green50     = Color(hex: "eef3f7")   // 예전 f1f7f4
+    static let green100    = Color(hex: "d7e5ee")   // 예전 dcebe3
+    static let green200    = Color(hex: "b3cbdc")   // 예전 bad9c9
 
-    // Dark-mode accent family.
-    static let pink        = Color(hex: "E985A2")
-    static let pinkLight   = Color(hex: "F4A4B8")
-    static let pinkDark    = Color(hex: "D16C8A")
-    static let pinkSoft    = Color(hex: "2b1922")
+    // Dark-mode accent family (lighter dusty blue).
+    static let pink        = Color(hex: "7aa2c9")   // 예전 E985A2 — 이제 다크모드 accent
+    static let pinkLight   = Color(hex: "9bb8d6")   // 예전 F4A4B8
+    static let pinkDark    = Color(hex: "5f87ab")   // 예전 D16C8A
+    static let pinkSoft    = Color(hex: "1f2733")   // 예전 2b1922
 
     // CMDS Process stage colors (used as semantic accents, e.g. routing).
-    static let connect     = Color(hex: "3b82f6")
-    static let merge       = Color(hex: "8b5cf6")
-    static let develop     = Color(hex: "f59e0b")
-    static let share       = Color(hex: "10b981")
+    static let connect     = Color(hex: "5b82ab")   // 예전 3b82f6, 채도 낮춘 블루
+    static let merge       = Color(hex: "8f7fa8")   // 예전 8b5cf6, 채도 낮춘 퍼플
+    static let develop     = Color(hex: "c9975a")   // 예전 f59e0b, 톤다운 앰버(계획서 명시값)
+    static let share       = Color(hex: "7a9a82")   // 예전 10b981, 채도 낮춘 세이지그린
 
     // Hex strings shared with the web preview CSS so the rendered document and
     // the native chrome use identical brand values.
-    static let greenHex = "#134538"
-    static let pinkHex  = "#E985A2"
+    static let greenHex = "#3d6a8a"   // 예전 #134538
+    static let pinkHex  = "#7aa2c9"   // 예전 #E985A2
 }
 
 // MARK: - Adaptive accent tokens
 
 extension Color {
-    /// The adaptive CMDS accent — Dark Green in light mode, Pink in dark mode.
+    /// The adaptive CMDS accent — Dusty Blue (#3d6a8a) in light mode, lighter Dusty Blue (#7aa2c9) in dark mode.
     /// Backed by a dynamic `NSColor`, so it re-resolves on appearance changes.
     static let cmdsAccent = Color(nsColor: .cmdsAccent)
 
     /// A faint tint of the accent for selected rows, hover fills, and chips.
     static let cmdsAccentSoft = Color(nsColor: .cmdsAccentSoft)
 
-    /// Text/icon color to place ON a solid accent fill. White over green (light),
-    /// near-black over pink (dark) — the CMDS `--accent-on` rule. White-on-pink
-    /// only reaches ~2.5:1; near-black-on-pink reaches ~7.7:1 (WCAG AA).
+    /// Text/icon color to place ON a solid accent fill. White over light dusty blue (light),
+    /// near-black over lighter dusty blue (dark) — the cmdALL `--accent-on` rule.
     static let cmdsAccentOn = Color(nsColor: .cmdsAccentOn)
 
     /// The CMDS green, fixed (used for brand marks / always-green affordances).
@@ -58,19 +57,19 @@ extension Color {
 }
 
 extension NSColor {
-    /// Dark Green (#134538) in light appearances, Pink (#E985A2) in dark.
+    /// Dusty Blue (#3d6a8a) in light appearances, lighter Dusty Blue (#7aa2c9) in dark.
     static let cmdsAccent = NSColor(name: NSColor.Name("CMDSAccent")) { appearance in
-        appearance.isDarkMode ? NSColor(hex: "E985A2") : NSColor(hex: "134538")
+        appearance.isDarkMode ? NSColor(hex: "7aa2c9") : NSColor(hex: "3d6a8a")
     }
 
     /// Translucent accent for subtle fills; alpha tuned per appearance.
     static let cmdsAccentSoft = NSColor(name: NSColor.Name("CMDSAccentSoft")) { appearance in
         appearance.isDarkMode
-            ? NSColor(hex: "E985A2").withAlphaComponent(0.18)
-            : NSColor(hex: "134538").withAlphaComponent(0.12)
+            ? NSColor(hex: "7aa2c9").withAlphaComponent(0.15)   // 예전 alpha 0.18 → 계획서 명시값 0.15로 변경
+            : NSColor(hex: "3d6a8a").withAlphaComponent(0.12)   // 라이트 alpha는 기존 0.12 그대로 유지(계획서에 라이트 값 명시 없어 변경 없음)
     }
 
-    /// On-accent text: white over green (light), near-black over pink (dark).
+    /// On-accent text: white over light dusty blue (light), near-black over lighter dusty blue (dark).
     static let cmdsAccentOn = NSColor(name: NSColor.Name("CMDSAccentOn")) { appearance in
         appearance.isDarkMode ? NSColor(hex: "0b0f0d") : NSColor(hex: "ffffff")
     }

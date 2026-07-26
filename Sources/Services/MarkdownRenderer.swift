@@ -716,9 +716,9 @@ class MarkdownRenderer {
     private var obsidianExtensionsCSS: String {
         """
         .wiki-link {
-            color: var(--link-color, #134538);
+            color: var(--link-color, \(CMDSBrand.greenHex));
             text-decoration: none;
-            border-bottom: 1px dashed var(--link-color, #134538);
+            border-bottom: 1px dashed var(--link-color, \(CMDSBrand.greenHex));
         }
         .wiki-link:hover {
             border-bottom-style: solid;
@@ -734,15 +734,15 @@ class MarkdownRenderer {
             font-style: italic;
         }
         .tag {
-            background: var(--tag-bg, #dcebe3);
-            color: var(--tag-color, #0d3529);
+            background: var(--tag-bg, #e3ebf1);
+            color: var(--tag-color, #2c4a5e);
             padding: 2px 8px;
             border-radius: 12px;
             font-size: 0.875em;
             font-weight: 500;
         }
         @media (prefers-color-scheme: dark) {
-            .tag { background: var(--tag-bg, #2b1922); color: var(--tag-color, #F4A4B8); }
+            .tag { background: var(--tag-bg, #1f2a35); color: var(--tag-color, #a9c4dc); }
         }
         mark {
             background: rgba(255, 208, 0, 0.4);
@@ -1169,13 +1169,13 @@ enum PreviewTheme: String, CaseIterable, Codable {
             --bg-secondary: #f1f7f4;
             --text-primary: #0a0d0b;
             --text-secondary: #4a544f;
-            --link-color: #134538;
+            --link-color: \(CMDSBrand.greenHex);
             --border-color: #e6e8e6;
             --code-bg: #eef1ee;
             --code-fg: #0d3529;
-            --tag-bg: #dcebe3;
-            --tag-color: #0d3529;
-            --accent: #134538;
+            --tag-bg: #e3ebf1;
+            --tag-color: #2c4a5e;
+            --accent: \(CMDSBrand.greenHex);
         }
         @media (prefers-color-scheme: dark) {
             :root {
@@ -1183,13 +1183,13 @@ enum PreviewTheme: String, CaseIterable, Codable {
                 --bg-secondary: #0d1411;
                 --text-primary: #f2f4f3;
                 --text-secondary: #9aa39d;
-                --link-color: #E985A2;
+                --link-color: \(CMDSBrand.pinkHex);
                 --border-color: #1a231f;
                 --code-bg: #1c2420;
                 --code-fg: #8fe3c4;
-                --tag-bg: #2b1922;
-                --tag-color: #F4A4B8;
-                --accent: #E985A2;
+                --tag-bg: #1f2a35;
+                --tag-color: #a9c4dc;
+                --accent: \(CMDSBrand.pinkHex);
             }
         }
         body {
@@ -1217,7 +1217,7 @@ enum PreviewTheme: String, CaseIterable, Codable {
         td code { font-size: 0.84em; }
         th { background: var(--accent); color: #fff; font-weight: 600; }
         /* Inline code inside the colored header: a dark translucent pill with
-           white text reads cleanly on both the green (light) and pink (dark) bar. */
+           white text reads cleanly on both the light and dark accent bar. */
         th code { background: rgba(0, 0, 0, 0.32); color: #ffffff; border-color: transparent; }
         @media (prefers-color-scheme: dark) { th { color: #0b0f0d; } }
         img { max-width: 100%; border-radius: 10px; }
