@@ -1,10 +1,13 @@
 #!/usr/bin/env swift
-// cmd-docu 앱 아이콘 생성기.
-// 콘셉: 그라디언트 타일 + 여러 장 쌓인 흰 문서(앞장은 접힌 모서리·본문 줄) + AI 스파크.
+// cmd-docu(cmdALL) 앱 아이콘 생성기.
+// 콘셉: 짙은 청회색 배경 + ⌘(커맨드 키) 기호 + 중앙에 살짝 겹치는 별표(＊).
+// ⌘=명령, ＊=컴퓨터에서 익숙한 "전체/와일드카드" 기호 — 두 기호로 cmdALL을 은유.
+// 이 파일의 색·비율 상수는 Sources/Models/Brand.swift의 DocBrand와 값을 공유한다
+// (SPM 모듈 경계 밖 독립 스크립트라 실제 코드 공유는 불가 — 값을 바꿀 때 두 곳을 함께 갱신할 것).
 // 사용:
-//   swift scripts/make_icon.swift <preview.png>                 # 1024 미리보기
-//   swift scripts/make_icon.swift <preview.png> --colors A,B,C  # 팔레트 지정(hex, 좌상→우하)
-//   swift scripts/make_icon.swift --install [--colors A,B,C]    # Resources/AppIcon.icns 생성
+//   swift scripts/make_icon.swift <preview.png>                        # 1024 미리보기
+//   swift scripts/make_icon.swift <preview.png> --colors BG,CMD,STAR    # 배경/⌘/별표 색 오버라이드(hex 3개)
+//   swift scripts/make_icon.swift --install [--colors BG,CMD,STAR]      # Resources/AppIcon.icns 생성
 import AppKit
 
 func c(_ hex: UInt32) -> NSColor {
@@ -13,33 +16,22 @@ func c(_ hex: UInt32) -> NSColor {
             blue: CGFloat(hex & 0xff) / 255, alpha: 1)
 }
 
-// 팔레트(좌상 → 중간 → 우하). --colors로 덮어쓸 수 있다.
-var palette: [NSColor] = [c(0x4338CA), c(0x6D5BE0), c(0x9333EA)] // 기본: 인디고→바이올렛
+// 배경 / ⌘ / 별표 색. --colors로 덮어쓸 수 있다.
+var bgColor = c(0x1c1e26)
+var cmdColor = c(0x7aa2c9)
+var starColor = c(0x9989c4)
 if let idx = CommandLine.arguments.firstIndex(of: "--colors"),
    idx + 1 < CommandLine.arguments.count {
     let hexes = CommandLine.arguments[idx + 1].split(separator: ",").compactMap { UInt32($0, radix: 16) }
-    if hexes.count == 3 { palette = hexes.map { c($0) } }
-}
-
-/// 둥근 사각형 path(접힌 모서리 옵션). 원점 좌하단 기준.
-func sheetPath(_ rect: CGRect, fold: CGFloat, rr: CGFloat) -> CGMutablePath {
-    let l = rect.minX, b = rect.minY, r = rect.maxX, t = rect.maxY
-    let p = CGMutablePath()
-    p.move(to: CGPoint(x: l, y: b + rr))
-    p.addArc(tangent1End: CGPoint(x: l, y: b), tangent2End: CGPoint(x: l + rr, y: b), radius: rr)
-    p.addArc(tangent1End: CGPoint(x: r, y: b), tangent2End: CGPoint(x: r, y: b + rr), radius: rr)
-    if fold > 0 {
-        p.addLine(to: CGPoint(x: r, y: t - fold))
-        p.addLine(to: CGPoint(x: r - fold, y: t))
-    } else {
-        p.addArc(tangent1End: CGPoint(x: r, y: t), tangent2End: CGPoint(x: r - rr, y: t), radius: rr)
+    if hexes.count == 3 {
+        bgColor = c(hexes[0])
+        cmdColor = c(hexes[1])
+        starColor = c(hexes[2])
     }
-    p.addArc(tangent1End: CGPoint(x: l, y: t), tangent2End: CGPoint(x: l, y: t - rr), radius: rr)
-    p.closeSubpath()
-    return p
 }
 
-func drawSymbol(_ name: String, into rect: CGRect, weight: NSFont.Weight = .regular) {
+/// SF Symbol을 지정 색으로 칠해 rect 안에 맞춰 그린다(비율 유지, 중앙 정렬).
+func drawSymbol(_ name: String, into rect: CGRect, weight: NSFont.Weight = .regular, color: NSColor = .white) {
     let cfg = NSImage.SymbolConfiguration(pointSize: rect.height, weight: weight)
     guard let base = NSImage(systemSymbolName: name, accessibilityDescription: nil)?
         .withSymbolConfiguration(cfg) else { return }
@@ -47,7 +39,7 @@ func drawSymbol(_ name: String, into rect: CGRect, weight: NSFont.Weight = .regu
     let tinted = NSImage(size: sz)
     tinted.lockFocus()
     base.draw(in: NSRect(origin: .zero, size: sz))
-    NSColor.white.set()
+    color.set()
     NSRect(origin: .zero, size: sz).fill(using: .sourceAtop)
     tinted.unlockFocus()
     let s = min(rect.width / sz.width, rect.height / sz.height)
@@ -62,67 +54,39 @@ func makeIcon(px: Int) -> CGImage? {
                               bytesPerRow: 0, space: cs,
                               bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
 
-    // 1) 둥근 타일 + 대각 그라디언트
+    // 1) 짙은 청회색 배경, macOS 표준 squircle 모서리(비율 유지)
     let radius = S * 0.235
-    ctx.saveGState()
     ctx.addPath(CGPath(roundedRect: CGRect(x: 0, y: 0, width: S, height: S),
                        cornerWidth: radius, cornerHeight: radius, transform: nil))
     ctx.clip()
-    let grad = CGGradient(colorsSpace: cs, colors: palette.map { $0.cgColor } as CFArray,
-                          locations: [0, 0.5, 1])!
-    ctx.drawLinearGradient(grad, start: CGPoint(x: 0, y: S), end: CGPoint(x: S, y: 0), options: [])
-    ctx.restoreGState()
+    ctx.setFillColor(bgColor.cgColor)
+    ctx.fill(CGRect(x: 0, y: 0, width: S, height: S))
 
-    // 2) 쌓인 문서 — 뒤 두 장은 좌상으로 살짝 비껴 흰색(반투명), 앞장은 접힌 모서리+본문 줄
-    let w = S * 0.40, h = S * 0.48
-    let frontX = S * 0.30, frontY = S * 0.16   // 앞장(가장 우하)
-    let dx = S * 0.055, dy = S * 0.055         // 뒤로 갈수록 좌상으로
-    let rr = S * 0.045
-
-    func sheet(_ i: Int, alpha: CGFloat) {
-        let rect = CGRect(x: frontX - CGFloat(i) * dx, y: frontY + CGFloat(i) * dy, width: w, height: h)
-        ctx.addPath(sheetPath(rect, fold: 0, rr: rr))
-        ctx.setFillColor(NSColor(white: 1, alpha: alpha).cgColor)
-        ctx.fillPath()
-    }
-    sheet(2, alpha: 0.55)
-    sheet(1, alpha: 0.78)
-
-    // 앞장
-    let front = CGRect(x: frontX, y: frontY, width: w, height: h)
-    let fold = S * 0.11
-    ctx.addPath(sheetPath(front, fold: fold, rr: rr))
-    ctx.setFillColor(NSColor.white.cgColor)
-    ctx.fillPath()
-    // 접힌 모서리 플랩(연한 그림자)
-    let flap = CGMutablePath()
-    flap.move(to: CGPoint(x: front.maxX - fold, y: front.maxY))
-    flap.addLine(to: CGPoint(x: front.maxX, y: front.maxY - fold))
-    flap.addLine(to: CGPoint(x: front.maxX - fold, y: front.maxY - fold))
-    flap.closeSubpath()
-    ctx.addPath(flap)
-    ctx.setFillColor(NSColor(white: 0.0, alpha: 0.16).cgColor)
-    ctx.fillPath()
-    // 본문 줄 3개(팔레트 짙은 색)
-    let lineColor = palette[0].cgColor
-    let lx = front.minX + w * 0.16
-    let lw = w * 0.60
-    let lh = S * 0.022
-    for (k, frac) in [0.30, 0.46, 0.62].enumerated() {
-        _ = k
-        let ly = front.minY + h * CGFloat(frac)
-        ctx.addPath(CGPath(roundedRect: CGRect(x: lx, y: ly, width: k == 2 ? lw * 0.7 : lw, height: lh),
-                           cornerWidth: lh / 2, cornerHeight: lh / 2, transform: nil))
-        ctx.setFillColor(lineColor)
-        ctx.fillPath()
-    }
-
-    // 3) AI 스파크(우상단, 흰색)
     let nsctx = NSGraphicsContext(cgContext: ctx, flipped: false)
     NSGraphicsContext.saveGraphicsState()
     NSGraphicsContext.current = nsctx
-    drawSymbol("sparkles", into: CGRect(x: S * 0.60, y: S * 0.62, width: S * 0.30, height: S * 0.30),
-               weight: .semibold)
+
+    // 2) ⌘ 기호 — 프레임의 82%, 중앙 배치
+    let cmdSize = S * 0.82
+    drawSymbol("command",
+               into: CGRect(x: S / 2 - cmdSize / 2, y: S / 2 - cmdSize / 2, width: cmdSize, height: cmdSize),
+               weight: .medium, color: cmdColor)
+
+    // 3) 별표(＊) — 프레임의 80%(⌘ 글리프 기준이 아니라 전체 프레임 기준. 사용자가 실시간
+    //    비교(62%→70%→90%→120%→80%)로 확정한 값이라 ⌘ 아래 가로줄과 의도적으로 겹친다),
+    //    수직으로 중앙에서 S*0.1357만큼 아래로. AppKit은 origin이 좌하단이라
+    //    drawY = centerY - S*0.1357 가 "아래로 이동"이 된다.
+    let starFontSize = S * 0.80
+    let starFont = NSFont.systemFont(ofSize: starFontSize, weight: .heavy)
+    let starAttrs: [NSAttributedString.Key: Any] = [.font: starFont, .foregroundColor: starColor]
+    let starStr = NSAttributedString(string: "＊", attributes: starAttrs)
+    let starBounds = starStr.boundingRect(with: NSSize(width: 10000, height: 10000),
+                                           options: [.usesLineFragmentOrigin])
+    let starCenterY = S / 2 - S * 0.1357
+    let starDrawX = S / 2 - starBounds.width / 2 - starBounds.minX
+    let starDrawY = starCenterY - starBounds.height / 2 - starBounds.minY
+    starStr.draw(at: NSPoint(x: starDrawX, y: starDrawY))
+
     NSGraphicsContext.restoreGraphicsState()
 
     return ctx.makeImage()
