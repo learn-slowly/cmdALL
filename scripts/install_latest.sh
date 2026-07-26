@@ -14,7 +14,7 @@
 #
 set -euo pipefail
 
-REPO="learn-slowly/cmd-docu"
+REPO="learn-slowly/cmdALL"
 APP="cmdALL.app"
 DEST="/Applications"
 ZIP_URL="https://github.com/$REPO/releases/latest/download/cmdALL-macos.zip"

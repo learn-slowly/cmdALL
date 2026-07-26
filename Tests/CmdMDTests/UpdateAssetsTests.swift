@@ -6,9 +6,9 @@ final class UpdateAssetsTests: XCTestCase {
 
     func testAssetAndSumsURLsUseGivenTag() {
         XCTAssertEqual(UpdateAssets.assetURL(tag: "v0.9.404").absoluteString,
-                       "https://github.com/learn-slowly/cmd-docu/releases/download/v0.9.404/cmdALL-macos.zip")
+                       "https://github.com/learn-slowly/cmdALL/releases/download/v0.9.404/cmdALL-macos.zip")
         XCTAssertEqual(UpdateAssets.sumsURL(tag: "v0.9.404").absoluteString,
-                       "https://github.com/learn-slowly/cmd-docu/releases/download/v0.9.404/SHA256SUMS.txt")
+                       "https://github.com/learn-slowly/cmdALL/releases/download/v0.9.404/SHA256SUMS.txt")
     }
 
     /// 실제 릴리스 파일 형식: "<64 hex>␣␣<파일명>" 두 줄(zip, dmg).

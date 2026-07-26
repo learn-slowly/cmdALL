@@ -10,7 +10,7 @@
 내용 검색(FTS5)·자료에 묻기(RAG)·PARA 라우팅·파일 관리로 이어집니다.
 Native Swift / SwiftUI · macOS 14+ · light & dark.
 
-**[Download](https://github.com/learn-slowly/cmd-docu/releases/latest)**
+**[Download](https://github.com/learn-slowly/cmdALL/releases/latest)**
 
 <br/>
 
@@ -20,7 +20,7 @@ Native Swift / SwiftUI · macOS 14+ · light & dark.
 
 ---
 
-> **이 저장소는 [CmdMD](https://github.com/johnfkoo951/CmdMD)(MIT, 구요한/CMDSPACE)의 포크 `cmdALL`입니다(저장소명은 `cmd-docu`).** 원본 프로젝트: [cmdmd.cmdspace.work](https://cmdmd.cmdspace.work) · [Website source](https://github.com/johnfkoo951/CmdMD-web)
+> **이 저장소는 [CmdMD](https://github.com/johnfkoo951/CmdMD)(MIT, 구요한/CMDSPACE)의 포크 `cmdALL`입니다.** 원본 프로젝트: [cmdmd.cmdspace.work](https://cmdmd.cmdspace.work) · [Website source](https://github.com/johnfkoo951/CmdMD-web)
 > 원본의 마크다운 리더 위에 **이미지·PDF 보기**, **한글/오피스(HWP·DOCX·XLSX) 읽기**, **HWP/HWPX 편집·양식 채우기(서식 보존)**, **종류를 가로지르는 내용 검색(FTS5 인덱스·한국어 부분일치)**, **Claude 연동(`claude -p`) — 문서 질의·자료에 묻기(RAG)·PARA 라우팅·폴더 정리**, **PARA 라이브러리 뷰**를 더한 개인용 도구입니다.
 > 문서 엔진은 외부 CLI [kordoc](https://www.npmjs.com/package/kordoc), AI는 로컬 `claude` CLI를 `Process`로 호출합니다(앱에 재구현하지 않음).
 > 원작자와 라이선스(MIT) 고지는 그대로 유지합니다. 원본과 무관하며 원작자의 보증을 받지 않았습니다.
@@ -94,7 +94,7 @@ prompt at all**. It grabs the latest release zip, checks its SHA‑256 against `
 installs into `/Applications`:
 
 ```bash
-curl -fsSLO https://raw.githubusercontent.com/learn-slowly/cmd-docu/main/scripts/install_latest.sh
+curl -fsSLO https://raw.githubusercontent.com/learn-slowly/cmdALL/main/scripts/install_latest.sh
 bash install_latest.sh
 ```
 
@@ -130,8 +130,8 @@ Or allow it once in **System Settings → Privacy & Security**, where the blocke
 Requires Xcode 15+ (Swift 5.9+) on macOS 14+.
 
 ```bash
-git clone https://github.com/learn-slowly/cmd-docu.git
-cd cmd-docu
+git clone https://github.com/learn-slowly/cmdALL.git
+cd cmdALL
 
 swift build                         # debug build
 swift run                           # run it

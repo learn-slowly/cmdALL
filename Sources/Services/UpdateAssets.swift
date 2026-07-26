@@ -3,7 +3,7 @@ import Foundation
 /// 릴리스 자산 URL 조립·체크섬 파싱·오류 문구(전부 순수 — 네트워크·파일시스템 접근 없음).
 enum UpdateAssets {
     /// 포크 저장소다. 원작자 저장소(CmdMD)가 아니다.
-    static let repository = "learn-slowly/cmd-docu"
+    static let repository = "learn-slowly/cmdALL"
     static let assetName = "cmdALL-macos.zip"
     static let sumsName = "SHA256SUMS.txt"
 

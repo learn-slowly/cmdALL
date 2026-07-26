@@ -730,7 +730,7 @@ final class AppState {
             do {
                 // 포크 저장소의 릴리스를 본다(원본 CmdMD가 아님). 포크에 릴리스가
                 // 없으면 업데이트를 권하지 않는다 — 원본 릴리스로 덮어쓰는 사고 방지.
-                var request = URLRequest(url: URL(string: "https://api.github.com/repos/learn-slowly/cmd-docu/releases/latest")!)
+                var request = URLRequest(url: URL(string: "https://api.github.com/repos/learn-slowly/cmdALL/releases/latest")!)
                 request.setValue("cmdALL", forHTTPHeaderField: "User-Agent")
                 request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
                 request.timeoutInterval = 10
@@ -745,7 +745,7 @@ final class AppState {
                 UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: throttleKey)
                 latestTag = tag
                 latestVersion = tag.hasPrefix("v") ? String(tag.dropFirst()) : tag
-                updateURL = URL(string: (json["html_url"] as? String) ?? "https://github.com/learn-slowly/cmd-docu/releases/latest")
+                updateURL = URL(string: (json["html_url"] as? String) ?? "https://github.com/learn-slowly/cmdALL/releases/latest")
 
                 if Self.isVersion(tag, newerThan: current) {
                     updateAvailable = true
