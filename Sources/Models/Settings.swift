@@ -55,6 +55,15 @@ struct PreviewSettings: Codable, Equatable {
     }
 }
 
+// MARK: - AI 로그인
+
+/// 폴더 정리·질의·위키 정리에 쓸 AI. 계정이 둘 다 있어도 한 번에 하나만 활성화된다 —
+/// 한쪽으로 로그인하면 다른 쪽은 자동 로그아웃된다(AppState.claudeLogin/codexLogin).
+enum AIProvider: String, CaseIterable, Codable {
+    case claude = "Claude"
+    case chatgpt = "ChatGPT"
+}
+
 // MARK: - App Settings
 
 struct AppSettings: Codable, Equatable {
@@ -91,6 +100,9 @@ struct AppSettings: Codable, Equatable {
     var defaultSendFolder: String = "Inbox"
     var conflictResolution: FileConflictResolution = .rename
     var injectFrontmatterByDefault: Bool = true
+
+    // MARK: AI 로그인
+    var aiProvider: AIProvider = .claude   // 폴더 정리·질의·위키 정리에 쓸 활성 AI
 
     // MARK: PARA 스마트 라우팅
     var paraVaultId: UUID? = nil           // 지정 PARA 볼트
@@ -167,6 +179,7 @@ struct AppSettings: Codable, Equatable {
         defaultSendFolder = try c.decodeIfPresent(String.self, forKey: .defaultSendFolder) ?? d.defaultSendFolder
         conflictResolution = try c.decodeIfPresent(FileConflictResolution.self, forKey: .conflictResolution) ?? d.conflictResolution
         injectFrontmatterByDefault = try c.decodeIfPresent(Bool.self, forKey: .injectFrontmatterByDefault) ?? d.injectFrontmatterByDefault
+        aiProvider = try c.decodeIfPresent(AIProvider.self, forKey: .aiProvider) ?? d.aiProvider
         paraVaultId = try c.decodeIfPresent(UUID.self, forKey: .paraVaultId) ?? d.paraVaultId
         paraFolders = try c.decodeIfPresent([ParaFolder].self, forKey: .paraFolders) ?? d.paraFolders
         claudeRoutingEnabled = try c.decodeIfPresent(Bool.self, forKey: .claudeRoutingEnabled) ?? d.claudeRoutingEnabled

@@ -235,6 +235,11 @@ final class AppState {
     var claudeAuthChecked: Bool = false       // 한 번이라도 status를 조회했는가
     var claudeAuthBusy: Bool = false
 
+    // 챗GPT(codex) 인증 상태(설정 화면) — claudeAuth*와 동일한 3종 세트.
+    var codexAuthStatus: CodexAuthStatus?
+    var codexAuthChecked: Bool = false
+    var codexAuthBusy: Bool = false
+
     // Status
     var errorMessage: String?
     var toastMessage: String?
@@ -253,6 +258,10 @@ final class AppState {
     private let exportService: ExportService
     private let kordocService = KordocService()
     private let claudeService = ClaudeService()
+    private let codexService = CodexService()
+    /// 클로드·챗GPT 중 로그인된(설정에 저장된) 쪽으로만 질의를 위임 — cleanupService 등은
+    /// 이 라우터 하나만 주입받아 provider 전환 시 재구성 없이 바로 반영된다(init 하단 참고).
+    private let aiRouter: AIRouterService
     private let kordocWriteService = KordocWriteService()
     private let kordocFillService = KordocFillService()
     private let moveLogStore: MoveLogStore
@@ -555,6 +564,31 @@ final class AppState {
         }
     }
 
+    /// ClaudeError를 챗GPT(codex) 맥락의 한국어 안내로 변환한다(순수 함수). 에러 타입은
+    /// 공용 ClaudeError를 재사용하지만(CodexService 참고) 사용자에게 보여줄 이름은 다르게 한다.
+    static func codexErrorMessage(_ error: Error) -> String {
+        switch error {
+        case ClaudeError.toolNotFound:
+            return "codex CLI를 찾을 수 없습니다. 설치 후 설정에서 ‘브라우저로 로그인’을 눌러 로그인하고 다시 시도하세요."
+        case ClaudeError.notLoggedIn:
+            return "ChatGPT 로그인이 필요합니다. 설정에서 ‘브라우저로 로그인’을 눌러 로그인한 뒤 다시 시도하세요."
+        case ClaudeError.creditExhausted:
+            return "ChatGPT 사용량이 소진되었습니다. 잠시 후 다시 시도하세요."
+        case ClaudeError.timeout:
+            return "응답이 너무 오래 걸려 중단했습니다."
+        case ClaudeError.failed(let m):
+            return "ChatGPT 호출에 실패했습니다: \(m)"
+        default:
+            return "ChatGPT 호출에 실패했습니다: \(error.localizedDescription)"
+        }
+    }
+
+    /// 현재 활성 AI(설정의 aiProvider)에 맞는 에러 안내를 고른다 — 폴더 정리·질의·위키
+    /// 기능처럼 provider 무관 공용 코드에서 쓴다.
+    static func aiErrorMessage(_ error: Error, provider: AIProvider) -> String {
+        provider == .claude ? claudeErrorMessage(error) : codexErrorMessage(error)
+    }
+
     // MARK: - PARA 스마트 라우팅
 
     /// PARA 볼트와 폴더가 모두 설정됐고 그 볼트가 실제 등록돼 있는가(버튼 활성/가드용).
@@ -583,14 +617,14 @@ final class AppState {
         let prompt = RouteHelper.buildRoutePrompt(destinations: dests)
         let context = RouteHelper.buildRouteContext(noteBody: noteBody)
         do {
-            let out = try await claudeService.ask(prompt: prompt, context: context)
+            let out = try await aiRouter.ask(prompt: prompt, context: context)
             if let suggestion = RouteHelper.parseRouteSuggestion(out, destinations: dests) {
                 return suggestion
             }
-            claudeRouteError = "Claude 제안을 해석하지 못했습니다. 직접 골라 주세요."
+            claudeRouteError = "AI 제안을 해석하지 못했습니다. 직접 골라 주세요."
             return nil
         } catch {
-            claudeRouteError = Self.claudeErrorMessage(error)
+            claudeRouteError = Self.aiErrorMessage(error, provider: settings.aiProvider)
             return nil
         }
     }
@@ -623,18 +657,18 @@ final class AppState {
         Task { @MainActor in
             do {
                 var acc = ""
-                let stream = await claudeService.askStream(prompt: prompt, context: context)
+                let stream = await aiRouter.askStream(prompt: prompt, context: context)
                 for try await chunk in stream {
                     acc += chunk
                     claudeResponse = acc          // @Observable — 패널이 실시간 갱신
                 }
                 if acc.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     claudeResponse = nil
-                    claudeError = "Claude가 빈 응답을 반환했습니다. 다시 시도해 주세요."
+                    claudeError = "AI가 빈 응답을 반환했습니다. 다시 시도해 주세요."
                 }
             } catch {
                 claudeResponse = nil
-                claudeError = Self.claudeErrorMessage(error)
+                claudeError = Self.aiErrorMessage(error, provider: settings.aiProvider)
             }
             claudeBusy = false
         }
@@ -909,10 +943,13 @@ final class AppState {
 
         moveLogStore = MoveLogStore(directory: appDir)
         fileOpsLogStore = FileOpsLogStore(directory: appDir)
-        cleanupService = CleanupService(claude: claudeService, kordoc: kordocService)
-        wikiIngestService = WikiIngestService(claude: claudeService, kordoc: kordocService)
+        // provider는 임시로 .claude — 실제 값은 loadUserData() 이후에나 알 수 있어(설정 파일
+        // 읽기가 아래에서 늦게 일어남) 로드 후 aiRouter.setProvider로 동기화한다.
+        aiRouter = AIRouterService(claude: claudeService, codex: codexService, provider: .claude)
+        cleanupService = CleanupService(claude: aiRouter, kordoc: kordocService)
+        wikiIngestService = WikiIngestService(claude: aiRouter, kordoc: kordocService)
         wikiBackupStore = WikiBackupStore(directory: appDir)
-        wikiRulesService = WikiRulesService(claude: claudeService)
+        wikiRulesService = WikiRulesService(claude: aiRouter)
         moveExecutor = MoveExecutor(store: moveLogStore)
 
         fileService = FileService()
@@ -922,11 +959,14 @@ final class AppState {
         let idx = SearchIndex(dbURL: appDir.appendingPathComponent("searchindex.sqlite"))
         self.searchIndex = idx
         self.searchIndexer = SearchIndexer(index: idx, kordoc: kordocService)
-        self.ragService = RagService(index: idx, claude: claudeService, kordoc: kordocService)
+        self.ragService = RagService(index: idx, claude: aiRouter, kordoc: kordocService)
 
         AppState.shared = self
 
         loadUserData()
+        // 설정에 저장된 provider를 라우터에 동기화 — 위에서 만든 aiRouter는 임시 .claude였다.
+        let savedProvider = settings.aiProvider
+        Task { await self.aiRouter.setProvider(savedProvider) }
         // 검색 인덱스 스키마가 바뀌어 재구성됐으면 등록 폴더를 자동 재인덱싱(1회).
         Task { @MainActor in await self.reindexAfterSchemaMigration() }
         // 등록 폴더 파일 감시 시작(앱 시작 시 1회).
@@ -1688,7 +1728,7 @@ final class AppState {
         case .noEvidence:
             ragMessage = "자료에서 관련 내용을 찾지 못했습니다."
         case .failed(let e):
-            ragMessage = AppState.claudeErrorMessage(e)
+            ragMessage = AppState.aiErrorMessage(e, provider: settings.aiProvider)
         }
     }
 
@@ -3563,9 +3603,9 @@ final class AppState {
             // 스킴만 제시하고 사용자 편집을 기다린다. plan은 아직 만들지 않는다.
             cleanupPlan = nil
         } catch let error as ClaudeError {
-            cleanupError = Self.claudeErrorMessage(error)
+            cleanupError = Self.aiErrorMessage(error, provider: settings.aiProvider)
         } catch {
-            showToast("Claude 응답을 해석하지 못했습니다")
+            showToast("AI 응답을 해석하지 못했습니다")
         }
     }
 
@@ -3593,9 +3633,9 @@ final class AppState {
             cleanupPlan = CleanupPlan(mode: mode, scheme: scheme,
                                       moves: CleanupPlanner.buildMoves(from: assignments))
         } catch let error as ClaudeError {
-            cleanupError = Self.claudeErrorMessage(error)
+            cleanupError = Self.aiErrorMessage(error, provider: settings.aiProvider)
         } catch {
-            showToast("Claude 응답을 해석하지 못했습니다")
+            showToast("AI 응답을 해석하지 못했습니다")
         }
     }
 
@@ -3771,7 +3811,7 @@ final class AppState {
         } catch is CancellationError {
             // 사용자 중단(시트 "중단"·닫기) — 에러가 아니므로 조용히 끝낸다(무쓰기).
         } catch {
-            wikiIngestError = Self.claudeErrorMessage(error)
+            wikiIngestError = Self.aiErrorMessage(error, provider: settings.aiProvider)
         }
     }
 
@@ -3851,7 +3891,7 @@ final class AppState {
         return f
     }()
 
-    // MARK: - Claude 인증 (설정 화면)
+    // MARK: - AI 로그인 (설정 화면) — 클로드 · 챗GPT 중 한 번에 하나만 활성화
 
     /// `claude auth status`를 조회해 화면 상태를 갱신한다.
     @MainActor
@@ -3862,12 +3902,27 @@ final class AppState {
         claudeAuthChecked = true
     }
 
-    /// `claude auth login`(브라우저 로그인)을 실행하고 끝나면 상태를 새로고침한다.
+    /// `codex login status`를 조회해 화면 상태를 갱신한다.
+    @MainActor
+    func refreshCodexAuth() async {
+        codexAuthBusy = true
+        defer { codexAuthBusy = false }
+        codexAuthStatus = await codexService.authStatus()
+        codexAuthChecked = true
+    }
+
+    /// `claude auth login`(브라우저 로그인) 실행. 성공하면 챗GPT는 자동 로그아웃하고 활성
+    /// AI를 클로드로 전환한다 — 계정이 둘 다 있어도 한 번에 하나만 쓴다는 요구사항(설정 화면
+    /// 경고 문구와 짝) 때문. 로그인 자체가 실패하면 provider는 그대로 둔다.
     @MainActor
     func claudeLogin() async {
         claudeAuthBusy = true
         do {
             try await claudeService.login()
+            try? await codexService.logout()   // best-effort — 실패해도 클로드 전환은 진행
+            settings.aiProvider = .claude
+            await aiRouter.setProvider(.claude)
+            saveUserData()
         } catch let error as ClaudeError {
             errorMessage = Self.claudeErrorMessage(error)
         } catch {
@@ -3875,15 +3930,47 @@ final class AppState {
         }
         claudeAuthBusy = false
         await refreshClaudeAuth()
+        await refreshCodexAuth()   // 로그인 성공 시 챗GPT가 로그아웃됐으므로 화면도 갱신
     }
 
-    /// 로그아웃 후 상태를 새로고침한다.
+    /// `codex login`(브라우저 로그인) 실행. 성공하면 클로드는 자동 로그아웃하고 활성 AI를
+    /// 챗GPT로 전환한다(claudeLogin과 대칭 — 위 주석 참고).
+    @MainActor
+    func codexLogin() async {
+        codexAuthBusy = true
+        do {
+            try await codexService.login()
+            try? await claudeService.logout()   // best-effort
+            settings.aiProvider = .chatgpt
+            await aiRouter.setProvider(.chatgpt)
+            saveUserData()
+        } catch let error as ClaudeError {
+            errorMessage = Self.codexErrorMessage(error)
+        } catch {
+            errorMessage = "ChatGPT 로그인에 실패했습니다."
+        }
+        codexAuthBusy = false
+        await refreshCodexAuth()
+        await refreshClaudeAuth()
+    }
+
+    /// 로그아웃 후 상태를 새로고침한다. (다른 provider·활성 AI 선택은 건드리지 않는다 —
+    /// 로그인 전환과 달리 로그아웃은 그 서비스 하나에 한정된 명시적 동작.)
     @MainActor
     func claudeLogout() async {
         claudeAuthBusy = true
         try? await claudeService.logout()
         claudeAuthBusy = false
         await refreshClaudeAuth()
+    }
+
+    /// 로그아웃 후 상태를 새로고침한다.
+    @MainActor
+    func codexLogout() async {
+        codexAuthBusy = true
+        try? await codexService.logout()
+        codexAuthBusy = false
+        await refreshCodexAuth()
     }
 
     func showToast(_ message: String) {

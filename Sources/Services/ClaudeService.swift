@@ -15,6 +15,11 @@ protocol ClaudeAsking: Sendable {
     /// 호출별 타임아웃 지정 — 출력이 긴 작업(위키 병합=페이지 전문 재생성)이 기본 120s를
     /// 구조적으로 초과해 도입(2026-07-07 실측: 138행 페이지 병합 6연속 타임아웃).
     func ask(prompt: String, context: String, timeout: TimeInterval) async throws -> String
+    /// "Ask Claude" 패널의 스트리밍 인터페이스 — AIRouterService가 provider(클로드/챗GPT) 무관
+    /// 하나의 타입으로 dispatch할 수 있게 프로토콜 요구사항으로 뺐다(2026-07-26 챗GPT 로그인
+    /// 추가 때 도입). 기본 구현은 ask()의 결과를 한 번에 yield(아래 확장) — 실시간 델타가
+    /// 있는 타입(ClaudeService)은 자기 구현으로 이를 대체한다.
+    func askStream(prompt: String, context: String) async -> AsyncThrowingStream<String, Error>
 }
 
 extension ClaudeAsking {
@@ -22,6 +27,23 @@ extension ClaudeAsking {
     /// 소스 호환 유지. 실제 시간 제한은 ClaudeService의 구체 구현만 갖는다.
     func ask(prompt: String, context: String, timeout: TimeInterval) async throws -> String {
         try await ask(prompt: prompt, context: context)
+    }
+
+    /// 기본 구현: 델타 스트리밍이 없는 타입(CodexService·테스트 가짜)이 ask()의 최종 결과를
+    /// 한 번에 yield하게 한다 — "타이핑 효과 없이 한 번에 표시"되는 정직한 폴백.
+    func askStream(prompt: String, context: String) async -> AsyncThrowingStream<String, Error> {
+        AsyncThrowingStream { continuation in
+            let task = Task {
+                do {
+                    let text = try await self.ask(prompt: prompt, context: context)
+                    if !text.isEmpty { continuation.yield(text) }
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
     }
 }
 

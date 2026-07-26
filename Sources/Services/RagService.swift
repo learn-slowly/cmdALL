@@ -4,10 +4,10 @@ import Foundation
 /// 근거가 0건이면 Claude를 호출하지 않는다(무근거 생성 차단·크레딧 절약).
 actor RagService {
     private let index: SearchIndex
-    private let claude: ClaudeService
+    private let claude: any ClaudeAsking
     private let kordoc: KordocService
 
-    init(index: SearchIndex, claude: ClaudeService, kordoc: KordocService) {
+    init(index: SearchIndex, claude: any ClaudeAsking, kordoc: KordocService) {
         self.index = index
         self.claude = claude
         self.kordoc = kordoc

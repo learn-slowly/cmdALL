@@ -118,6 +118,16 @@ struct GeneralSettingsView: View {
             }
 
             Section {
+                Text("지금 폴더 정리·질문·자료 검색은 **\(appState.settings.aiProvider == .claude ? "클로드" : "챗GPT")**를 쓰고 있습니다.")
+                    .font(.callout)
+            } header: {
+                Text("AI 로그인")
+            } footer: {
+                Text("⚠️ 클로드·챗GPT 중 하나로 로그인하면 다른 하나는 자동으로 로그아웃됩니다(한 번에 하나만 사용). 이 컴퓨터에 설치된 프로그램 자체의 로그인이라, 이 앱이 아닌 다른 곳(터미널 등)에서 같은 로그인을 쓰고 있었다면 그것도 함께 로그아웃됩니다. 되돌리려면 그 프로그램에서 다시 로그인하면 됩니다.")
+                    .font(.caption)
+            }
+
+            Section {
                 claudeStatusRow
                 HStack {
                     if let s = appState.claudeAuthStatus, s.loggedIn {
@@ -139,6 +149,27 @@ struct GeneralSettingsView: View {
             }
 
             Section {
+                codexStatusRow
+                HStack {
+                    if let s = appState.codexAuthStatus, s.loggedIn {
+                        Button("로그아웃") { Task { await appState.codexLogout() } }
+                    } else {
+                        Button("브라우저로 로그인") { Task { await appState.codexLogin() } }
+                    }
+                    Button("상태 새로고침") { Task { await appState.refreshCodexAuth() } }
+                    if appState.codexAuthBusy {
+                        ProgressView().controlSize(.small)
+                    }
+                }
+                .disabled(appState.codexAuthBusy)
+            } header: {
+                Text("ChatGPT")
+            } footer: {
+                Text("폴더 정리·라우팅·질의는 로컬 codex CLI를 씁니다. ‘브라우저로 로그인’을 누르면 챗GPT 계정 로그인 페이지가 열립니다. 별도 API 키는 필요 없습니다.")
+                    .font(.caption)
+            }
+
+            Section {
                 LabeledContent("Version", value: AppInfo.versionLabel)
                 LabeledContent("Fork by", value: AppInfo.forkMaker)
                 LabeledContent("Original", value: AppInfo.originalMaker)
@@ -156,6 +187,7 @@ struct GeneralSettingsView: View {
         .formStyle(.grouped)
         .task {
             await appState.refreshClaudeAuth()
+            await appState.refreshCodexAuth()
         }
         .onChange(of: appState.settings) { _, _ in
             appState.saveUserData()
@@ -185,6 +217,28 @@ struct GeneralSettingsView: View {
                 }
             } else {
                 Label("claude CLI 미설치", systemImage: "xmark.octagon")
+                    .foregroundStyle(.red)
+            }
+        }
+    }
+
+    /// codex(챗GPT) 로그인 상태 한 줄. claudeStatusRow와 대칭 — email 대신 "Logged in using X"의
+    /// method(예: "ChatGPT")를 보여준다.
+    @ViewBuilder
+    private var codexStatusRow: some View {
+        LabeledContent("상태") {
+            if !appState.codexAuthChecked {
+                Text("확인 중…").foregroundStyle(.secondary)
+            } else if let s = appState.codexAuthStatus {
+                if s.loggedIn {
+                    Label(s.method.map { "로그인됨 (\($0))" } ?? "로그인됨", systemImage: "checkmark.seal.fill")
+                        .foregroundStyle(.green)
+                } else {
+                    Label("미로그인", systemImage: "exclamationmark.triangle")
+                        .foregroundStyle(.orange)
+                }
+            } else {
+                Label("codex CLI 미설치", systemImage: "xmark.octagon")
                     .foregroundStyle(.red)
             }
         }
