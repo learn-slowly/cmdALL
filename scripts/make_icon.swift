@@ -1,6 +1,6 @@
 #!/usr/bin/env swift
 // cmd-docu(cmdALL) 앱 아이콘 생성기.
-// 콘셉: 짙은 청회색 배경 + ⌘(커맨드 키) 기호 + 중앙에 살짝 겹치는 별표(＊).
+// 콘셉: 짙은 청회색 배경 + ⌘(커맨드 키) 기호(90% 크기) + 오른쪽 아래 구석에 작은 별표(＊) 포인트.
 // ⌘=명령, ＊=컴퓨터에서 익숙한 "전체/와일드카드" 기호 — 두 기호로 cmdALL을 은유.
 // 이 파일의 색·비율 상수는 Sources/Models/Brand.swift의 DocBrand와 값을 공유한다
 // (SPM 모듈 경계 밖 독립 스크립트라 실제 코드 공유는 불가 — 값을 바꿀 때 두 곳을 함께 갱신할 것).
@@ -66,24 +66,23 @@ func makeIcon(px: Int) -> CGImage? {
     NSGraphicsContext.saveGraphicsState()
     NSGraphicsContext.current = nsctx
 
-    // 2) ⌘ 기호 — 프레임의 82%, 중앙 배치
-    let cmdSize = S * 0.82
+    // 2) ⌘ 기호 — 프레임의 82%*0.9(=73.8%), 중앙 배치(2026-07-26 사용자 결정 — 90%로 축소)
+    let cmdSize = S * 0.82 * 0.9
     drawSymbol("command",
                into: CGRect(x: S / 2 - cmdSize / 2, y: S / 2 - cmdSize / 2, width: cmdSize, height: cmdSize),
                weight: .medium, color: cmdColor)
 
-    // 3) 별표(＊) — 프레임의 80%(⌘ 글리프 기준이 아니라 전체 프레임 기준. 사용자가 실시간
-    //    비교(62%→70%→90%→120%→80%)로 확정한 값이라 ⌘ 아래 가로줄과 의도적으로 겹친다),
-    //    수직으로 중앙에서 S*0.1357만큼 아래로. AppKit은 origin이 좌하단이라
-    //    drawY = centerY - S*0.1357 가 "아래로 이동"이 된다.
-    let starFontSize = S * 0.80
-    let starFont = NSFont.systemFont(ofSize: starFontSize, weight: .heavy)
+    // 3) 별표(＊) — 벌레처럼 보인다는 지적(2026-07-26)으로 가운데 겹침 방식을 폐기.
+    //    ⌘와 겹치지 않게 오른쪽 아래 구석에 작은 점처럼, 두께는 얇게(regular).
+    let starFontSize = S * 0.30
+    let starFont = NSFont.systemFont(ofSize: starFontSize, weight: .regular)
     let starAttrs: [NSAttributedString.Key: Any] = [.font: starFont, .foregroundColor: starColor]
     let starStr = NSAttributedString(string: "＊", attributes: starAttrs)
     let starBounds = starStr.boundingRect(with: NSSize(width: 10000, height: 10000),
                                            options: [.usesLineFragmentOrigin])
-    let starCenterY = S / 2 - S * 0.1357
-    let starDrawX = S / 2 - starBounds.width / 2 - starBounds.minX
+    let starCenterX = S * 0.855
+    let starCenterY = S * 0.145
+    let starDrawX = starCenterX - starBounds.width / 2 - starBounds.minX
     let starDrawY = starCenterY - starBounds.height / 2 - starBounds.minY
     starStr.draw(at: NSPoint(x: starDrawX, y: starDrawY))
 

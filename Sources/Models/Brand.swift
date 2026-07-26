@@ -111,16 +111,16 @@ extension NSAppearance {
 /// cmdALL 마크 색(#1c1e26 배경, #7aa2c9 ⌘, #9989c4 별표).
 /// 앱 아이콘(scripts/make_icon.swift)과 동일한 리터럴을 공유한다.
 /// 공유 리터럴: 배경 #1c1e26, ⌘ #7aa2c9, 별표 #9989c4,
-///   SF Symbol "command", 별표 문자 "＊"(U+FF0A), ⌘ 크기 프레임 대비 82%, 별표 80%,
-///   별표 중심을 수직 중앙에서 아래로 size * 0.1357 이동.
-///   (SwiftUI origin은 좌상단이고 y축이 아래로 증가하므로 .offset(y: +) 방향.)
+///   SF Symbol "command", 별표 문자 "＊"(U+FF0A), ⌘ 크기 프레임 대비 82%*0.9(=73.8%, 정중앙),
+///   별표는 벌레처럼 보인다는 지적(2026-07-26)으로 가운데 겹침을 폐기 — 오른쪽 아래 구석에
+///   작은 점처럼(크기 30%, 중심 x=85.5%·y=14.5%, 두께 regular).
 enum DocBrand {
     static let background = Color(hex: "1c1e26")
     static let command    = Color(hex: "7aa2c9")
     static let asterisk   = Color(hex: "9989c4")
 }
 
-/// cmdALL 캐노니컬 마크: ⌘ 위에 별표를 얹은 인앱 히어로 로고.
+/// cmdALL 캐노니컬 마크: ⌘ + 오른쪽 아래 구석의 작은 별표 포인트.
 /// 앱 아이콘과 같은 모티프(인앱 hero용). 순수 벡터라 swift run·패키지 모두 동일.
 struct BrandLogo: View {
     var size: CGFloat = 76
@@ -134,13 +134,13 @@ struct BrandLogo: View {
             .overlay {
                 ZStack {
                     Image(systemName: "command")
-                        .font(.system(size: size * 0.82, weight: .medium))
+                        .font(.system(size: size * 0.82 * 0.9, weight: .medium))
                         .foregroundStyle(DocBrand.command)
 
                     Text("＊")
-                        .font(.system(size: size * 0.80, weight: .heavy))
+                        .font(.system(size: size * 0.30, weight: .regular))
                         .foregroundStyle(DocBrand.asterisk)
-                        .offset(y: size * 0.1357)
+                        .position(x: size * 0.855, y: size * (1 - 0.145))
                 }
                 .frame(width: size, height: size)
             }
