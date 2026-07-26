@@ -122,7 +122,7 @@ struct FolderCleanupView: View {
                     // 다시 읽어 배타적 접근 위반으로 즉사한다(스모크 실측 크래시, 2026-07-02).
                     Button(role: .destructive) {
                         let removedId = bucket.id
-                        withAnimation {
+                        withAnimation(.easeInOut(duration: 0.13)) {
                             state.cleanupScheme.removeAll { $0.id == removedId }
                         }
                     } label: {

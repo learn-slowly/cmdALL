@@ -52,7 +52,7 @@ struct QuickLookQuickPanel: View {
                 .frame(maxWidth: 900, maxHeight: 700)
                 .background(.regularMaterial)
                 .clipShape(.rect(cornerRadius: 12))
-                .shadow(radius: 24)
+                .shadow(color: .black.opacity(0.18), radius: 16, y: 8)
                 .padding(40)
             }
             .transition(.opacity)

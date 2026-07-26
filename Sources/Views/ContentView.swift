@@ -146,7 +146,7 @@ struct ContentView: View {
                     .transition(.move(edge: .top).combined(with: .opacity))
             }
         }
-        .animation(.easeInOut(duration: 0.2), value: appState.toastMessage)
+        .animation(.easeInOut(duration: 0.13), value: appState.toastMessage)
         .focusedSceneValue(\.document, appState.currentDocument)
 
             if appState.claudePanelVisible {
@@ -175,7 +175,7 @@ struct ContentView: View {
                     .transition(.move(edge: .trailing))
             }
         }
-        .animation(.easeInOut(duration: 0.2), value: appState.claudePanelVisible)
+        .animation(.easeInOut(duration: 0.13), value: appState.claudePanelVisible)
         .overlay {
             QuickLookQuickPanel()
         }

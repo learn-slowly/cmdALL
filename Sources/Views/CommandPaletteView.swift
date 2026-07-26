@@ -94,7 +94,7 @@ struct CommandPaletteView: View {
                 }
                 .onChange(of: model.selectedIndex) { _, newIndex in
                     guard model.navigatingByKeyboard else { return }
-                    withAnimation {
+                    withAnimation(.easeInOut(duration: 0.13)) {
                         proxy.scrollTo(newIndex, anchor: .center)
                     }
                 }
@@ -102,9 +102,7 @@ struct CommandPaletteView: View {
         }
         .frame(width: 520, height: 420)
         .tint(.cmdsAccent)
-        .background(.regularMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .shadow(color: .black.opacity(0.2), radius: 20, y: 10)
+        .cmdOverlayChrome()
         .onChange(of: model.query) { _, _ in
             model.selectedIndex = 0
         }

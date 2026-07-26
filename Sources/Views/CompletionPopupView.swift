@@ -19,8 +19,8 @@ struct CompletionPopupView: View {
         }
         .frame(width: 300)
         .background(.regularMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 8))
-        .shadow(color: .black.opacity(0.15), radius: 8, y: 4)
+        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .shadow(color: .black.opacity(0.12), radius: 6, y: 4)
     }
 }
 
