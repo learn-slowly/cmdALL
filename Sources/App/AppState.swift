@@ -543,6 +543,15 @@ final class AppState {
         return ""
     }
 
+    /// 파일 우클릭 "Claude로 요약"에 노출할지(순수 함수) — 글자로 뽑아낼 수 있는 종류만.
+    /// office(kordoc)·pdf·일반 텍스트는 되고, 이미지·미디어·모르는 형식(QuickLook 폴백)은 제외.
+    static func isSummarizable(url: URL) -> Bool {
+        let ext = url.pathExtension.lowercased()
+        if DocumentKind.officeExtensions.contains(ext) { return true }
+        if DocumentKind.pdfExtensions.contains(ext) { return true }
+        return QuickLookRouting.opensAsText(extension: ext)
+    }
+
     /// ClaudeError를 사용자용 한국어 안내로 변환한다(순수 함수).
     static func claudeErrorMessage(_ error: Error) -> String {
         switch error {
@@ -669,6 +678,43 @@ final class AppState {
             }
             claudeBusy = false
         }
+    }
+    /// 파일 우클릭 "Claude로 요약" — 파일을 탭으로 열지 않고도 내용을 뽑아 요약을 요청한다.
+    /// askClaude()와 같은 패널(claudeResponse 등)을 그대로 재사용 — 새 UI 없음. 컨텍스트는
+    /// 열린 문서가 아니라 `ContentExtractor`로 그 자리에서 새로 뽑는다(office는 kordoc 경유).
+    func summarizeFile(at url: URL) {
+        guard !claudeBusy else { return }
+        claudePrompt = "이 문서를 한국어로 짧게 요약해줘. 핵심 내용과 중요한 숫자·날짜가 있으면 놓치지 말고 짚어줘."
+        claudeBusy = true
+        claudeError = nil
+        claudeResponse = nil
+        claudePanelVisible = true
+
+        Task { @MainActor in
+            guard let body = await ContentExtractor.body(for: url, kordoc: kordocService),
+                  !body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                claudeBusy = false
+                claudeError = "이 파일에서 읽을 수 있는 글자를 찾지 못했습니다(빈 문서이거나 지원하지 않는 형식)."
+                return
+            }
+            do {
+                var acc = ""
+                let stream = await aiRouter.askStream(prompt: claudePrompt, context: body)
+                for try await chunk in stream {
+                    acc += chunk
+                    claudeResponse = acc
+                }
+                if acc.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    claudeResponse = nil
+                    claudeError = "AI가 빈 응답을 반환했습니다. 다시 시도해 주세요."
+                }
+            } catch {
+                claudeResponse = nil
+                claudeError = Self.aiErrorMessage(error, provider: settings.aiProvider)
+            }
+            claudeBusy = false
+        }
+
     }
 
     // MARK: - Claude 응답 저장(본문 삽입·노트로 저장)

@@ -561,6 +561,13 @@ struct FileTreeContextMenu: View {
             } label: {
                 Label("위키에 인제스트…", systemImage: "text.badge.plus")
             }
+            if AppState.isSummarizable(url: item.url) {
+                Button {
+                    appState.summarizeFile(at: item.url)
+                } label: {
+                    Label("Claude로 요약…", systemImage: "sparkles")
+                }
+            }
         }
         Divider()
 

@@ -220,4 +220,47 @@ final class AppClaudeTests: XCTestCase {
             XCTAssertTrue(name.contains("이 문서를"))
         }
     }
+
+    // MARK: - 파일 우클릭 "Claude로 요약"
+
+    func testIsSummarizableAcceptsOfficePdfAndText() {
+        XCTAssertTrue(AppState.isSummarizable(url: URL(fileURLWithPath: "/tmp/a.pdf")))
+        XCTAssertTrue(AppState.isSummarizable(url: URL(fileURLWithPath: "/tmp/a.hwp")))
+        XCTAssertTrue(AppState.isSummarizable(url: URL(fileURLWithPath: "/tmp/a.docx")))
+        XCTAssertTrue(AppState.isSummarizable(url: URL(fileURLWithPath: "/tmp/a.md")))
+        XCTAssertTrue(AppState.isSummarizable(url: URL(fileURLWithPath: "/tmp/a.txt")))
+    }
+
+    func testIsSummarizableRejectsImagesMediaAndUnknown() {
+        XCTAssertFalse(AppState.isSummarizable(url: URL(fileURLWithPath: "/tmp/a.png")))
+        XCTAssertFalse(AppState.isSummarizable(url: URL(fileURLWithPath: "/tmp/a.mp4")))
+        XCTAssertFalse(AppState.isSummarizable(url: URL(fileURLWithPath: "/tmp/a.zip")))
+    }
+
+    @MainActor
+    func testSummarizeFileSetsPromptAndShowsPanel() {
+        let app = AppState(dataDirectory: tempDir)
+        let url = tempDir.appendingPathComponent("note.md")
+        try? "본문".write(to: url, atomically: true, encoding: .utf8)
+
+        app.summarizeFile(at: url)
+
+        XCTAssertTrue(app.claudePanelVisible)
+        XCTAssertTrue(app.claudeBusy)
+        XCTAssertFalse(app.claudePrompt.isEmpty)
+        XCTAssertNil(app.claudeError)
+    }
+
+    @MainActor
+    func testSummarizeFileIgnoredWhileBusy() {
+        let app = AppState(dataDirectory: tempDir)
+        app.claudeBusy = true
+        app.claudePanelVisible = false
+        let priorPrompt = app.claudePrompt
+
+        app.summarizeFile(at: tempDir.appendingPathComponent("x.md"))
+
+        XCTAssertFalse(app.claudePanelVisible, "이미 다른 요청이 진행 중이면 새 요청을 겹쳐 시작하지 않는다")
+        XCTAssertEqual(app.claudePrompt, priorPrompt)
+    }
 }
