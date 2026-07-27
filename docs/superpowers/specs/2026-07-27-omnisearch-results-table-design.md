@@ -25,7 +25,7 @@ Docufinder를 보고 사용자가 "이것처럼 되고 싶다"고 지목한 기�
 
 - 대상: `Sources/Views/OmnisearchView.swift`의 **파일명 검색 결과**(`fileHits` — 최근 파일 + 이름 유사도 검색)만.
 - 칼럼: 이름 · 경로 · 크기 · 수정일 (팀 작업 지시에 명시된 4개, 아래 §7 참고).
-- 칼럼 헤더 클릭 → 그 기준 정렬, 재클릭 → 방향 반전. 기본은 지금과 동일한 순서(관련도/최근순 — 아래 §4.2).
+- 칼럼 헤더 클릭 → 그 기준 정렬, 재클릭 → 방향 반전. 기본은 지금과 동일한 순서(관련도/최근순 — 아래 §5.3).
 - 칼럼 경계 드래그 → 폭 조절.
 - 본문 검색 결과("In-file Matches" 섹션)는 지금 모양(파일명 + 줄 번호 + 스니펫 한 줄) 그대로 유지 — 표로 바꾸지 않는다(§7).
 
@@ -53,10 +53,14 @@ Docufinder를 보고 사용자가 "이것처럼 되고 싶다"고 지목한 기�
 
 ## 5. 설계 상세
 
-### 5.1 데이터 — `Hit`에 필드 추가
+### 5.1 데이터 — `Hit`를 모델로 승격 + 필드 추가
+
+지금 `Hit`는 `OmnisearchView` 안에 갇힌 `struct`라(§3) 정렬 로직을 순수 함수로 테스트하려면 뷰 파일 밖에서 꺼내 쓸 수 있어야 한다. `LibrarySort`(순수 모델, `Sources/Models/`)와 `LibrarySorting`(정렬 함수, `Sources/Services/`)이 분리된 것과 같은 모양으로 맞춘다:
+
+- `Hit` → `OmnisearchHit`로 이름을 바꿔 `Sources/Models/OmnisearchHit.swift`(신규, 최상위 모델)로 옮긴다. 이 파일 안에서만 쓰던 타입이라(§3에서 확인 — 다른 파일 참조 0건) 이름 바꾸기·이동은 기계적 치환이라 위험이 작다.
 
 ```swift
-struct Hit: Identifiable {
+struct OmnisearchHit: Identifiable {
     ...
     var sizeBytes: Int64?
     var modifiedAt: Date?
@@ -67,7 +71,11 @@ struct Hit: Identifiable {
 
 `contentHits`(본문 검색)는 이번 범위 밖이라 `sizeBytes`/`modifiedAt`을 채우지 않는다(nil로 둠, 화면에서도 안 씀).
 
-### 5.2 정렬 상태 — `OmnisearchSort` (신규, `Sources/Models/OmnisearchSort.swift`)
+### 5.1.1 정렬 함수 — `OmnisearchHitSorting` (신규, `Sources/Services/OmnisearchHitSorting.swift`)
+
+`LibrarySorting.sorted(_:by:under:)`와 같은 모양의 순수 함수. `OmnisearchHit` 배열과 `OmnisearchSort`(§5.3)를 받아 정렬된 배열을 돌려준다 — 뷰는 이 함수 결과를 그대로 그리기만 한다. 뷰 파일 밖의 순수 함수라 `@testable import CmdMD`로 직접 단위 테스트할 수 있다(§8 `OmnisearchSortTests`가 실제로 이 함수를 호출해 검증).
+
+### 5.3 정렬 상태 — `OmnisearchSort` (신규, `Sources/Models/OmnisearchSort.swift`)
 
 `LibrarySortKey`/`LibrarySort`와 같은 모양으로 새로 만든다(다른 화면 것과 섞어 쓰지 않음 — Omnisearch 전용).
 
@@ -88,11 +96,11 @@ struct OmnisearchSort: Equatable {
 - `allHits = fileHits + contentHits`는 (재정렬된) `fileHits`를 그대로 이어붙이므로, 화살표 이동·엔터로 열기 인덱스는 **정렬 후에도 화면에 보이는 순서와 항상 일치**한다(별도 동기화 코드 불필요 — 단일 진실원).
 - **저장 안 함**: `LibrarySort`(라이브러리 화면)와 달리 폴더별로 기억하지 않는다. `OmnisearchModel`은 팝업이 열릴 때마다 새로 생성되는 `@State`라 자연히 세션 한정 — 검색창을 닫았다 다시 열면 정렬은 관련도 기본값으로 리셋된다(§7에 "이번에 안 함"으로 명시).
 
-### 5.3 화면 — 헤더 + 칼럼형 행
+### 5.4 화면 — 헤더 + 칼럼형 행
 
 - 새 헤더 뷰(가칭 `OmnisearchColumnHeader`): "이름"(가변폭, 남는 공간 채움) · "경로"(고정폭, 조절가능) · "크기"(고정폭, 우측정렬) · "수정일"(고정폭, 우측정렬) 4개 버튼. `LibraryView.sortHeaderButton`과 같은 모양(텍스트 + 방향 화살표, 현재 정렬 키만 강조색).
 - 칼럼 사이 경계에 드래그 핸들(가칭 `OmnisearchColumnResizeHandle`, 신규 소형 컴포넌트) — `DragGesture`로 폭을 늘리고 줄인다. 최소 폭(예: 60pt) 아래로는 안 줄어듦. "이름" 칼럼은 나머지 폭을 자동으로 채우는 가변 칼럼이라 자체 핸들이 없다(오른쪽 이웃 칼럼 핸들이 이름 칼럼 폭에 영향).
-- 폭 상태는 뷰의 `@State`(딕셔너리 또는 구조체, 예: `columnWidths.path`, `.size`, `.modifiedAt`) — 세션 한정, 저장 안 함(§5.2와 동일 이유).
+- 폭 상태는 뷰의 `@State`(딕셔너리 또는 구조체, 예: `columnWidths.path`, `.size`, `.modifiedAt`) — 세션 한정, 저장 안 함(§5.3과 동일 이유).
 - 파일 행(가칭 `OmnisearchFileRow`, 기존 `OmnisearchRow`를 파일 종류에 한해 대체): 아이콘 + 이름 + 경로 + 크기(`FileInfoService.formatSize`) + 수정일(`.formatted(date: .abbreviated, time: .shortened)`) 4칸을 가로로 배치. **클릭=`open(at:in:)` 즉시 열기, 호버=하이라이트, 선택 강조색** 로직은 지금 `OmnisearchRow`에 있는 것을 값만 바꿔 그대로 옮긴다(§4 결정 이유).
 - 본문 검색 행(`OmnisearchRow`, `.content` 종류)은 지금 그대로 둔다 — 파일 행 표 아래에 기존 모양 그대로 이어진다.
 - 팝업 크기: 지금 560×440은 칼럼 4개를 넣기엔 좁다. 폭을 넓힌다(구체적 수치는 구현 시 실제로 띄워보고 정함 — 계획 문서 태스크에서 확정).
@@ -103,14 +111,16 @@ struct OmnisearchSort: Equatable {
 
 | 파일 | 책임 |
 |---|---|
+| `Sources/Models/OmnisearchHit.swift` | `OmnisearchHit`(옛 `Hit`, 최상위 모델로 승격 — `sizeBytes`·`modifiedAt` 필드 추가) |
 | `Sources/Models/OmnisearchSort.swift` | `OmnisearchSortKey`·`OmnisearchSort`(관련도 기본값 + 선택 시 토글) |
-| `Tests/CmdMDTests/OmnisearchSortTests.swift` | 정렬 키 전환·방향 토글·기본값(relevance) 순수 로직 테스트 |
+| `Sources/Services/OmnisearchHitSorting.swift` | `OmnisearchHit` 배열을 `OmnisearchSort` 기준으로 정렬하는 순수 함수(`LibrarySorting`과 같은 모양) |
+| `Tests/CmdMDTests/OmnisearchSortTests.swift` | 정렬 키 전환·방향 토글·기본값(relevance) 순수 로직 + `OmnisearchHitSorting` 실제 정렬 결과 테스트 |
 
 **손대는 기존 파일**
 
 | 파일 | 변경 |
 |---|---|
-| `Sources/Views/OmnisearchView.swift` | `Hit`에 `sizeBytes`/`modifiedAt` 추가, `fileHits` 조립 시 `FileInfoService.loadBasic` 호출 + `OmnisearchSort` 적용, 헤더+칼럼 행 뷰 신설(`OmnisearchColumnHeader`/`OmnisearchFileRow`/`OmnisearchColumnResizeHandle`), 팝업 프레임 크기 조정. 본문 검색 섹션·`open`/`moveSelection`/`scheduleContentSearch` 로직은 **손대지 않음**(회귀 없음 원칙) |
+| `Sources/Views/OmnisearchView.swift` | `Hit` → `OmnisearchHit`(신규 모델 파일)로 이동, `fileHits` 조립 시 `FileInfoService.loadBasic` 호출로 `sizeBytes`/`modifiedAt` 채움 + `OmnisearchHitSorting` 적용, 헤더+칼럼 행 뷰 신설(`OmnisearchColumnHeader`/`OmnisearchFileRow`/`OmnisearchColumnResizeHandle`), 팝업 프레임 크기 조정. 본문 검색 섹션·`open`/`moveSelection`/`scheduleContentSearch` 로직은 **손대지 않음**(회귀 없음 원칙) |
 
 ## 7. 이번에 하지 않을 것
 
