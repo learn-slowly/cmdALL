@@ -132,7 +132,7 @@ Run: `swift test` → Step 1과 같은 개수, 실패 0(이름만 바꿨으므�
   - `OmnisearchSort`(`struct`: `key: OmnisearchSortKey`, `ascending: Bool`, `static let default`, `func selecting(_:) -> OmnisearchSort`)
   - `OmnisearchHitSorting.sorted(_ hits: [OmnisearchHit], by sort: OmnisearchSort) -> [OmnisearchHit]`
 
-- [ ] **Step 1: 실패하는 테스트를 쓴다**
+- [x] **Step 1: 실패하는 테스트를 쓴다**
 
 `Tests/CmdMDTests/OmnisearchSortTests.swift`:
 
@@ -203,12 +203,12 @@ final class OmnisearchSortTests: XCTestCase {
 }
 ```
 
-- [ ] **Step 2: 실패하는지 확인한다**
+- [x] **Step 2: 실패하는지 확인한다**
 
 Run: `swift test --filter OmnisearchSortTests`
 Expected: 컴파일 실패 — `OmnisearchSort`/`OmnisearchHitSorting` 없음.
 
-- [ ] **Step 3: `OmnisearchSort` 모델을 만든다**
+- [x] **Step 3: `OmnisearchSort` 모델을 만든다**
 
 `Sources/Models/OmnisearchSort.swift`:
 
@@ -251,7 +251,7 @@ struct OmnisearchSort: Equatable {
 }
 ```
 
-- [ ] **Step 4: `OmnisearchHitSorting` 함수를 만든다**
+- [x] **Step 4: `OmnisearchHitSorting` 함수를 만든다**
 
 `Sources/Services/OmnisearchHitSorting.swift`:
 
@@ -292,7 +292,7 @@ enum OmnisearchHitSorting {
 
 주의: 이 함수가 컴파일되려면 Task 3에서 `OmnisearchHit`에 `sizeBytes`/`modifiedAt` 필드를 추가해야 한다 — **Task 2와 Task 3은 실질적으로 함께 커밋**(아래 Task 3 Step에서 필드 추가 후 이 파일이 처음으로 빌드된다). 순서상 정렬 규칙을 먼저 확정하고 필드는 다음 태스크에서 채운다.
 
-- [ ] **Step 5: 통과 확인**
+- [x] **Step 5: 통과 확인**
 
 Run: `swift test --filter OmnisearchSortTests` → Task 3 완료 후 전체 통과(필드가 없으면 컴파일 실패 상태로 남는다 — 정상, Task 3에서 마무리).
 
@@ -306,38 +306,38 @@ Run: `swift test --filter OmnisearchSortTests` → Task 3 완료 후 전체 통�
 - Modify: `Sources/Models/OmnisearchHit.swift`
 - Modify: `Sources/Views/OmnisearchView.swift`
 
-- [ ] **Step 1: `OmnisearchHit`에 필드 추가**
+- [x] **Step 1: `OmnisearchHit`에 필드 추가**
 
 `sizeBytes: Int64?`, `modifiedAt: Date?`을 추가(둘 다 기본값 `nil` — 본문 검색 결과는 채우지 않으므로).
 
-- [ ] **Step 2: `OmnisearchSortTests` 컴파일+통과 확인**
+- [x] **Step 2: `OmnisearchSortTests` 컴파일+통과 확인**
 
 Run: `swift test --filter OmnisearchSortTests` → 전체 통과(Task 2에서 작성해 둔 테스트).
 
-- [ ] **Step 3: `fileHits`에 메타데이터 채우기**
+- [x] **Step 3: `fileHits`에 메타데이터 채우기**
 
 `fileHits` 계산 프로퍼티의 각 `OmnisearchHit(...)` 생성 지점(최근 파일 분기, 이름유사도 검색 분기) 양쪽에서 `FileInfoService.loadBasic(url:)`을 호출해 `sizeBytes`·`modifiedAt`을 채운다. `linkableNotes` 분기는 이미 `note.modifiedAt`이 있지만, 크기는 없으므로 어차피 `loadBasic` 호출이 필요 — 통일해서 두 분기 다 `loadBasic` 결과를 쓴다(코드 중복 최소화).
 
-- [ ] **Step 4: `OmnisearchModel`에 정렬 상태 추가**
+- [x] **Step 4: `OmnisearchModel`에 정렬 상태 추가**
 
 ```swift
 var sort = OmnisearchSort.default
 ```
 
-- [ ] **Step 5: `fileHits`에 정렬 적용**
+- [x] **Step 5: `fileHits`에 정렬 적용**
 
 `fileHits` 계산 프로퍼티 마지막에 `OmnisearchHitSorting.sorted(builtHits, by: model.sort)`를 거쳐 반환하도록 바꾼다. `.relevance`(기본값)일 땐 함수가 원본을 그대로 돌려주므로(Task 2 Step 4) **기본 화면은 지금과 동일**하다.
 
-- [ ] **Step 6: 빌드+전체 테스트**
+- [x] **Step 6: 빌드+전체 테스트** — 889개 통과(기준선 883 + 신규 6), 실패 0.
 
 Run: `swift build` → 성공.
 Run: `swift test` → 기준선(Task 1 Step 1 기록) + 신규 6개, 실패 0.
 
-- [ ] **Step 7: 수동 스모크**
+- [x] **Step 7: 수동 스모크** — 화면 배선 전 단계라 코드상 렌더링 차이 없음 확인(정렬은 relevance 고정이라 fileHits 원본 순서 유지). 실제 화면 눈 확인은 레고 확인 대기.
 
 ⇧⌘O로 검색창 열기 → 지금까지는 화면에 크기·수정일이 안 보이므로(다음 태스크에서 화면 배선) 눈에 보이는 차이는 없어야 한다. 최근 파일·이름유사도 검색 순서가 이전과 동일한지 확인(정렬이 아직 relevance 고정이라 UI가 없어도 순서는 그대로여야 함).
 
-- [ ] **Step 8: 커밋**
+- [x] **Step 8: 커밋**
 
 `git commit -m "기능: Omnisearch 결과에 크기·수정일 메타데이터 + 정렬 로직 추가(화면 미배선)"`
 

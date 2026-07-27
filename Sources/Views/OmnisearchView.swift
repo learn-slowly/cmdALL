@@ -12,6 +12,7 @@ import SwiftUI
     var navigatingByKeyboard = false
     var contentResults: [SearchResult] = []
     var isSearchingContent = false
+    var sort = OmnisearchSort.default
 }
 
 struct OmnisearchView: View {
@@ -24,38 +25,53 @@ struct OmnisearchView: View {
     // MARK: Hit assembly
 
     private var fileHits: [OmnisearchHit] {
+        let builtHits: [OmnisearchHit]
         if model.query.isEmpty {
             // Bare ⇧⌘O = recent files, most useful default.
-            return appState.recentFiles.prefix(8).map { url in
-                OmnisearchHit(
+            builtHits = appState.recentFiles.prefix(8).map { url in
+                let info = FileInfoService.loadBasic(url: url)
+                return OmnisearchHit(
                     kind: .file,
                     title: url.deletingPathExtension().lastPathComponent,
                     subtitle: url.deletingLastPathComponent().path,
                     url: url,
-                    line: nil
+                    line: nil,
+                    sizeBytes: info.sizeBytes,
+                    modifiedAt: info.modifiedAt
                 )
             }
+        } else {
+            let lowered = model.query.lowercased()
+            let recents = Set(appState.recentFiles)
+
+            builtHits = appState.linkableNotes
+                .compactMap { note -> (VaultNote, Int)? in
+                    let score = Command.fuzzyScore(query: lowered, in: note.title.lowercased())
+                        ?? Command.fuzzyScore(query: lowered, in: note.path.lowercased())
+                    guard var score else { return nil }
+                    if recents.contains(note.url) { score += 20 }
+                    return (note, score)
+                }
+                .sorted { lhs, rhs in
+                    if lhs.1 != rhs.1 { return lhs.1 > rhs.1 }
+                    return lhs.0.modifiedAt > rhs.0.modifiedAt
+                }
+                .prefix(10)
+                .map { note, _ in
+                    let info = FileInfoService.loadBasic(url: note.url)
+                    return OmnisearchHit(
+                        kind: .file,
+                        title: note.title,
+                        subtitle: note.path,
+                        url: note.url,
+                        line: nil,
+                        sizeBytes: info.sizeBytes,
+                        modifiedAt: info.modifiedAt
+                    )
+                }
         }
 
-        let lowered = model.query.lowercased()
-        let recents = Set(appState.recentFiles)
-
-        return appState.linkableNotes
-            .compactMap { note -> (VaultNote, Int)? in
-                let score = Command.fuzzyScore(query: lowered, in: note.title.lowercased())
-                    ?? Command.fuzzyScore(query: lowered, in: note.path.lowercased())
-                guard var score else { return nil }
-                if recents.contains(note.url) { score += 20 }
-                return (note, score)
-            }
-            .sorted { lhs, rhs in
-                if lhs.1 != rhs.1 { return lhs.1 > rhs.1 }
-                return lhs.0.modifiedAt > rhs.0.modifiedAt
-            }
-            .prefix(10)
-            .map { note, _ in
-                OmnisearchHit(kind: .file, title: note.title, subtitle: note.path, url: note.url, line: nil)
-            }
+        return OmnisearchHitSorting.sorted(builtHits, by: model.sort)
     }
 
     private var contentHits: [OmnisearchHit] {

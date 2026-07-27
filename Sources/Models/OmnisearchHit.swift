@@ -15,4 +15,7 @@ struct OmnisearchHit: Identifiable {
     let subtitle: String
     let url: URL
     let line: Int?
+    /// 파일 결과에만 채움(§5.1) — 본문 검색 결과는 nil로 둔다(화면에서도 안 씀).
+    var sizeBytes: Int64? = nil
+    var modifiedAt: Date? = nil
 }
