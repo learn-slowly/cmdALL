@@ -32,7 +32,7 @@
 - 글에서 '박다/박는다/박았다' 표현은 쓰지 않는다.
 - **본문 검색(In-file Matches) 섹션·`open(at:in:)`·`moveSelection`·`scheduleContentSearch`는 손대지 않는다** — 이번 변경은 파일명 검색 결과(fileHits)의 표시 방식에만 한정.
 - 신규 기능은 가능한 한 **별도 파일**로 분리한다(`OmnisearchHit`·`OmnisearchSort`·`OmnisearchHitSorting`).
-- 각 태스크는 `swift test` 전체 통과로 끝난다. **기준선은 구현 착수 시점에 `swift test` 전체 실행으로 재확인 후 Task 1에 기록**(이 계획 문서는 구현 착수 전 작성이라 아직 미확정 — 2026-07-25 시점 참고값은 872개였으나 그 뒤 변경됐을 수 있음).
+- 각 태스크는 `swift test` 전체 통과로 끝난다. **기준선(구현 착수 시점 2026-07-27, `swift test` 전체 재실행 확인): 883개 통과, 실패 0**(XCTest 스위트 기준 — 2026-07-25 시점 참고값 872개에서 그 뒤 변경됨).
 - 테스트는 XCTest, `@testable import CmdMD`.
 - 칼럼 폭·정렬 상태는 저장하지 않는다(세션 한정, §설계 문서 §5.3/§5.4) — 새 저장 파일·설정 키를 만들지 않는다.
 
@@ -68,11 +68,11 @@
 **Interfaces:**
 - Produces: `OmnisearchHit`(`Identifiable`) — `id`(UUID) · `kind`(enum: file/content) · `title`(String) · `subtitle`(String) · `url`(URL) · `line`(Int?)
 
-- [ ] **Step 1: 기준선 확인**
+- [x] **Step 1: 기준선 확인**
 
 Run: `swift test` (전체) → 통과 개수를 이 문서 상단 Global Constraints의 기준선 자리에 기록한다(구현 착수 시 첫 작업).
 
-- [ ] **Step 2: 모델 파일 생성**
+- [x] **Step 2: 모델 파일 생성**
 
 `Sources/Models/OmnisearchHit.swift`:
 
@@ -97,20 +97,20 @@ struct OmnisearchHit: Identifiable {
 }
 ```
 
-- [ ] **Step 3: `OmnisearchView.swift`에서 `Hit` 참조를 전부 `OmnisearchHit`로 교체**
+- [x] **Step 3: `OmnisearchView.swift`에서 `Hit` 참조를 전부 `OmnisearchHit`로 교체**
 
 `OmnisearchView` 안의 `struct Hit { ... }` 선언을 삭제하고, `Hit(...)` 생성 호출·`OmnisearchView.Hit` 타입 참조(예: `OmnisearchRow`의 `let hit: OmnisearchView.Hit`)를 전부 `OmnisearchHit`로 바꾼다. 로직은 한 글자도 바꾸지 않는다(순수 치환).
 
-- [ ] **Step 4: 빌드+테스트 확인**
+- [x] **Step 4: 빌드+테스트 확인**
 
 Run: `swift build` → 성공.
 Run: `swift test` → Step 1과 같은 개수, 실패 0(이름만 바꿨으므로 동작 차이 없음).
 
-- [ ] **Step 5: 수동 스모크**
+- [x] **Step 5: 수동 스모크** — 코드 레벨에서 순수 리팩터(이름 바꾸기만)임을 확인. 로직 diff 없음, 렌더링 트리 변경 없음. 실제 화면 눈 확인은 이번 작업 지시에 따라 레고가 나중에 직접 함(수동 스모크 대기).
 
 ⇧⌘O로 검색창을 열어 최근 파일 목록·검색어 입력 시 결과·본문 검색·화살표/엔터/클릭 열기가 지금과 동일하게 동작하는지 확인(이 태스크는 순수 리팩터라 화면이 1px도 달라지면 안 된다).
 
-- [ ] **Step 6: 커밋**
+- [x] **Step 6: 커밋**
 
 `git commit -m "리팩터: Omnisearch Hit을 OmnisearchHit 모델로 승격(동작 변경 없음)"`
 

@@ -21,27 +21,13 @@ struct OmnisearchView: View {
     @State private var model = OmnisearchModel()
     @State private var contentSearchTask: Task<Void, Never>?
 
-    struct Hit: Identifiable {
-        enum Kind {
-            case file
-            case content
-        }
-
-        let id = UUID()
-        let kind: Kind
-        let title: String
-        let subtitle: String
-        let url: URL
-        let line: Int?
-    }
-
     // MARK: Hit assembly
 
-    private var fileHits: [Hit] {
+    private var fileHits: [OmnisearchHit] {
         if model.query.isEmpty {
             // Bare ⇧⌘O = recent files, most useful default.
             return appState.recentFiles.prefix(8).map { url in
-                Hit(
+                OmnisearchHit(
                     kind: .file,
                     title: url.deletingPathExtension().lastPathComponent,
                     subtitle: url.deletingLastPathComponent().path,
@@ -68,13 +54,13 @@ struct OmnisearchView: View {
             }
             .prefix(10)
             .map { note, _ in
-                Hit(kind: .file, title: note.title, subtitle: note.path, url: note.url, line: nil)
+                OmnisearchHit(kind: .file, title: note.title, subtitle: note.path, url: note.url, line: nil)
             }
     }
 
-    private var contentHits: [Hit] {
+    private var contentHits: [OmnisearchHit] {
         model.contentResults.prefix(12).map { result in
-            Hit(
+            OmnisearchHit(
                 kind: .content,
                 title: result.fileName,
                 subtitle: "L\(result.lineNumber)  \(result.lineContent.trimmingCharacters(in: .whitespaces))",
@@ -84,7 +70,7 @@ struct OmnisearchView: View {
         }
     }
 
-    private var allHits: [Hit] {
+    private var allHits: [OmnisearchHit] {
         fileHits + contentHits
     }
 
@@ -207,7 +193,7 @@ struct OmnisearchView: View {
 
     // MARK: Actions
 
-    private func open(at index: Int, in hits: [Hit]) {
+    private func open(at index: Int, in hits: [OmnisearchHit]) {
         guard index >= 0, index < hits.count else { return }
         let hit = hits[index]
         dismiss()
@@ -255,7 +241,7 @@ private struct OmnisearchSectionHeader: View {
 }
 
 private struct OmnisearchRow: View {
-    let hit: OmnisearchView.Hit
+    let hit: OmnisearchHit
     let isSelected: Bool
 
     var body: some View {
