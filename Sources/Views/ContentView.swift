@@ -114,6 +114,9 @@ struct ContentView: View {
         .sheet(item: $state.fileInfoRequest) { request in
             FileInfoView(request: request)
         }
+        .sheet(item: $state.compareRequest) { request in
+            DocumentCompareView(request: request)
+        }
         .sheet(item: $state.wikiIngestRequest) { request in
             WikiIngestView(request: request)
         }

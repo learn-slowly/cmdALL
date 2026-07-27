@@ -220,6 +220,11 @@ final class AppState {
     var renameRequest: RenameRequest? = nil
     /// 정보 보기 시트 요청(.sheet(item:)).
     var fileInfoRequest: FileInfoRequest? = nil
+    /// 두 파일 비교 시트 요청(.sheet(item:)) — Docufinder 격차 3번.
+    var compareRequest: CompareRequest? = nil
+    var compareDiffLines: [LineDiff.Line] = []
+    var compareBusy: Bool = false
+    var compareError: String? = nil
     /// F2: 진행 중인 내부 드래그의 페이로드(드래그 시작 시 스냅샷) — 드롭 타깃의 hover
     /// 하이라이트 게이팅(DropGuard.dropDecision)이 **내부 세션에서만** 읽는다. 불변식:
     /// 외부(Finder) 세션은 세션 타입으로 판별해 이 스냅샷을 절대 참조하지 않고(stale이어도
@@ -552,6 +557,19 @@ final class AppState {
         return QuickLookRouting.opensAsText(extension: ext)
     }
 
+    /// 우클릭 다중 선택 메뉴에서 "두 파일 비교…"를 보여줄지 판정. 정확히 2개 + 둘 다
+    /// 폴더가 아니고 글자로 뽑을 수 있는 종류(office/pdf/텍스트)일 때만 순서대로 반환.
+    static func comparablePair(_ targets: [URL]) -> (URL, URL)? {
+        guard targets.count == 2 else { return nil }
+        let files = targets.filter { url in
+            var isDir: ObjCBool = false
+            let exists = FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir)
+            return exists && !isDir.boolValue && isSummarizable(url: url)
+        }
+        guard files.count == 2 else { return nil }
+        return (files[0], files[1])
+    }
+
     /// ClaudeError를 사용자용 한국어 안내로 변환한다(순수 함수).
     static func claudeErrorMessage(_ error: Error) -> String {
         switch error {
@@ -715,6 +733,30 @@ final class AppState {
             claudeBusy = false
         }
 
+    }
+
+    /// 파일 우클릭(2개 선택) → "두 파일 비교…" — Docufinder 격차 3번. 나란히(2단) 대신
+    /// 기존 위키 인제스트가 쓰는 통합(unified) diff 컴포넌트(`LineDiff`·`WikiDiffListView`)를
+    /// 재사용한다(2026-07-27 결정 — 새 레이아웃 없이 기존 것으로 "달라진 부분 표시"를 충족).
+    func requestCompare(urlA: URL, urlB: URL) {
+        guard !compareBusy else { return }
+        compareRequest = CompareRequest(urlA: urlA, urlB: urlB)
+        compareDiffLines = []
+        compareError = nil
+        compareBusy = true
+
+        Task { @MainActor in
+            async let bodyA = ContentExtractor.body(for: urlA, kordoc: kordocService)
+            async let bodyB = ContentExtractor.body(for: urlB, kordoc: kordocService)
+            let (a, b) = await (bodyA, bodyB)
+            guard let a, let b else {
+                compareBusy = false
+                compareError = "두 파일 중 하나 이상에서 읽을 수 있는 글자를 찾지 못했습니다(빈 문서이거나 지원하지 않는 형식)."
+                return
+            }
+            compareDiffLines = LineDiff.diff(old: a, new: b)
+            compareBusy = false
+        }
     }
 
     // MARK: - Claude 응답 저장(본문 삽입·노트로 저장)
@@ -4205,6 +4247,13 @@ struct RenameRequest: Identifiable {
 struct FileInfoRequest: Identifiable {
     let id = UUID()
     let url: URL
+}
+
+/// 두 파일 비교 시트 요청 페이로드(Docufinder 격차 3번 — 문서 버전 비교).
+struct CompareRequest: Identifiable {
+    let id = UUID()
+    let urlA: URL
+    let urlB: URL
 }
 
 enum SendError: LocalizedError {

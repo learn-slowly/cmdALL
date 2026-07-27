@@ -263,4 +263,79 @@ final class AppClaudeTests: XCTestCase {
         XCTAssertFalse(app.claudePanelVisible, "이미 다른 요청이 진행 중이면 새 요청을 겹쳐 시작하지 않는다")
         XCTAssertEqual(app.claudePrompt, priorPrompt)
     }
+
+    // MARK: - "두 파일 비교…" (Docufinder 격차 3번)
+
+    func testComparablePairAcceptsTwoTextFiles() throws {
+        let a = tempDir.appendingPathComponent("a.md")
+        let b = tempDir.appendingPathComponent("b.md")
+        try "가".write(to: a, atomically: true, encoding: .utf8)
+        try "나".write(to: b, atomically: true, encoding: .utf8)
+
+        let pair = AppState.comparablePair([a, b])
+
+        XCTAssertEqual(pair?.0, a)
+        XCTAssertEqual(pair?.1, b)
+    }
+
+    func testComparablePairRejectsWrongCount() throws {
+        let a = tempDir.appendingPathComponent("a.md")
+        try "가".write(to: a, atomically: true, encoding: .utf8)
+        XCTAssertNil(AppState.comparablePair([a]))
+        XCTAssertNil(AppState.comparablePair([]))
+    }
+
+    func testComparablePairRejectsWhenOneIsDirectory() throws {
+        let a = tempDir.appendingPathComponent("a.md")
+        try "가".write(to: a, atomically: true, encoding: .utf8)
+        let folder = tempDir.appendingPathComponent("sub", isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+
+        XCTAssertNil(AppState.comparablePair([a, folder]))
+    }
+
+    func testComparablePairRejectsNonSummarizableExtension() throws {
+        let a = tempDir.appendingPathComponent("a.md")
+        let b = tempDir.appendingPathComponent("b.png")
+        try "가".write(to: a, atomically: true, encoding: .utf8)
+        try Data().write(to: b)
+
+        XCTAssertNil(AppState.comparablePair([a, b]))
+    }
+
+    @MainActor
+    func testRequestCompareShowsSheetAndComputesDiff() async throws {
+        let app = AppState(dataDirectory: tempDir)
+        let a = tempDir.appendingPathComponent("a.md")
+        let b = tempDir.appendingPathComponent("b.md")
+        try "한 줄\n같은 줄".write(to: a, atomically: true, encoding: .utf8)
+        try "다른 줄\n같은 줄".write(to: b, atomically: true, encoding: .utf8)
+
+        app.requestCompare(urlA: a, urlB: b)
+        XCTAssertNotNil(app.compareRequest)
+        XCTAssertTrue(app.compareBusy)
+
+        // requestCompare의 Task는 async let 두 개짜리라 즉시 안 끝난다 — 짧게 양보하며 대기.
+        for _ in 0..<50 where app.compareBusy {
+            try await Task.sleep(nanoseconds: 20_000_000)
+        }
+
+        XCTAssertFalse(app.compareBusy)
+        XCTAssertNil(app.compareError)
+        XCTAssertTrue(app.compareDiffLines.contains(where: { $0.kind == .removed && $0.text == "한 줄" }))
+        XCTAssertTrue(app.compareDiffLines.contains(where: { $0.kind == .added && $0.text == "다른 줄" }))
+        XCTAssertTrue(app.compareDiffLines.contains(where: { $0.kind == .same && $0.text == "같은 줄" }))
+    }
+
+    @MainActor
+    func testRequestCompareIgnoredWhileBusy() {
+        let app = AppState(dataDirectory: tempDir)
+        app.compareBusy = true
+        let priorRequest = app.compareRequest
+
+        app.requestCompare(urlA: tempDir.appendingPathComponent("a.md"),
+                            urlB: tempDir.appendingPathComponent("b.md"))
+
+        XCTAssertEqual(app.compareRequest?.id, priorRequest?.id)
+    }
 }

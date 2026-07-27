@@ -40,6 +40,13 @@ struct BatchSelectionMenu: View {
         } label: {
             Label("\(count)개 항목 위키에 인제스트…", systemImage: "text.badge.plus")
         }
+        if let pair = AppState.comparablePair(targets) {
+            Button {
+                appState.requestCompare(urlA: pair.0, urlB: pair.1)
+            } label: {
+                Label("두 파일 비교…", systemImage: "square.split.2x1")
+            }
+        }
         Divider()
         Button(role: .destructive) {
             appState.batchTrashWithConfirmation(targets)
