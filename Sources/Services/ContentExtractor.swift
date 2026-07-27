@@ -22,6 +22,20 @@ enum ContentExtractor {
             return parts.isEmpty ? nil : parts.joined(separator: "\n")
         }
 
+        // 이메일(.eml)은 여는 방식(QuickLook — Mail 미리보기가 더 나음, Phase 12 유지)과
+        // 색인 방식을 일부러 분리한다 — 원문 그대로 색인하면 헤더 인코딩·첨부 base64가
+        // 그대로 섞여 검색이 오염되니 EmailExtractor로 제목/보낸사람/받는사람/본문만 뽑는다
+        // (Docufinder 격차 7번).
+        if ext == "eml" {
+            let size = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+            guard size <= maxTextBytes else { return nil }
+            let raw = (try? String(contentsOf: url, encoding: .utf8))
+                ?? (try? String(contentsOf: url, encoding: .isoLatin1))
+            guard let raw else { return nil }
+            let text = EmailExtractor.searchableText(rawEML: raw)
+            return text.isEmpty ? nil : text
+        }
+
         // 글자 파일 판정은 QuickLookRouting 하나만 쓴다 — 여는 규칙과 색인 규칙이
         // 어긋나지 않게(스펙 §3.6).
         guard QuickLookRouting.opensAsText(extension: ext) else { return nil }

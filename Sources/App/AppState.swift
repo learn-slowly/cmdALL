@@ -549,9 +549,11 @@ final class AppState {
     }
 
     /// 파일 우클릭 "Claude로 요약"에 노출할지(순수 함수) — 글자로 뽑아낼 수 있는 종류만.
-    /// office(kordoc)·pdf·일반 텍스트는 되고, 이미지·미디어·모르는 형식(QuickLook 폴백)은 제외.
+    /// office(kordoc)·pdf·일반 텍스트·이메일(.eml)은 되고, 이미지·미디어·모르는 형식
+    /// (QuickLook 폴백)은 제외.
     static func isSummarizable(url: URL) -> Bool {
         let ext = url.pathExtension.lowercased()
+        if ext == "eml" { return true }
         if DocumentKind.officeExtensions.contains(ext) { return true }
         if DocumentKind.pdfExtensions.contains(ext) { return true }
         return QuickLookRouting.opensAsText(extension: ext)
