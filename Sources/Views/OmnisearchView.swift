@@ -143,6 +143,7 @@ struct OmnisearchView: View {
                             let fileCount = fileHits.count
                             if fileCount > 0 {
                                 OmnisearchSectionHeader(title: model.query.isEmpty ? "Recent" : "Files")
+                                OmnisearchColumnHeader(sort: $model.sort)
                             }
                             ForEach(Array(hits.enumerated()), id: \.element.id) { index, hit in
                                 if index == fileCount && !contentHits.isEmpty {
@@ -253,6 +254,43 @@ private struct OmnisearchSectionHeader: View {
         .padding(.horizontal, 20)
         .padding(.top, 8)
         .padding(.bottom, 2)
+    }
+}
+/// 이름/경로/크기/수정일 칼럼 헤더 — 클릭 시 그 기준으로 정렬(`LibraryView.sortHeaderButton`과 같은 모양, 스펙 §5.4).
+private struct OmnisearchColumnHeader: View {
+    @Binding var sort: OmnisearchSort
+
+    var body: some View {
+        HStack(spacing: 8) {
+            sortButton(title: "이름", key: .name)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            sortButton(title: "경로", key: .path)
+                .frame(width: 160, alignment: .leading)
+            sortButton(title: "크기", key: .size)
+                .frame(width: 70, alignment: .trailing)
+            sortButton(title: "수정일", key: .modifiedAt)
+                .frame(width: 120, alignment: .trailing)
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 4)
+    }
+
+    /// 헤더 버튼 — 클릭=키 선택, 같은 키 재클릭=방향 토글(`OmnisearchSort.selecting` 공용 전이).
+    private func sortButton(title: String, key: OmnisearchSortKey) -> some View {
+        Button {
+            sort = sort.selecting(key)
+        } label: {
+            HStack(spacing: 2) {
+                Text(title)
+                if sort.key == key {
+                    Image(systemName: sort.ascending ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 8, weight: .semibold))
+                }
+            }
+            .font(.caption)
+            .foregroundStyle(sort.key == key ? Color.cmdsAccent : Color.secondary)
+        }
+        .buttonStyle(.plain)
     }
 }
 

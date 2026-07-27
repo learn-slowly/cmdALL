@@ -350,24 +350,24 @@ Run: `swift test` → 기준선(Task 1 Step 1 기록) + 신규 6개, 실패 0.
 **Files:**
 - Modify: `Sources/Views/OmnisearchView.swift`
 
-- [ ] **Step 1: `OmnisearchColumnHeader` 뷰 신설**
+- [x] **Step 1: `OmnisearchColumnHeader` 뷰 신설**
 
 `LibraryView.sortHeaderButton`(`Sources/Views/LibraryView.swift:138`)과 같은 모양 — 텍스트 + 현재 정렬 키일 때만 방향 화살표(`chevron.up`/`chevron.down`), 클릭 시 `model.sort = model.sort.selecting(key)`. 이름(가변폭, `.frame(maxWidth: .infinity, alignment: .leading)`) · 경로 · 크기 · 수정일(우측정렬) 4개를 가로로 배치.
 
-- [ ] **Step 2: 파일 섹션 헤더 자리에 배선**
+- [x] **Step 2: 파일 섹션 헤더 자리에 배선**
 
 "Files/Recent" `OmnisearchSectionHeader` 아래(파일 행들 위)에 `OmnisearchColumnHeader(sort: $model.sort)`를 넣는다. `@Bindable var model = model`이 이미 `body` 안에 있으므로 바인딩 가능.
 
-- [ ] **Step 3: 빌드+전체 테스트**
+- [x] **Step 3: 빌드+전체 테스트** — 889개 통과(신규 테스트 없음, UI 전용 변경), 실패 0.
 
 Run: `swift build` → 성공.
 Run: `swift test` → 실패 0(UI 전용 변경이라 신규 테스트 없음 — Task 2 테스트가 이미 로직을 보장).
 
-- [ ] **Step 4: 수동 스모크**
+- [x] **Step 4: 수동 스모크** — 자동 검사로는 확인 불가한 화면 항목이라 레고 확인 대기.
 
 ⇧⌘O → 헤더 4칸이 보이는지, "크기"·"수정일" 클릭 시 화면이 재정렬되는지(아직 칼럼형 행이 아니라 기존 2줄 행 순서만 바뀜), 재클릭 시 방향이 뒤집히는지, 화살표/엔터/클릭 열기가 여전히 되는지.
 
-- [ ] **Step 5: 커밋**
+- [x] **Step 5: 커밋**
 
 `git commit -m "기능: Omnisearch 칼럼 헤더 + 클릭 정렬 배선"`
 
