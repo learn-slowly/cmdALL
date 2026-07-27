@@ -73,4 +73,49 @@ final class SearchIndexerTests: XCTestCase {
         let count = await index.count()
         XCTAssertEqual(count, 1, "하위 폴더 자신은 빼고 그 안의 파일 1개만 색인돼야 한다")
     }
+
+    /// 2026-07-28 실사용 발견 — 홈 폴더처럼 큰 폴더를 고르면 개발 도구 부속 폴더
+    /// (venv·node_modules 등)와 숨김 폴더가 실제 문서보다 먼저 훑여 며칠이 지나도
+    /// 정작 필요한 폴더에 색인이 못 닿았다. 이런 폴더는 통째로 건너뛰어야 한다.
+    func test개발도구부속폴더와숨김폴더는건너뛴다() async throws {
+        let dir = tempDir()
+        try "진짜 노트".write(to: dir.appendingPathComponent("메모.md"), atomically: true, encoding: .utf8)
+
+        let venv = dir.appendingPathComponent("venv")
+        try FileManager.default.createDirectory(at: venv, withIntermediateDirectories: true)
+        try "가짜".write(to: venv.appendingPathComponent("부스러기.md"), atomically: true, encoding: .utf8)
+
+        let nodeModules = dir.appendingPathComponent("node_modules")
+        try FileManager.default.createDirectory(at: nodeModules, withIntermediateDirectories: true)
+        try "가짜".write(to: nodeModules.appendingPathComponent("부스러기.md"), atomically: true, encoding: .utf8)
+
+        let hiddenGit = dir.appendingPathComponent(".git")
+        try FileManager.default.createDirectory(at: hiddenGit, withIntermediateDirectories: true)
+        try "가짜".write(to: hiddenGit.appendingPathComponent("부스러기.md"), atomically: true, encoding: .utf8)
+
+        let index = SearchIndex(dbURL: tempDBURL())
+        let indexer = SearchIndexer(index: index, kordoc: KordocService())
+        await indexer.indexFolder(dir, progress: nil)
+        let count = await index.count()
+        XCTAssertEqual(count, 1, "venv·node_modules·숨김 폴더 부스러기는 빼고 진짜 노트 1개만 색인돼야 한다")
+    }
+
+    /// 지름길(symlink)이 고른 폴더 밖을 가리키면 따라가지 않는다 — 실사용에서
+    /// 홈 폴더를 고르자 /Library/Developer/... 시스템 폴더까지 새어 들어간 사례 확인.
+    func test심볼릭링크가폴더밖을가리키면건너뛴다() async throws {
+        let dir = tempDir()
+        try "진짜 노트".write(to: dir.appendingPathComponent("메모.md"), atomically: true, encoding: .utf8)
+
+        let outside = tempDir()
+        try "밖의 파일".write(to: outside.appendingPathComponent("바깥.md"), atomically: true, encoding: .utf8)
+
+        let link = dir.appendingPathComponent("지름길")
+        try FileManager.default.createSymbolicLink(at: link, withDestinationURL: outside)
+
+        let index = SearchIndex(dbURL: tempDBURL())
+        let indexer = SearchIndexer(index: index, kordoc: KordocService())
+        await indexer.indexFolder(dir, progress: nil)
+        let count = await index.count()
+        XCTAssertEqual(count, 1, "지름길이 가리키는 폴더 밖 내용은 빼고 진짜 노트 1개만 색인돼야 한다")
+    }
 }

@@ -3,7 +3,7 @@
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 - 날짜: 2026-07-27
-- 상태: **구현 착수 전 — 설계 문서와 함께 사용자 승인 대기.** 이 계획 문서 자체는 실행되지 않았다(작성만 완료).
+- 상태: **구현 완료(코드는 2026-07-27 중 실제로 적용·커밋됨 — commit 282bc87 등). 이 문서 상단의 "구현 착수 전" 표기는 실행 뒤 갱신을 안 한 낡은 기록이었다(2026-07-28 정정).** 남은 것은 Task 6 Step 5·"최종 통합"의 사람 눈 확인(수동 스모크)뿐 — swift test(자동 검사)는 6개 신규 테스트 포함 전부 통과.
 - 설계 문서: `docs/superpowers/specs/2026-07-27-omnisearch-results-table-design.md`
 - 상위 맥락: `.gjc/context/docufinder-parity-20260727T021555Z.md` (Docufinder 격차 7개 중 1번)
 

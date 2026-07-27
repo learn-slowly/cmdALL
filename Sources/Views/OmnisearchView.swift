@@ -291,14 +291,18 @@ private struct OmnisearchColumnHeader: View {
         HStack(spacing: 8) {
             sortButton(title: "이름", key: .name)
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
             sortButton(title: "경로", key: .path)
                 .frame(width: columnWidths.path, alignment: .leading)
+                .contentShape(Rectangle())
             OmnisearchColumnResizeHandle(width: $columnWidths.path)
             sortButton(title: "크기", key: .size)
                 .frame(width: columnWidths.size, alignment: .trailing)
+                .contentShape(Rectangle())
             OmnisearchColumnResizeHandle(width: $columnWidths.size)
             sortButton(title: "수정일", key: .modifiedAt)
                 .frame(width: columnWidths.modifiedAt, alignment: .trailing)
+                .contentShape(Rectangle())
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 4)
@@ -318,8 +322,10 @@ private struct OmnisearchColumnHeader: View {
             }
             .font(.caption)
             .foregroundStyle(sort.key == key ? Color.cmdsAccent : Color.secondary)
+            .padding(.vertical, 4)
         }
         .buttonStyle(.plain)
+        .contentShape(Rectangle())
     }
 }
 /// 칼럼 폭 상태 — 세션 한정(팝업이 열려있는 동안만 유지, 저장하지 않음. 스펙 §5.3/§5.4).
