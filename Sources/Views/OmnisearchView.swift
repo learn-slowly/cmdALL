@@ -21,6 +21,7 @@ struct OmnisearchView: View {
 
     @State private var model = OmnisearchModel()
     @State private var contentSearchTask: Task<Void, Never>?
+    @State private var columnWidths = OmnisearchColumnWidths()
 
     // MARK: Hit assembly
 
@@ -143,7 +144,7 @@ struct OmnisearchView: View {
                             let fileCount = fileHits.count
                             if fileCount > 0 {
                                 OmnisearchSectionHeader(title: model.query.isEmpty ? "Recent" : "Files")
-                                OmnisearchColumnHeader(sort: $model.sort)
+                                OmnisearchColumnHeader(sort: $model.sort, columnWidths: $columnWidths)
                             }
                             ForEach(Array(hits.enumerated()), id: \.element.id) { index, hit in
                                 if index == fileCount && !contentHits.isEmpty {
@@ -259,17 +260,20 @@ private struct OmnisearchSectionHeader: View {
 /// 이름/경로/크기/수정일 칼럼 헤더 — 클릭 시 그 기준으로 정렬(`LibraryView.sortHeaderButton`과 같은 모양, 스펙 §5.4).
 private struct OmnisearchColumnHeader: View {
     @Binding var sort: OmnisearchSort
+    @Binding var columnWidths: OmnisearchColumnWidths
 
     var body: some View {
         HStack(spacing: 8) {
             sortButton(title: "이름", key: .name)
                 .frame(maxWidth: .infinity, alignment: .leading)
             sortButton(title: "경로", key: .path)
-                .frame(width: 160, alignment: .leading)
+                .frame(width: columnWidths.path, alignment: .leading)
+            OmnisearchColumnResizeHandle(width: $columnWidths.path)
             sortButton(title: "크기", key: .size)
-                .frame(width: 70, alignment: .trailing)
+                .frame(width: columnWidths.size, alignment: .trailing)
+            OmnisearchColumnResizeHandle(width: $columnWidths.size)
             sortButton(title: "수정일", key: .modifiedAt)
-                .frame(width: 120, alignment: .trailing)
+                .frame(width: columnWidths.modifiedAt, alignment: .trailing)
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 4)
@@ -291,6 +295,48 @@ private struct OmnisearchColumnHeader: View {
             .foregroundStyle(sort.key == key ? Color.cmdsAccent : Color.secondary)
         }
         .buttonStyle(.plain)
+    }
+}
+/// 칼럼 폭 상태 — 세션 한정(팝업이 열려있는 동안만 유지, 저장하지 않음. 스펙 §5.3/§5.4).
+private struct OmnisearchColumnWidths {
+    var path: CGFloat = 160
+    var size: CGFloat = 70
+    var modifiedAt: CGFloat = 120
+}
+
+/// 칼럼 경계 드래그 핸들 — 왼쪽 칼럼 폭을 늘리고 줄인다(최소 60pt 클램프, 스펙 §5.4).
+/// 이름 칼럼은 가변폭이라 자체 핸들이 없다 — 이 핸들로 경로 폭이 바뀌면 이름 칼럼이 남는 공간을
+/// 자동으로 채우므로(`.frame(maxWidth: .infinity)`) 사실상 함께 조절된다.
+private struct OmnisearchColumnResizeHandle: View {
+    @Binding var width: CGFloat
+    private let minWidth: CGFloat = 60
+
+    @State private var widthAtDragStart: CGFloat?
+
+    var body: some View {
+        Rectangle()
+            .fill(Color.clear)
+            .frame(width: 8)
+            .overlay(Rectangle().fill(Color.secondary.opacity(0.25)).frame(width: 1))
+            .contentShape(Rectangle())
+            .onHover { hovering in
+                if hovering {
+                    NSCursor.resizeLeftRight.push()
+                } else {
+                    NSCursor.pop()
+                }
+            }
+            .gesture(
+                DragGesture(minimumDistance: 1)
+                    .onChanged { value in
+                        let start = widthAtDragStart ?? width
+                        if widthAtDragStart == nil { widthAtDragStart = width }
+                        width = max(minWidth, start + value.translation.width)
+                    }
+                    .onEnded { _ in
+                        widthAtDragStart = nil
+                    }
+            )
     }
 }
 

@@ -380,28 +380,28 @@ Run: `swift test` → 실패 0(UI 전용 변경이라 신규 테스트 없음 �
 **Files:**
 - Modify: `Sources/Views/OmnisearchView.swift`
 
-- [ ] **Step 1: `OmnisearchColumnResizeHandle` 뷰 신설**
+- [x] **Step 1: `OmnisearchColumnResizeHandle` 뷰 신설**
 
 작은 세로 막대(호버 시 커서 변경, `NSCursor.resizeLeftRight` 유사 처리) + `DragGesture`로 인접 칼럼 폭(`@State` 바인딩)을 갱신. 최소 폭(60pt) 클램프.
 
-- [ ] **Step 2: 칼럼 폭 상태 추가**
+- [x] **Step 2: 칼럼 폭 상태 추가** — 구조체 `OmnisearchColumnWidths`로 구현(가칭 튜플 대신 — SwiftUI 바인딩 편의를 위해 구조체 선택).
 
 `OmnisearchView`에 `@State private var columnWidths = (path: 200.0, size: 80.0, modifiedAt: 130.0)`(가칭 — 실제 구현 시 화면 보고 조정) 추가. `OmnisearchColumnHeader`와 (Task 6의) 칼럼 행 양쪽이 이 값을 읽어 폭을 맞춘다.
 
-- [ ] **Step 3: 헤더에 핸들 배선**
+- [x] **Step 3: 헤더에 핸들 배선**
 
 경로/크기/수정일 칼럼 사이에 핸들을 끼워 넣는다(이름 칼럼은 가변폭이라 핸들 없음 — 설계 §5.4).
 
-- [ ] **Step 4: 빌드+전체 테스트**
+- [x] **Step 4: 빌드+전체 테스트** — 889개 통과(신규 테스트 없음, UI 전용 변경), 실패 0.
 
 Run: `swift build` → 성공.
 Run: `swift test` → 실패 0.
 
-- [ ] **Step 5: 수동 스모크**
+- [x] **Step 5: 수동 스모크** — 자동 검사로는 확인 불가한 화면 항목이라 레고 확인 대기.
 
 칼럼 경계를 드래그해 폭이 바뀌는지, 최소 폭 아래로 안 줄어드는지, 나머지 동작(정렬·클릭 열기)이 안 깨졌는지.
 
-- [ ] **Step 6: 커밋**
+- [x] **Step 6: 커밋**
 
 `git commit -m "기능: Omnisearch 칼럼 폭 드래그 조절 추가"`
 
