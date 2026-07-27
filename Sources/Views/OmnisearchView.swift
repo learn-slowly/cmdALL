@@ -150,7 +150,13 @@ struct OmnisearchView: View {
                                 if index == fileCount && !contentHits.isEmpty {
                                     OmnisearchSectionHeader(title: "In-file Matches")
                                 }
-                                OmnisearchRow(hit: hit, isSelected: index == model.selectedIndex)
+                                Group {
+                                    if hit.kind == .file {
+                                        OmnisearchFileRow(hit: hit, isSelected: index == model.selectedIndex, columnWidths: columnWidths)
+                                    } else {
+                                        OmnisearchRow(hit: hit, isSelected: index == model.selectedIndex)
+                                    }
+                                }
                                     .id(index)
                                     .onHover { hovering in
                                         if hovering {
@@ -189,7 +195,7 @@ struct OmnisearchView: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
         }
-        .frame(width: 560, height: 440)
+        .frame(width: 760, height: 480)
         .tint(.cmdsAccent)
         .cmdOverlayChrome()
         .onDisappear {
@@ -370,6 +376,54 @@ private struct OmnisearchRow: View {
                     .font(.caption2)
                     .foregroundStyle(isSelected ? AnyShapeStyle(Color.cmdsAccentOn.opacity(0.6)) : AnyShapeStyle(.tertiary))
             }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 7)
+        .background(isSelected ? Color.cmdsAccent : Color.clear)
+        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .padding(.horizontal, 8)
+        .contentShape(Rectangle())
+    }
+}
+/// 파일 결과 행 — 이름/경로/크기/수정일 4칸(스펙 §5.4). 표시만 담당 — 클릭·호버·선택 강조는
+/// `OmnisearchRow`와 마찬가지로 `ForEach` 레벨에서 배선(회귀 위험 최소화, 설계 §4 결정).
+private struct OmnisearchFileRow: View {
+    let hit: OmnisearchHit
+    let isSelected: Bool
+    let columnWidths: OmnisearchColumnWidths
+
+    var body: some View {
+        HStack(spacing: 8) {
+            HStack(spacing: 12) {
+                Image(systemName: "doc.text")
+                    .font(.system(size: 14))
+                    .frame(width: 22)
+                    .foregroundStyle(isSelected ? Color.cmdsAccentOn : .secondary)
+
+                Text(hit.title)
+                    .font(.body)
+                    .lineLimit(1)
+                    .foregroundStyle(isSelected ? Color.cmdsAccentOn : .primary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Text(hit.subtitle)
+                .font(.caption)
+                .lineLimit(1)
+                .foregroundStyle(isSelected ? Color.cmdsAccentOn.opacity(0.8) : .secondary)
+                .frame(width: columnWidths.path, alignment: .leading)
+
+            Text(FileInfoService.formatSize(hit.sizeBytes ?? 0))
+                .font(.caption)
+                .lineLimit(1)
+                .foregroundStyle(isSelected ? Color.cmdsAccentOn.opacity(0.8) : .secondary)
+                .frame(width: columnWidths.size, alignment: .trailing)
+
+            Text(hit.modifiedAt?.formatted(date: .abbreviated, time: .shortened) ?? "--")
+                .font(.caption)
+                .lineLimit(1)
+                .foregroundStyle(isSelected ? Color.cmdsAccentOn.opacity(0.8) : .secondary)
+                .frame(width: columnWidths.modifiedAt, alignment: .trailing)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 7)

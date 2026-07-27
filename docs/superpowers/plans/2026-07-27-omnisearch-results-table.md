@@ -414,24 +414,24 @@ Run: `swift test` → 실패 0.
 **Files:**
 - Modify: `Sources/Views/OmnisearchView.swift`
 
-- [ ] **Step 1: `OmnisearchFileRow` 뷰 신설**
+- [x] **Step 1: `OmnisearchFileRow` 뷰 신설**
 
 기존 `OmnisearchRow`의 `hit: OmnisearchHit`·`isSelected: Bool` 인터페이스를 그대로 따르되, 본문(`VStack` 2줄) 대신 이름/경로/크기/수정일 4칸을 가로로 배치. `FileInfoService.formatSize(hit.sizeBytes ?? 0)`, `hit.modifiedAt?.formatted(date: .abbreviated, time: .shortened) ?? "--"`로 표시. 아이콘·선택 강조색(`Color.cmdsAccent`/`cmdsAccentOn`)·`.padding`/`.clipShape` 등 스타일은 `OmnisearchRow`와 동일하게 맞춘다.
 
-- [ ] **Step 2: 렌더링 분기에서 교체**
+- [x] **Step 2: 렌더링 분기에서 교체**
 
 `body`의 `ForEach(hits) { ... }` 안에서 `hit.kind == .file`이면 `OmnisearchFileRow`, `.content`면 기존 `OmnisearchRow`를 그린다. `.onHover`·`.onTapGesture`(선택 갱신·`open(at:in:)` 호출)는 지금처럼 `ForEach` 레벨에 그대로 둔다(행 뷰 종류와 무관 — 옮길 필요 없음).
 
-- [ ] **Step 3: 팝업 프레임 크기 조정**
+- [x] **Step 3: 팝업 프레임 크기 조정** — 760×480으로 확정.
 
 `.frame(width: 560, height: 440)`을 칼럼 4개가 들어가도록 넓힌다(예: `width: 760, height: 480` — 실제로 띄워보고 잘림 없는 값으로 확정).
 
-- [ ] **Step 4: 빌드+전체 테스트**
+- [x] **Step 4: 빌드+전체 테스트** — 889개 통과(기준선 883 + 신규 6), 실패 0.
 
 Run: `swift build` → 성공.
 Run: `swift test` → 기준선 + 신규 6개, 실패 0.
 
-- [ ] **Step 5: 수동 회귀 체크리스트 (자동 테스트로는 원리상 불가)**
+- [ ] **Step 5: 수동 회귀 체크리스트 (자동 테스트로는 원리상 불가)** — 사람이 직접 앱을 눌러보는 확인은 이번 작업 지시에 따라 하지 않음. 레고가 직접 확인 대기.
 
 - [ ] ⇧⌘O로 검색창 열기 → 빈 검색어에서 최근 파일이 표 형태(이름/경로/크기/수정일)로 보임
 - [ ] 검색어 입력 → 이름 유사도 결과가 같은 표 형태로 보임, 검색어 지우면 다시 최근 파일 표로 복귀
@@ -443,7 +443,7 @@ Run: `swift test` → 기준선 + 신규 6개, 실패 0.
 - [ ] 검색 결과 0건일 때 안내 문구(`ContentUnavailableView`) 정상 표시
 - [ ] ESC로 창 닫기 정상 동작
 
-- [ ] **Step 6: 최종 커밋**
+- [x] **Step 6: 최종 커밋**
 
 `git commit -m "기능: Omnisearch 파일명 검색 결과를 정렬 가능한 표로 전환"`
 
