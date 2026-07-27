@@ -25,6 +25,12 @@ extension DocumentKind {
     /// kordoc으로 마크다운 변환해 보는 한글·오피스 확장자(소문자).
     static let officeExtensions: Set<String> = ["hwp", "hwpx", "hwpml", "doc", "docx", "xls", "xlsx"]
 
+    /// Docufinder 격차 5번(원본 그대로 보기) — macOS 내장 QuickLook이 원본 조판을 그대로
+    /// 그릴 수 있는 MS 오피스 확장자만. HWP류(hwp/hwpx/hwpml)는 맥이 아예 모르는 형식이라
+    /// QuickLook도 못 그린다 — kordoc→마크다운이 유일한 경로(실측, npx kordoc --help도
+    /// SVG·HTML 렌더 출력 없음 — CmdMD-fork_prd.md §10 격차 5 참고).
+    static let nativelyRenderableOfficeExtensions: Set<String> = ["doc", "docx", "xls", "xlsx"]
+
     /// kordoc patch가 서식 보존 라운드트립을 지원하는 확장자(소문자). HWP/HWPX 전용.
     static let patchableExtensions: Set<String> = ["hwp", "hwpx"]
 

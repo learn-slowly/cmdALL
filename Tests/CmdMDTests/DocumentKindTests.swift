@@ -64,4 +64,19 @@ final class DocumentKindTests: XCTestCase {
         XCTAssertEqual(kind("a.png"), .image)
         XCTAssertEqual(kind("a.md"), .markdown)
     }
+
+    // MARK: - Docufinder 격차 5번(원본 그대로 보기)
+
+    func testNativelyRenderableOfficeExtensionsAcceptsMSOfficeOnly() {
+        for ext in ["doc", "docx", "xls", "xlsx"] {
+            XCTAssertTrue(DocumentKind.nativelyRenderableOfficeExtensions.contains(ext))
+        }
+    }
+
+    func testNativelyRenderableOfficeExtensionsExcludesHWPFamily() {
+        for ext in ["hwp", "hwpx", "hwpml"] {
+            XCTAssertFalse(DocumentKind.nativelyRenderableOfficeExtensions.contains(ext),
+                            "\(ext)은 macOS QuickLook이 못 읽어 원본 보기 대상이 아니어야 한다")
+        }
+    }
 }

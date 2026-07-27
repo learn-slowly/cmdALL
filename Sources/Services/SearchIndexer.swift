@@ -28,7 +28,7 @@ actor SearchIndexer {
         return url  // 폴백: 원본 그대로
     }
 
-    func indexFolder(_ folder: URL, progress: ((Int, Int) -> Void)?) async {
+    func indexFolder(_ folder: URL, ocrScannedPDFs: Bool = false, progress: ((Int, Int) -> Void)?) async {
         // 폴더의 정규 경로를 구한다. enumerator도 동일 정규 경로를 반환하므로
         // indexedPaths prefix와 일치한다.
         let canonicalFolder = Self.canonicalURL(folder)
@@ -50,7 +50,7 @@ actor SearchIndexer {
             let mtime = ((try? url.resourceValues(forKeys: [.contentModificationDateKey]))?
                 .contentModificationDate ?? Date()).timeIntervalSince1970
             if await index.needsIndex(path: url.path, mtime: mtime) {
-                let body = await ContentExtractor.body(for: url, kordoc: kordoc) ?? ""
+                let body = await ContentExtractor.body(for: url, kordoc: kordoc, ocrScannedPDFs: ocrScannedPDFs) ?? ""
                 await index.upsert(path: url.path, filename: url.lastPathComponent,
                                    body: body, mtime: mtime, ext: url.pathExtension.lowercased())
             }
@@ -64,7 +64,7 @@ actor SearchIndexer {
     }
 
     /// 단일 경로 (재)인덱싱. 파일이 없으면 인덱스에서 제거.
-    func reindex(path: String) async {
+    func reindex(path: String, ocrScannedPDFs: Bool = false) async {
         // 정규 경로로 변환(예: /var → /private/var). 파일이 없어도 부모 기준 해소.
         let canonicalURL = Self.canonicalURL(URL(fileURLWithPath: path))
         let canonicalPath = canonicalURL.path
@@ -78,7 +78,7 @@ actor SearchIndexer {
         let mtime = ((try? canonicalURL.resourceValues(forKeys: [.contentModificationDateKey]))?
             .contentModificationDate ?? Date()).timeIntervalSince1970
         guard await index.needsIndex(path: canonicalPath, mtime: mtime) else { return }
-        let body = await ContentExtractor.body(for: canonicalURL, kordoc: kordoc) ?? ""
+        let body = await ContentExtractor.body(for: canonicalURL, kordoc: kordoc, ocrScannedPDFs: ocrScannedPDFs) ?? ""
         await index.upsert(path: canonicalPath, filename: canonicalURL.lastPathComponent,
                            body: body, mtime: mtime, ext: canonicalURL.pathExtension.lowercased())
     }

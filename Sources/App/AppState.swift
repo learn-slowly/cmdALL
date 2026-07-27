@@ -148,6 +148,9 @@ final class AppState {
     var officeFillSession: OfficeFillRequest?
     /// 양식 채우기(dry-run·fill) 진행 중인 탭. 스피너·중복 실행 방지.
     var officeFillInProgress: Set<UUID> = []
+    /// "원본 보기" 켜진 탭(격차 5번) — MS 오피스(doc/docx/xls/xlsx)만 대상, macOS 내장
+    /// QuickLook이 원본 조판을 그대로 그린다. HWP류는 QuickLook이 못 읽어 토글 자체가 안 뜬다.
+    var officeShowingOriginal: Set<UUID> = []
 
     // Update checking (GitHub Releases)
     var updateAvailable: Bool = false
@@ -413,6 +416,7 @@ final class AppState {
     // MARK: - kordoc patch 편집 저장
 
     /// 변환 마크다운을 편집 버퍼로 복사하고 편집모드로 들어간다(이미 버퍼가 있으면 유지).
+    /// 편집은 마크다운에서만 가능 — "원본 보기" 중이었으면 함께 끈다.
     @MainActor
     func beginOfficeEdit(tabID: UUID) {
         guard case .loaded(let result)? = officeStates[tabID] else { return }
@@ -420,6 +424,20 @@ final class AppState {
             officeEditBuffers[tabID] = result.markdown
         }
         officeEditing.insert(tabID)
+        officeShowingOriginal.remove(tabID)
+    }
+
+    /// "원본 보기" 켜고 끄기(격차 5번) — MS 오피스(doc/docx/xls/xlsx)만. 호출부(뷰)가
+    /// `DocumentKind.nativelyRenderableOfficeExtensions`로 이미 걸러 보이지만, 여기서도
+    /// 같은 판정으로 한 번 더 막는다(단일 진실 원천 유지).
+    @MainActor
+    func toggleOfficeOriginalView(tabID: UUID, fileURL: URL) {
+        guard DocumentKind.nativelyRenderableOfficeExtensions.contains(fileURL.pathExtension.lowercased()) else { return }
+        if officeShowingOriginal.contains(tabID) {
+            officeShowingOriginal.remove(tabID)
+        } else {
+            officeShowingOriginal.insert(tabID)
+        }
     }
 
     /// 편집을 취소하고 버퍼를 버린다.
@@ -1771,7 +1789,7 @@ final class AppState {
         // 판 번호를 실제 완주 전에 적으면, 중간에 종료됐을 때 다음 실행이 "이미
         // 끝났다"고 오판해 다시 훑지 않는다(판 번호 도입 취지 자체가 무력화됨).
         for folder in settings.indexedFolders {
-            await searchIndexer.indexFolder(URL(fileURLWithPath: folder), progress: nil)
+            await searchIndexer.indexFolder(URL(fileURLWithPath: folder), ocrScannedPDFs: settings.ocrScannedPDFsEnabled, progress: nil)
         }
         await searchIndex.setExtractorVersion(SearchIndex.currentExtractorVersion)
     }
@@ -1782,7 +1800,7 @@ final class AppState {
         indexInProgress = true
         indexProgress = (0, 0)
         Task {
-            await searchIndexer.indexFolder(URL(fileURLWithPath: path)) { done, total in
+            await searchIndexer.indexFolder(URL(fileURLWithPath: path), ocrScannedPDFs: settings.ocrScannedPDFsEnabled) { done, total in
                 Task { @MainActor in self.indexProgress = (done, total) }
             }
             await MainActor.run {
@@ -1833,7 +1851,7 @@ final class AppState {
             guard let self else { return }
             Task { @MainActor in
                 for p in Set(paths) {
-                    await self.searchIndexer.reindex(path: p)
+                    await self.searchIndexer.reindex(path: p, ocrScannedPDFs: self.settings.ocrScannedPDFsEnabled)
                 }
             }
         }

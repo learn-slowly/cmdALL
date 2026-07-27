@@ -8,6 +8,12 @@ struct OfficeReaderView: View {
     let tabID: UUID
     let fileURL: URL
 
+    /// Docufinder 격차 5번 — macOS 내장 QuickLook이 원본 조판 그대로 그릴 수 있는
+    /// MS 오피스(doc/docx/xls/xlsx)만. HWP류는 이 토글 자체가 안 뜬다(§DocumentKind).
+    private var canShowOriginal: Bool {
+        DocumentKind.nativelyRenderableOfficeExtensions.contains(fileURL.pathExtension.lowercased())
+    }
+
     var body: some View {
         switch appState.officeStates[tabID] {
         case .loaded(let result):
@@ -27,6 +33,14 @@ struct OfficeReaderView: View {
                         .buttonStyle(.borderedProminent)
                         .disabled(appState.officePatchInProgress.contains(tabID))
                     } else {
+                        if canShowOriginal {
+                            Button {
+                                appState.toggleOfficeOriginalView(tabID: tabID, fileURL: fileURL)
+                            } label: {
+                                Label(appState.officeShowingOriginal.contains(tabID) ? "글로 보기" : "원본 보기",
+                                      systemImage: "doc.richtext")
+                            }
+                        }
                         if DocumentKind.isPatchable(fileURL) {
                             Button {
                                 appState.beginOfficeEdit(tabID: tabID)
@@ -51,6 +65,8 @@ struct OfficeReaderView: View {
                 Divider()
                 if isEditing {
                     OfficeEditorPane(tabID: tabID)
+                } else if canShowOriginal && appState.officeShowingOriginal.contains(tabID) {
+                    QuickLookPreview(url: fileURL)
                 } else {
                     MarkdownPreviewView(
                         documentID: tabID,

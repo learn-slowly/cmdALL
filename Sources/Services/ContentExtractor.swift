@@ -10,16 +10,23 @@ enum ContentExtractor {
     static let maxTextBytes = 5 * 1024 * 1024
 
     /// kordoc 없이 즉시 추출 가능한 종류(글자/pdf)만. 미지원·없는 파일은 nil.
-    static func localBody(for url: URL) -> String? {
+    /// `ocrScannedPDFs`가 켜져 있고 PDF에 글자 레이어가 전혀 없으면(스캔본) Vision OCR로
+    /// 폴백한다(Docufinder 격차 6번 — 기본 OFF, 설정에서 켠다).
+    static func localBody(for url: URL, ocrScannedPDFs: Bool = false) -> String? {
         let ext = url.pathExtension.lowercased()
 
         if DocumentKind.pdfExtensions.contains(ext) {
             guard let pdf = PDFDocument(url: url) else { return nil }
             var parts: [String] = []
             for i in 0..<pdf.pageCount {
-                if let s = pdf.page(at: i)?.string { parts.append(s) }
+                if let s = pdf.page(at: i)?.string,
+                   !s.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    parts.append(s)
+                }
             }
-            return parts.isEmpty ? nil : parts.joined(separator: "\n")
+            if !parts.isEmpty { return parts.joined(separator: "\n") }
+            guard ocrScannedPDFs else { return nil }
+            return OCRService.recognizeText(in: pdf)
         }
 
         // 이메일(.eml)은 여는 방식(QuickLook — Mail 미리보기가 더 나음, Phase 12 유지)과
@@ -47,11 +54,11 @@ enum ContentExtractor {
     }
 
     /// 종류별 본문. office면 kordoc 분기, 그 외는 localBody.
-    static func body(for url: URL, kordoc: KordocService) async -> String? {
+    static func body(for url: URL, kordoc: KordocService, ocrScannedPDFs: Bool = false) async -> String? {
         let ext = url.pathExtension.lowercased()
         if DocumentKind.officeExtensions.contains(ext) {
             return try? await kordoc.markdown(for: url)
         }
-        return localBody(for: url)
+        return localBody(for: url, ocrScannedPDFs: ocrScannedPDFs)
     }
 }
