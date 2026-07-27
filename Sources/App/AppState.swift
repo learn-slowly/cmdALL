@@ -1473,7 +1473,14 @@ final class AppState {
         // Hop back through the static ref instead of capturing self across the
         // detached-task boundary (AppState itself is not Sendable).
         noteIndexTask = Task.detached(priority: .utility) {
-            let notes = NoteIndexService.buildIndex(roots: roots)
+            let notes = NoteIndexService.buildIndex(roots: roots) { chunk in
+                // onChunk는 이 detached task 실행 흐름 안에서 동기 호출되므로,
+                // 여기서 보는 Task.isCancelled는 바깥 noteIndexTask 자신의 취소 상태다.
+                guard !Task.isCancelled else { return }
+                Task { @MainActor in
+                    AppState.shared?.linkableNotes = chunk
+                }
+            }
             guard !Task.isCancelled else { return }
             await MainActor.run {
                 AppState.shared?.linkableNotes = notes

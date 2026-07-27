@@ -6,9 +6,18 @@ import Foundation
 enum NoteIndexService {
     static let supportedExtensions: Set<String> = ["md", "markdown", "txt"]
 
-    static func buildIndex(roots: [URL], limit: Int = 8000) -> [VaultNote] {
+    /// - chunkSize: `onChunk`을 몇 개 모일 때마다 부를지(중간 진행 반영용).
+    /// - onChunk: 지금까지 모은 걸 정렬해 전달(누적본 — 매번 전체를 다시 보내므로
+    ///   호출 쪽은 그냥 덮어써도 된다). 취소는 호출 쪽이 `Task.isCancelled`로 판단.
+    static func buildIndex(
+        roots: [URL],
+        limit: Int = 200_000,
+        chunkSize: Int = 10_000,
+        onChunk: (([VaultNote]) -> Void)? = nil
+    ) -> [VaultNote] {
         var notes: [VaultNote] = []
         var seenPaths: Set<String> = []
+        var lastChunkCount = 0
 
         for root in roots {
             guard let enumerator = FileManager.default.enumerator(
@@ -31,6 +40,11 @@ enum NoteIndexService {
                     modifiedAt: modified,
                     url: standardized
                 ))
+
+                if notes.count - lastChunkCount >= chunkSize {
+                    lastChunkCount = notes.count
+                    onChunk?(sorted(notes))
+                }
 
                 if notes.count >= limit {
                     return sorted(notes)
