@@ -405,6 +405,16 @@ UpdateInstallError: 쓰기권한없음 | 다운로드실패 | 체크섬불일치
 - **Docufinder에는 있는데 cmdALL엔 없는 것(구체적 격차 7가지, 우선순위 미정)**:
   1. 파일명 검색 결과를 정렬 가능한 표(이름·경로·크기·수정일·종류 칼럼, 너비 조절)로 보기 —
      cmdALL은 지금 단순 리스트(Omnisearch).
+     — **완료(2026-07-27, 1단계)**: 설계·계획 승인 후 구현. `Sources/Models/OmnisearchHit.swift`(신규,
+       옛 `OmnisearchView.Hit`을 최상위 모델로 승격 + `sizeBytes`/`modifiedAt` 필드 추가)·
+       `Sources/Models/OmnisearchSort.swift`(신규, 정렬 키+방향 상태)·
+       `Sources/Services/OmnisearchHitSorting.swift`(신규, 순수 정렬 함수)·
+       `Tests/CmdMDTests/OmnisearchSortTests.swift`(신규, 정렬 로직 단위 테스트 6개)·
+       `Sources/Views/OmnisearchView.swift`(칼럼 헤더+클릭 정렬, 칼럼 폭 드래그 조절, 파일 행을
+       이름/경로/크기/수정일 4칸 표로 교체, 팝업 프레임 760×480으로 확대). 본문 검색(In-file
+       Matches)·화살표 탐색·엔터/클릭 열기는 손대지 않음(회귀 없음 확인). `swift test` 전체
+       889개 통과(기존 883 + 신규 6), 실패 0. "종류" 칼럼·칼럼 폭 저장은 이번 범위 밖(합의된
+       범위 §10 상단 참고). **수동 스모크(실제 화면 확인)는 레고 확인 대기.**
   2. 파일 우클릭 → AI 요약 한 번에(문서 타입별 핵심 요약). cmdALL은 문서를 열어 직접 질문해야
      함.
   3. 문서 버전 비교(같은 문서 여러 버전을 나란히, 달라진 부분 표시). cmdALL엔 없음.
