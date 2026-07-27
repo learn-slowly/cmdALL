@@ -185,10 +185,7 @@ final class AppState {
     var ragBusy: Bool = false
     var ragMessage: String? = nil   // noEvidence·에러 안내
 
-    // 내용 검색(인덱스) UI 상태
-    var showIndexSearch: Bool = false
-    var indexSearchText: String = ""
-    var indexSearchResults: [IndexHit] = []
+    // 내용 검색(인덱스) 진행 상태 — 검색 화면 자체는 Omnisearch로 통합됐다(§방법2).
     var indexInProgress: Bool = false
     var indexProgress: (done: Int, total: Int)? = nil
 
@@ -985,6 +982,15 @@ final class AppState {
         }
 
         NotificationCenter.default.addObserver(
+            forName: .showOmnisearchGlobal,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.presentMainWindowIfNeeded()
+            self?.showOmnisearch = true
+        }
+
+        NotificationCenter.default.addObserver(
             forName: .openInternalLink,
             object: nil,
             queue: .main
@@ -1033,6 +1039,7 @@ final class AppState {
         sidebarVisible = true
         loadFileTree()
         rebuildNoteIndex()
+        Task { @MainActor in self.registerIndexFolder(url) }   // 열면 자동으로 내용(pdf·오피스 포함)까지 뒤에서 훑는다.
         saveSession()
     }
 
@@ -1694,27 +1701,8 @@ final class AppState {
             await MainActor.run {
                 self.indexInProgress = false
                 self.indexProgress = nil
-                if !self.indexSearchText.isEmpty {
-                    Task { await self.runIndexSearch(query: self.indexSearchText) }
-                }
             }
         }
-    }
-
-    /// 인덱스 검색 실행(결과를 indexSearchResults에 채운다).
-    @MainActor
-    func runIndexSearch(query: String) async {
-        guard !query.isEmpty else { indexSearchResults = []; return }
-        let hits = await searchIndex.search(query: query)
-        indexSearchResults = hits
-    }
-
-    /// 결과 경로를 연다.
-    @MainActor
-    func openIndexHit(_ hit: IndexHit) {
-        let url = URL(fileURLWithPath: hit.path)
-        showIndexSearch = false
-        Task { await loadAndActivateDocument(at: url, inNewTab: true) }
     }
 
     /// 자료에 묻기(RAG) 실행. 근거 없으면 안내, 성공하면 답변+출처를 채운다.
@@ -1759,9 +1747,6 @@ final class AppState {
             Task { @MainActor in
                 for p in Set(paths) {
                     await self.searchIndexer.reindex(path: p)
-                }
-                if !self.indexSearchText.isEmpty {
-                    await self.runIndexSearch(query: self.indexSearchText)
                 }
             }
         }
@@ -3347,14 +3332,11 @@ final class AppState {
         isSearching = false
     }
 
-    /// Content search over the open folder, used by Omnisearch.
-    /// Omnisearch는 타이핑 중 실시간 검색이라 파일명·PDF 본문은 제외하고
-    /// 텍스트 줄(.line) 결과만 받는다(성능·라벨/scrollToLine 정합).
-    func searchContent(query: String) async -> [SearchResult] {
-        guard let folder = currentFolder, !query.isEmpty else { return [] }
-        return await performSearch(query: query, in: folder,
-                                   includeFilenames: false, includePDFBody: false,
-                                   includeOfficeBody: false)
+    /// Omnisearch의 내용(In-file) 검색 — 이미 자동으로 훑어둔 색인(FTS5)에서 가져온다.
+    /// pdf·hwp·워드·엑셀 안 내용도 포함(색인이 이미 커버, §방법2로 실시간 스캔 방식 폐기).
+    func searchContent(query: String) async -> [IndexHit] {
+        guard !query.isEmpty else { return [] }
+        return await searchIndex.search(query: query, limit: 12)
     }
 
     // MARK: - Vaults
@@ -3363,6 +3345,7 @@ final class AppState {
         vaults.append(vault)
         saveUserData()
         rebuildNoteIndex()
+        Task { @MainActor in self.registerIndexFolder(vault.rootPath) }   // 연결하면 자동으로 내용까지 훑는다.
     }
 
     func removeVault(_ vault: Vault) {
@@ -4041,6 +4024,7 @@ final class AppState {
             // 복원 위치를 히스토리 시작점으로 seed(가짜 뒤로 항목 없이).
             navHistory.record(FolderLocation(root: folder, display: folder))
             loadFileTree()
+            Task { @MainActor in self.registerIndexFolder(folder) }   // 복원한 폴더도 자동으로 내용까지 훑는다.
         }
 
         let files = session.openFiles.filter { FileManager.default.fileExists(atPath: $0.path) }

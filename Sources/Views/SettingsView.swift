@@ -784,24 +784,43 @@ struct ToolsSettingsView: View {
 
             Section {
                 if appState.settings.indexedFolders.isEmpty {
-                    Text("등록된 폴더 없음")
+                    Text("등록된 폴더 없음 — 폴더를 열거나 볼트를 연결하면 자동으로 여기 등록되고 내용까지 훑린다.")
+                        .font(.caption)
                         .foregroundStyle(.secondary)
                 } else {
                     ForEach(appState.settings.indexedFolders, id: \.self) { path in
-                        Text(path)
-                            .font(.callout)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text((path as NSString).lastPathComponent)
+                                    .font(.callout)
+                                Text(path)
+                                    .font(.caption).foregroundStyle(.secondary)
+                                    .lineLimit(1).truncationMode(.middle)
+                            }
+                            Spacer()
+                            Button("재인덱싱") { appState.reindexFolder(path) }
+                                .controlSize(.small)
+                            Button(role: .destructive) { appState.unregisterIndexFolder(path) } label: {
+                                Image(systemName: "minus.circle")
+                            }
+                            .controlSize(.small)
+                        }
                     }
                 }
-                Toggle("질의 확장 (RAG)", isOn: $state.settings.ragExpandQuery)
-                Button("내용 검색 열기…") {
-                    appState.showIndexSearch = true
+
+                HStack {
+                    Button("폴더 추가…") { addIndexFolder() }
+                    if appState.indexInProgress, let p = appState.indexProgress {
+                        ProgressView(value: p.total == 0 ? 0 : Double(p.done) / Double(p.total))
+                        Text("\(p.done)/\(p.total)").font(.caption).foregroundStyle(.secondary)
+                    }
                 }
+
+                Toggle("질의 확장 (RAG)", isOn: $state.settings.ragExpandQuery)
             } header: {
                 Text("검색 인덱스")
             } footer: {
-                Text("폴더 등록·해제는 내용 검색 창에서 합니다. 질의 확장은 자료에 묻기(RAG)가 검색어를 넓히는 옵션입니다.")
+                Text("여기 등록된 폴더는 이름·내용(pdf·hwp·워드·엑셀 포함) 검색(⇧⌘O) 대상이다. 폴더를 열거나 볼트를 연결하면 자동으로 등록되니, 손으로 뺄 때만 여기를 쓴다. 질의 확장은 자료에 묻기(RAG)가 검색어를 넓히는 옵션이다.")
                     .font(.caption)
             }
 
@@ -926,6 +945,16 @@ struct ToolsSettingsView: View {
                 claudePath = claude
                 hasChecked = true
             }
+        }
+    }
+    /// 검색 인덱스에 폴더를 손으로 추가(보통은 폴더를 열거나 볼트를 연결하면 자동 등록됨).
+    private func addIndexFolder() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.allowsMultipleSelection = false
+        if panel.runModal() == .OK, let url = panel.url {
+            appState.registerIndexFolder(url)
         }
     }
 }

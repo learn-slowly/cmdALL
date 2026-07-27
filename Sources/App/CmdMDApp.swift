@@ -291,11 +291,6 @@ struct CmdMDApp: App {
 
                 Divider()
 
-                Button("내용 검색 (인덱스)...") {
-                    appState.showIndexSearch = true
-                }
-                .appShortcut(appState.keyBinding(for: .indexSearch))
-
                 Button("자료에 묻기 (RAG)...") {
                     appState.showAskCorpus = true
                 }
@@ -404,6 +399,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
             if event.modifierFlags.contains([.command, .shift]) && event.keyCode == 46 { // M key
                 self?.showQuickCapture()
+            } else if event.modifierFlags.contains([.command, .shift]) && event.keyCode == 28 { // 8 key(⌘⇧8) — 검색(방법2) 전역 단축키
+                self?.showOmnisearchGlobally()
             }
         }
 
@@ -507,6 +504,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Post notification to show quick capture
         NotificationCenter.default.post(name: .showQuickCapture, object: nil)
     }
+
+    /// ⌘⇧8 — 다른 앱을 보고 있어도 cmdALL을 앞으로 가져와 검색창을 띄운다.
+    private func showOmnisearchGlobally() {
+        NotificationCenter.default.post(name: .showOmnisearchGlobal, object: nil)
+    }
 }
 
 extension AppLaunchDefaults {
@@ -517,6 +519,7 @@ extension AppLaunchDefaults {
 
 extension Notification.Name {
     static let showQuickCapture = Notification.Name("showQuickCapture")
+    static let showOmnisearchGlobal = Notification.Name("showOmnisearchGlobal")
     static let showDocumentSearch = Notification.Name("showDocumentSearch")
     static let formatBold = Notification.Name("formatBold")
     static let formatItalic = Notification.Name("formatItalic")

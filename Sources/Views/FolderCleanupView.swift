@@ -3,7 +3,7 @@ import AppKit
 
 /// 폴더 정리 전용 시트: 폴더 선택 → Claude 스킴 제안 → 미리보기/승인 → 실행 → 기록/되돌리기.
 struct FolderCleanupView: View {
-    // IndexSearchView와 동일한 AppState 주입 형태(@Observable / @Environment)
+    // 다른 시트들과 동일한 AppState 주입 형태(@Observable / @Environment)
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
 

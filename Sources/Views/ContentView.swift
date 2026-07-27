@@ -105,9 +105,6 @@ struct ContentView: View {
         .sheet(item: $state.officeFillSession) { request in
             OfficeFillView(request: request)
         }
-        .sheet(isPresented: $state.showIndexSearch) {
-            IndexSearchView()
-        }
         .sheet(isPresented: $state.showFolderCleanup) {
             FolderCleanupView()
         }

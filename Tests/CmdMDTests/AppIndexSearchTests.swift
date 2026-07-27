@@ -31,11 +31,10 @@ final class AppIndexSearchTests: XCTestCase {
     }
 
     @MainActor
-    func testIndexSearchStateDefaults() {
+    func testIndexingStateDefaults() {
         let dir = TempDataDirectory.make(); defer { TempDataDirectory.cleanup(dir) }
         let app = AppState(dataDirectory: dir)
-        XCTAssertFalse(app.showIndexSearch)
-        XCTAssertTrue(app.indexSearchResults.isEmpty)
         XCTAssertFalse(app.indexInProgress)
+        XCTAssertNil(app.indexProgress)
     }
 }

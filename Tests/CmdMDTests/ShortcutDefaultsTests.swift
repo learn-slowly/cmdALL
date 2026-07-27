@@ -5,8 +5,6 @@ import XCTest
 /// (하드코딩 단축키와의 충돌은 enum 밖이라 설계 단계 수동 검증으로 갈음 — 스펙 §2·§5)
 final class ShortcutDefaultsTests: XCTestCase {
     func testPhase10ShortcutDefaults() {
-        XCTAssertEqual(AppShortcut.indexSearch.defaultBinding,
-                       KeyBinding(key: "f", command: true, option: true))
         XCTAssertEqual(AppShortcut.askCorpus.defaultBinding,
                        KeyBinding(key: "a", command: true, option: true))
         XCTAssertEqual(AppShortcut.toggleLibraryMode.defaultBinding,

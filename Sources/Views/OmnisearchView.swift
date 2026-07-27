@@ -10,7 +10,7 @@ import SwiftUI
     var query = ""
     var selectedIndex = 0
     var navigatingByKeyboard = false
-    var contentResults: [SearchResult] = []
+    var contentResults: [IndexHit] = []
     var isSearchingContent = false
     var sort = OmnisearchSort.default
 }
@@ -76,13 +76,13 @@ struct OmnisearchView: View {
     }
 
     private var contentHits: [OmnisearchHit] {
-        model.contentResults.prefix(12).map { result in
+        model.contentResults.prefix(12).map { hit in
             OmnisearchHit(
                 kind: .content,
-                title: result.fileName,
-                subtitle: "L\(result.lineNumber)  \(result.lineContent.trimmingCharacters(in: .whitespaces))",
-                url: result.fileURL,
-                line: result.lineNumber
+                title: (hit.path as NSString).lastPathComponent,
+                subtitle: hit.snippet.isEmpty ? hit.path : hit.snippet,
+                url: URL(fileURLWithPath: hit.path),
+                line: nil
             )
         }
     }
@@ -184,8 +184,10 @@ struct OmnisearchView: View {
 
             HStack(spacing: 12) {
                 Label("\(appState.linkableNotes.count) notes indexed", systemImage: "tray.full")
-                if appState.currentFolder == nil {
-                    Text("Open a folder (⌥⌘O) to enable content search")
+                if appState.currentFolder == nil && appState.settings.indexedFolders.isEmpty {
+                    Text("Open a folder (⌥⌘O) to enable search")
+                } else if appState.indexInProgress, let p = appState.indexProgress {
+                    Text(p.total > 0 ? "훑는 중… (\(p.done)/\(p.total))" : "훑는 중…")
                 }
                 Spacer()
                 Text("↩ open · ↑↓ navigate")
@@ -230,7 +232,9 @@ struct OmnisearchView: View {
         contentSearchTask?.cancel()
         model.contentResults = []
 
-        guard query.count >= 2, appState.currentFolder != nil else {
+        // 색인(자동으로 훑어둔 폴더·볼트)이 하나라도 있으면 내용 검색 가능 — currentFolder가
+        // nil이어도(볼트만 연결된 상태 등) 검색은 된다.
+        guard query.count >= 2, !appState.settings.indexedFolders.isEmpty else {
             model.isSearchingContent = false
             return
         }
