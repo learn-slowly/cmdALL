@@ -128,7 +128,7 @@ struct PathBarView: View {
         if seg.isWithinRoot {
             appState.selectFolderForLibrary(seg.url)
         } else {
-            appState.openFolder(at: seg.url)
+            appState.openFolder(at: seg.url, autoIndex: false)   // 경로 바 탐색 — 새 폴더 선택이 아니다.
             appState.mainMode = .library
         }
     }

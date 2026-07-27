@@ -1031,7 +1031,11 @@ final class AppState {
 
     /// 작업 폴더를 지정 URL로 전환한다 — File > Open Folder의 성공 분기와 동일.
     /// 즐겨찾기 폴더 열기 등 패널 없는 진입로가 재사용한다.
-    func openFolder(at url: URL) {
+    /// - Parameter autoIndex: 이 폴더를 내용 검색 색인에도 자동 등록할지. 기본 true(File
+    ///   메뉴로 직접 연 폴더·즐겨찾기 등 "의도한 작업 폴더"). 사이드바 기본 위치(홈·데스크탑·
+    ///   다운로드·문서)처럼 그냥 훑어보기용 바로가기는 false로 호출한다 — 다운로드 폴더 전체가
+    ///   클릭 한 번에 몇만 개짜리 내용 색인 작업으로 둔갑하는 것을 막는다(2026-07-27 실사용 발견).
+    func openFolder(at url: URL, autoIndex: Bool = true) {
         currentFolder = url
         // currentFolder가 실제로 바뀌는 지점에서만 selectedFolder를 리셋한다.
         selectedFolder = url
@@ -1039,7 +1043,9 @@ final class AppState {
         sidebarVisible = true
         loadFileTree()
         rebuildNoteIndex()
-        Task { @MainActor in self.registerIndexFolder(url) }   // 열면 자동으로 내용(pdf·오피스 포함)까지 뒤에서 훑는다.
+        if autoIndex {
+            Task { @MainActor in self.registerIndexFolder(url) }   // 열면 자동으로 내용(pdf·오피스 포함)까지 뒤에서 훑는다.
+        }
         saveSession()
     }
 
@@ -1082,7 +1088,7 @@ final class AppState {
         suppressHistoryRecording = true
         defer { suppressHistoryRecording = false }
         if currentFolder?.standardizedFileURL.path != loc.root.standardizedFileURL.path {
-            openFolder(at: loc.root)
+            openFolder(at: loc.root, autoIndex: false)   // 뒤로/앞으로는 탐색이지 새 폴더 선택이 아니다.
         }
         selectedFolder = loc.display
         mainMode = .library

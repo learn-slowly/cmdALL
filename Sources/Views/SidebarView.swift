@@ -704,7 +704,8 @@ private struct DefaultLocationRow: View {
     var body: some View {
         Label(location.name, systemImage: location.icon)
             .onTapGesture {
-                appState.openFolder(at: location.url)
+                // 훑어보기용 바로가기 — 다운로드·문서 전체를 자동 내용 색인 대상으로 만들지 않는다.
+                appState.openFolder(at: location.url, autoIndex: false)
             }
             .contextMenu {
                 if appState.isQuickMoveFolder(location.url) {
