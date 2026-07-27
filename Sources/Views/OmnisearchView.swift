@@ -19,7 +19,7 @@ struct OmnisearchView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
 
-    /// 전역 오버레이 패널(⌃⌘Space)에서 재사용할 때만 채워진다 — 시트로 쓸 땐 nil이라
+    /// 전역 오버레이 패널(⌘⇧8)에서 재사용할 때만 채워진다 — 시트로 쓸 땐 nil이라
     /// `dismiss()`만으로 충분하다(전역 오버레이는 시트가 아니라 독립 NSPanel이라
     /// SwiftUI dismiss가 안 먹혀 별도 닫기 훅이 필요, GlobalSearchOverlayController 참고).
     var onRequestClose: (() -> Void)? = nil
@@ -230,7 +230,7 @@ struct OmnisearchView: View {
         dismiss()
         onRequestClose?()
         appState.openDocument(at: hit.url, inNewTab: true, scrollToLine: hit.line)
-        // 오버레이 경로에서 파일을 열 땐 cmdALL이 아직 앞에 나서 있지 않다(⌃⌘Space는
+        // 오버레이 경로에서 파일을 열 땐 cmdALL이 아직 앞에 나서 있지 않다(⌘⇧8는
         // nonactivatingPanel이라 앱을 활성화하지 않음) — 시트 경로에선 이미 최상단이라 no-op.
         appState.presentMainWindowIfNeeded()
     }

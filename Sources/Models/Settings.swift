@@ -113,7 +113,7 @@ struct AppSettings: Codable, Equatable {
     var indexedFolders: [String] = []      // 내용 검색 인덱스 등록 폴더(절대 경로)
 
     // MARK: 전역 검색 오버레이
-    /// ⌃⌘Space — 다른 앱을 보고 있어도 화면 중앙에 검색창을 띄운다(Raycast식). 기본 ON,
+    /// ⌘⇧8 — 다른 앱을 보고 있어도 화면 중앙에 검색창을 띄운다(Raycast식). 기본 ON,
     /// 다른 런처 앱과 조합이 겹치면 여기서 끌 수 있다.
     var globalSearchOverlayEnabled: Bool = true
 

@@ -982,15 +982,6 @@ final class AppState {
         }
 
         NotificationCenter.default.addObserver(
-            forName: .showOmnisearchGlobal,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            self?.presentMainWindowIfNeeded()
-            self?.showOmnisearch = true
-        }
-
-        NotificationCenter.default.addObserver(
             forName: .openInternalLink,
             object: nil,
             queue: .main

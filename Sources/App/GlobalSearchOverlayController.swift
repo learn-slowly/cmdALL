@@ -1,11 +1,12 @@
 import SwiftUI
 import AppKit
 
-/// 다른 앱을 보고 있어도 ⌃⌘Space로 화면 중앙에 띄우는 파일 찾기(Raycast식) — PRD §10
-/// "전역 단축키 파일 찾기" 구현. 이미 있는 ⌘⇧8(`AppState.showOmnisearchGlobal`)은 cmdALL
-/// 메인 창 전체를 앞으로 불러오는 방식이라, 다른 앱 작업을 방해한다. 이건 그 대신 독립
-/// `NSPanel`에 기존 `OmnisearchView`를 그대로 얹어 cmdALL을 활성화하지 않고 띄운다
-/// (`.nonactivatingPanel` — Apple 문서: 이 패널이 key가 돼도 소유 앱은 활성화되지 않는다).
+/// 다른 앱을 보고 있어도 ⌘⇧8로 화면 중앙에 띄우는 파일 찾기(Raycast식) — PRD §10
+/// "전역 단축키 파일 찾기" 구현. 원래 이 조합은 cmdALL 메인 창 전체를 앞으로 불러와
+/// 시트로 검색을 여는 방식이었다(방법2). 다른 앱 작업을 방해해, 독립 `NSPanel`에
+/// 기존 `OmnisearchView`를 그대로 얹어 cmdALL을 활성화하지 않고 띄우는 방식으로
+/// 교체했다(`.nonactivatingPanel` — Apple 문서: 이 패널이 key가 돼도 소유 앱은
+/// 활성화되지 않는다).
 /// Esc나 바깥 클릭으로 닫히면 원래 보던 앱으로 그대로 복귀한다(cmdALL이 앞에 나서지 않음).
 @MainActor
 final class GlobalSearchOverlayController: NSObject, NSWindowDelegate {

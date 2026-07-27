@@ -405,9 +405,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
             if event.modifierFlags.contains([.command, .shift]) && event.keyCode == 46 { // M key
                 self?.showQuickCapture()
-            } else if event.modifierFlags.contains([.command, .shift]) && event.keyCode == 28 { // 8 key(⌘⇧8) — 검색(방법2) 전역 단축키
-                self?.showOmnisearchGlobally()
-            } else if event.modifierFlags.contains([.command, .shift]) && event.keyCode == 49 { // Space(⇧⌘Space) — 전역 검색 오버레이(Raycast식)
+            } else if event.modifierFlags.contains([.command, .shift]) && event.keyCode == 28 { // 8 key(⌘⇧8) — 전역 검색 오버레이(Raycast식)
                 self?.toggleGlobalSearchOverlay()
             }
         }
@@ -416,7 +414,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // 한다 — addGlobalMonitorForEvents는 자기 앱 안의 이벤트는 안 넘겨준다(별도 로컬
         // 모니터 필요, F1b `fileOpsMonitor`와 같은 이유).
         globalSearchLocalMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            if event.modifierFlags.contains([.command, .shift]) && event.keyCode == 49 {
+            if event.modifierFlags.contains([.command, .shift]) && event.keyCode == 28 {
                 self?.toggleGlobalSearchOverlay()
                 return nil
             }
@@ -528,15 +526,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         NotificationCenter.default.post(name: .showQuickCapture, object: nil)
     }
 
-    /// ⌘⇧8 — 다른 앱을 보고 있어도 cmdALL을 앞으로 가져와 검색창을 띄운다.
-    private func showOmnisearchGlobally() {
-        NotificationCenter.default.post(name: .showOmnisearchGlobal, object: nil)
-    }
-
-    /// ⇧⌘Space — cmdALL을 앞으로 불러오지 않고(nonactivatingPanel) 화면 중앙에 검색
-    /// 오버레이만 띄운다. 원래 처음 제안됐던 ⌃⌘Space는 macOS 기본 "이모지 및 기호"
-    /// 단축키와 겹쳐 시스템이 이벤트를 먼저 가로챌 위험이 있어, 이미 아무 충돌 없이
-    /// 쓰고 있는 조합 방식(⇧⌘M·⌘⇧8과 같은 Cmd+Shift 계열)을 따라 바꿨다.
+    /// ⌘⇧8 — cmdALL을 앞으로 불러오지 않고(nonactivatingPanel) 화면 중앙에 검색
+    /// 오버레이만 띄운다. 예전엔 이 조합이 cmdALL 메인 창 전체를 앞으로 불러와 시트로
+    /// 검색을 여는 방식이었는데(방법2, 2026-07-27 오전), 다른 앱 작업을 방해해 이
+    /// nonactivating 오버레이로 교체했다(같은 날 오후, 사용자 요청).
     private func toggleGlobalSearchOverlay() {
         guard AppState.shared?.settings.globalSearchOverlayEnabled != false else { return }
         globalSearchOverlay?.toggle()
@@ -551,7 +544,6 @@ extension AppLaunchDefaults {
 
 extension Notification.Name {
     static let showQuickCapture = Notification.Name("showQuickCapture")
-    static let showOmnisearchGlobal = Notification.Name("showOmnisearchGlobal")
     static let showDocumentSearch = Notification.Name("showDocumentSearch")
     static let formatBold = Notification.Name("formatBold")
     static let formatItalic = Notification.Name("formatItalic")
