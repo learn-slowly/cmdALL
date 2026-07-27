@@ -172,6 +172,12 @@ struct OmnisearchView: View {
                                     .onTapGesture {
                                         open(at: index, in: hits)
                                     }
+                                    .onDrag {
+                                        // 다른 앱/데스크탑으로 바로 끌어다 놓기(Docufinder 격차 4번) —
+                                        // Finder는 fileURL 표현만 읽는다(DragPayload 주석 참고).
+                                        appState.draggingURLs = [hit.url]
+                                        return DragPayload.makeProvider(for: [hit.url], primary: hit.url)
+                                    }
                             }
                         }
                         .padding(.vertical, 6)
