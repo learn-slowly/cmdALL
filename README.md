@@ -84,6 +84,8 @@ read connects onward: content search, ask-your-corpus (RAG), PARA routing, file 
 
 > 외부 도구가 없으면 해당 기능만 안내 후 비활성화되고, 앱은 크래시하지 않습니다.
 > kordoc은 Node 18+가 필요하고(`npx kordoc`), Claude 연동은 로컬 `claude` 로그인이 선행됩니다.
+> Omnisearch의 정렬 가능한 결과 표·통합 검색 등 일부 기능은 [Docufinder](https://github.com/chrisryugj/Docufinder)
+> (BSL 1.1)의 아이디어를 참고했습니다 — 코드는 가져오지 않았고 전부 새로 구현했습니다.
 
 ## Install
 
