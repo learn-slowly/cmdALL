@@ -112,6 +112,11 @@ struct AppSettings: Codable, Equatable {
     // MARK: 내용 검색
     var indexedFolders: [String] = []      // 내용 검색 인덱스 등록 폴더(절대 경로)
 
+    // MARK: 전역 검색 오버레이
+    /// ⌃⌘Space — 다른 앱을 보고 있어도 화면 중앙에 검색창을 띄운다(Raycast식). 기본 ON,
+    /// 다른 런처 앱과 조합이 겹치면 여기서 끌 수 있다.
+    var globalSearchOverlayEnabled: Bool = true
+
     // MARK: LLM-Wiki 인제스트
     var wikiFolder: String? = nil          // LLM-Wiki 인제스트 대상 폴더(절대 경로)
     var wikiRulesSummary: String? = nil      // 위키 규칙 요약(파악 결과·사용자 편집 가능)
@@ -184,6 +189,7 @@ struct AppSettings: Codable, Equatable {
         paraFolders = try c.decodeIfPresent([ParaFolder].self, forKey: .paraFolders) ?? d.paraFolders
         claudeRoutingEnabled = try c.decodeIfPresent(Bool.self, forKey: .claudeRoutingEnabled) ?? d.claudeRoutingEnabled
         indexedFolders = try c.decodeIfPresent([String].self, forKey: .indexedFolders) ?? d.indexedFolders
+        globalSearchOverlayEnabled = try c.decodeIfPresent(Bool.self, forKey: .globalSearchOverlayEnabled) ?? d.globalSearchOverlayEnabled
         wikiFolder = try c.decodeIfPresent(String.self, forKey: .wikiFolder) ?? d.wikiFolder
         wikiRulesSummary = try c.decodeIfPresent(String.self, forKey: .wikiRulesSummary) ?? d.wikiRulesSummary
         wikiRulesCapturedAt = try c.decodeIfPresent(Date.self, forKey: .wikiRulesCapturedAt) ?? d.wikiRulesCapturedAt

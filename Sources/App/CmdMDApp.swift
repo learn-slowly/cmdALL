@@ -380,11 +380,17 @@ struct CmdMDApp: App {
 }
 
 // MARK: - AppDelegate for Menu Bar & Global Hotkey
+@MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
     var statusItem: NSStatusItem?
     private let launchDefaults = AppLaunchDefaults()
     private var globalMonitor: Any?
     private var fileOpsMonitor: Any?
+    private var globalSearchLocalMonitor: Any?
+    private lazy var globalSearchOverlay: GlobalSearchOverlayController? = {
+        guard let appState = AppState.shared else { return nil }
+        return GlobalSearchOverlayController(appState: appState)
+    }()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         DispatchQueue.main.async { [launchDefaults] in
@@ -401,7 +407,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 self?.showQuickCapture()
             } else if event.modifierFlags.contains([.command, .shift]) && event.keyCode == 28 { // 8 key(⌘⇧8) — 검색(방법2) 전역 단축키
                 self?.showOmnisearchGlobally()
+            } else if event.modifierFlags.contains([.command, .shift]) && event.keyCode == 49 { // Space(⇧⌘Space) — 전역 검색 오버레이(Raycast식)
+                self?.toggleGlobalSearchOverlay()
             }
+        }
+
+        // 전역 검색 오버레이는 다른 앱에서만이 아니라 cmdALL이 이미 앞에 있을 때도 눌려야
+        // 한다 — addGlobalMonitorForEvents는 자기 앱 안의 이벤트는 안 넘겨준다(별도 로컬
+        // 모니터 필요, F1b `fileOpsMonitor`와 같은 이유).
+        globalSearchLocalMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            if event.modifierFlags.contains([.command, .shift]) && event.keyCode == 49 {
+                self?.toggleGlobalSearchOverlay()
+                return nil
+            }
+            return event
         }
 
         // 메뉴바 상주 앱이라 창 닫기는 파괴가 아니라 숨김 — 뷰 onDisappear가 안 불려
@@ -439,6 +458,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if let monitor = fileOpsMonitor {
             NSEvent.removeMonitor(monitor)
             fileOpsMonitor = nil
+        }
+        if let monitor = globalSearchLocalMonitor {
+            NSEvent.removeMonitor(monitor)
+            globalSearchLocalMonitor = nil
         }
         // 업데이트 후 "지금 다시 시작" — 종료가 실제로 진행될 때만 새 인스턴스를 띄운다.
         // applicationShouldTerminate의 저장 확인에서 취소하면 여기까지 오지 않으므로
@@ -508,6 +531,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     /// ⌘⇧8 — 다른 앱을 보고 있어도 cmdALL을 앞으로 가져와 검색창을 띄운다.
     private func showOmnisearchGlobally() {
         NotificationCenter.default.post(name: .showOmnisearchGlobal, object: nil)
+    }
+
+    /// ⇧⌘Space — cmdALL을 앞으로 불러오지 않고(nonactivatingPanel) 화면 중앙에 검색
+    /// 오버레이만 띄운다. 원래 처음 제안됐던 ⌃⌘Space는 macOS 기본 "이모지 및 기호"
+    /// 단축키와 겹쳐 시스템이 이벤트를 먼저 가로챌 위험이 있어, 이미 아무 충돌 없이
+    /// 쓰고 있는 조합 방식(⇧⌘M·⌘⇧8과 같은 Cmd+Shift 계열)을 따라 바꿨다.
+    private func toggleGlobalSearchOverlay() {
+        guard AppState.shared?.settings.globalSearchOverlayEnabled != false else { return }
+        globalSearchOverlay?.toggle()
     }
 }
 

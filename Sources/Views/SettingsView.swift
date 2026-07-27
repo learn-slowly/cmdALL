@@ -824,6 +824,14 @@ struct ToolsSettingsView: View {
                     .font(.caption)
             }
 
+            Section {
+                Toggle("다른 앱에서도 ⇧⌘Space로 검색창 띄우기", isOn: $state.settings.globalSearchOverlayEnabled)
+            } header: {
+                Text("전역 검색")
+            } footer: {
+                Text("다른 앱을 보던 중에도 ⇧⌘Space를 누르면 cmdALL이 앞으로 나서지 않고 화면 중앙에 검색창만 뜬다. 엔터로 파일을 열면 그때 cmdALL이 앞으로 나온다. Esc나 바깥 클릭이면 조용히 닫히고 보던 화면 그대로. 처음 눌렀을 때 macOS가 손쉬운 사용 권한을 물으면 허용해야 다른 앱 위에서도 반응한다(거부해도 이 기능만 안 될 뿐 나머지는 정상).")
+                    .font(.caption)
+            }
             Section("LLM-Wiki") {
                 Text("위키 설정은 Wiki 탭으로 이동했습니다.")
                     .font(.caption).foregroundStyle(.secondary)
