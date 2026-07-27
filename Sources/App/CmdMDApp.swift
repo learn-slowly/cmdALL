@@ -1,4 +1,5 @@
 import SwiftUI
+import ApplicationServices
 
 @main
 struct CmdMDApp: App {
@@ -400,6 +401,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             NSApp.activate(ignoringOtherApps: true)
         }
 
+        // ⇧⌘M·⌘⇧8 전역 단축키 둘 다 "손쉬운 사용(Accessibility)" 신뢰가 있어야 다른 앱
+        // 포커스 중에도 keyDown을 받는다. 지금까진 이 신뢰를 조용히 요구만 하고 안내가
+        // 없어, macOS 재빌드(ad-hoc 서명이라 서명이 매번 바뀜)로 예전 허가가 무효화되면
+        // 사용자가 원인을 모른 채 "단축키가 안 먹는다"만 겪었다(2026-07-27 실사고).
+        // 이미 신뢰돼 있으면 조용히 넘어가고, 아니면 macOS가 "손쉬운 사용에 추가해 달라"
+        // 표준 팝업을 띄운다(추가만 되고 체크는 사용자가 직접 — Apple API 사양).
+        Self.requestAccessibilityTrustIfNeeded()
+
         // Register for global hotkey (Cmd+Shift+M for quick capture). Keep the
         // returned token so it can be removed on teardown.
         globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
@@ -519,6 +528,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             appState.cancelPendingRelaunch()
             return .terminateCancel
         }
+    }
+
+    /// 손쉬운 사용 신뢰가 없으면 macOS 표준 안내 팝업을 띄운다("이 앱이 손쉬운 사용
+    /// 목록에 추가되게 해달라"). 이미 신뢰돼 있으면 아무 것도 안 뜨고 조용히 반환한다
+    /// (Apple `AXIsProcessTrustedWithOptions` 사양 — 실제 체크박스 on은 사용자 몫).
+    static func requestAccessibilityTrustIfNeeded() {
+        let promptKey = kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String
+        _ = AXIsProcessTrustedWithOptions([promptKey: true] as CFDictionary)
     }
 
     private func showQuickCapture() {
