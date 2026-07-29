@@ -108,6 +108,25 @@ final class AppState {
         panes[focusedPaneIndex].open(folder: url)
     }
 
+    /// 칸 안에서 폴더로 드릴인/이동한다(더블클릭). 그 칸에 포커스도 옮긴다(설계 §3.1).
+    func openFolder(inPane index: Int, url: URL) {
+        focusPane(index)
+        guard panes.indices.contains(index) else { return }
+        panes[index].open(folder: url)
+    }
+
+    /// 칸 안에서 상위 폴더로 이동한다 — 그 칸의 rootFolder 밑으로는 못 올라간다(라이브러리 §F3 동형 경계).
+    func goUpInPane(_ index: Int) {
+        guard panes.indices.contains(index) else { return }
+        let pane = panes[index]
+        guard pane.selectedFolder != pane.rootFolder else { return }
+        let parent = pane.selectedFolder.deletingLastPathComponent()
+        let parentStd = parent.standardizedFileURL.path
+        let rootStd = pane.rootFolder.standardizedFileURL.path
+        guard parentStd == rootStd || parentStd.hasPrefix(rootStd + "/") else { return }
+        panes[index].open(folder: parent)
+    }
+
     // MARK: - 다중 선택 (F1b)
     /// 라이브러리·트리 공유 선택 집합. URL 키 — FileTreeItem.id는 재빌드마다 새 UUID라 못 쓴다.
     var fileSelection: Set<URL> = []

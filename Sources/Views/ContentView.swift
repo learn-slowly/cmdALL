@@ -26,7 +26,11 @@ struct ContentView: View {
             SidebarView()
                 .navigationSplitViewColumnWidth(min: 200, ideal: 250, max: 300)
         } detail: {
-            MainEditorView()
+            if appState.dualPaneEnabled {
+                DualPaneView()
+            } else {
+                MainEditorView()
+            }
         }
         .navigationTitle(appState.windowTitle)
         .inspector(isPresented: $state.inspectorVisible) {
@@ -45,6 +49,7 @@ struct ContentView: View {
         .toolbar {
             ToolbarItemGroup(placement: .navigation) {
                 MainModePicker()
+                DualPaneToggleButton()
                 if appState.mainMode == .reader {
                     ViewModePicker()
                 } else {
@@ -176,6 +181,8 @@ struct ContentView: View {
             }
         }
         .animation(.easeInOut(duration: 0.13), value: appState.claudePanelVisible)
+        // 듀얼 페인(두 칸)이 눌려서 못 쓰게 되는 폭 밑으로는 창이 안 줄어들게 한다(설계 §3.3).
+        .frame(minWidth: appState.dualPaneEnabled ? 900 : nil)
         .overlay {
             QuickLookQuickPanel()
         }
