@@ -497,6 +497,24 @@ UpdateInstallError: 쓰기권한없음 | 다운로드실패 | 체크섬불일치
      nativelyRenderableOfficeExtensions`로 MS 오피스만 분리), kordoc도 SVG·HTML 렌더가
      없어(§4.1, `npx kordoc --help` 실측) 대안이 LibreOffice급 무거운 의존성뿐이라 이 부분만
      보류 유지. 신규 테스트 5개, `swift test` 전체 924개 통과. **수동 스모크 대기.**
+     **후속(2026-07-29) — hwpx까지 확대 완료.** 2026-07-27 당시 "kordoc에 SVG·HTML 렌더가
+     없다"고 결론 낸 것은 이 컴퓨터의 npx 캐시가 옛 kordoc 버전(3.1.1)을 계속 돌려준 탓에
+     최신 기능을 놓친 오판이었다(같은 날 별도로 `kordoc@latest` 고정 — `KordocService.
+     packageSpec`, 호출부 4곳). kordoc이 v3.10부터 `render` 명령(HWPX 조판 캐시 → SVG)을
+     갖추고 있음을 재확인해 hwpx 원본 보기를 구현했다. 설계·계획: `docs/superpowers/specs/
+     2026-07-29-hwpx-native-render-design.md`·`docs/superpowers/plans/
+     2026-07-29-hwpx-native-render.md`. 신규 `KordocRenderService`(actor, kordoc render
+     Process 호출 + 경로·mtime 캐시)·`HwpxRenderState`(loading/loaded/failed)·
+     `HwpxRenderPreview`(WKWebView, `DropThroughWebView` 재사용). `OfficeReaderView`의
+     기존 "원본 보기" 토글을 그대로 확장 — 버튼 자리·문구 불변, 확장자로 QuickLook과
+     kordoc render로 내부 분기만 갈림. **`.hwp`(구버전 바이너리)·`.hwpml`은 여전히 안 된다**
+     — kordoc `render` 명령 자체가 hwpx 전용임을 실측 확인(`kordoc render --help` 설명이
+     "HWPX의 조판 캐시"라고 명시). 조판 캐시 없는 파일(kordoc 자체 생성/편집본)은 렌더
+     실패 → "글로 보기로 전환" 버튼(크래시 없음, `--reflow` 자동 폴백은 이번 범위 밖).
+     953 테스트 통과(기존 950 + 신규 3, `wrapSVG` 순수 함수). **수동 스모크 대기** — 실제
+     한컴에서 저장한 진짜 hwpx 파일로 조판 캐시 기반 렌더가 되는지가 핵심 미확인 지점
+     (이 컴퓨터엔 그런 샘플이 없어 개발 중엔 kordoc generate로 만든 캐시 없는 파일로만
+     기술 가능성을 확인했다).
   6. **완료(2026-07-27)** — 사용자가 "토글 스위치 만들자"로 확정. 스캔 PDF(글자 레이어 없는
      이미지 PDF)에서 macOS 내장 `Vision`(`VNRecognizeTextRequest`, 한국어 지원)으로 OCR해
      검색 대상에 포함. 새 `OCRService`(순수 함수, 새 패키지 의존성 0) + 설정 토글
