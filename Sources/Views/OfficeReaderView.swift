@@ -8,10 +8,13 @@ struct OfficeReaderView: View {
     let tabID: UUID
     let fileURL: URL
 
-    /// Docufinder 격차 5번 — macOS 내장 QuickLook이 원본 조판 그대로 그릴 수 있는
-    /// MS 오피스(doc/docx/xls/xlsx)만. HWP류는 이 토글 자체가 안 뜬다(§DocumentKind).
+    /// Docufinder 격차 5번 — MS 오피스(doc/docx/xls/xlsx)는 macOS 내장 QuickLook, hwpx는
+    /// kordoc render(SVG, 2026-07-29 추가)로 각각 원본 조판을 그린다. hwp/hwpml은 이 토글
+    /// 자체가 안 뜬다(§DocumentKind — kordoc에 hwp 렌더 기능이 없음, 실측 확인).
     private var canShowOriginal: Bool {
-        DocumentKind.nativelyRenderableOfficeExtensions.contains(fileURL.pathExtension.lowercased())
+        let ext = fileURL.pathExtension.lowercased()
+        return DocumentKind.nativelyRenderableOfficeExtensions.contains(ext)
+            || DocumentKind.kordocRenderableExtensions.contains(ext)
     }
 
     var body: some View {
@@ -66,7 +69,11 @@ struct OfficeReaderView: View {
                 if isEditing {
                     OfficeEditorPane(tabID: tabID)
                 } else if canShowOriginal && appState.officeShowingOriginal.contains(tabID) {
-                    QuickLookPreview(url: fileURL)
+                    if DocumentKind.nativelyRenderableOfficeExtensions.contains(fileURL.pathExtension.lowercased()) {
+                        QuickLookPreview(url: fileURL)
+                    } else {
+                        HwpxRenderPreview(tabID: tabID, fileURL: fileURL)
+                    }
                 } else {
                     MarkdownPreviewView(
                         documentID: tabID,
