@@ -94,4 +94,30 @@ final class AppDualPaneTests: XCTestCase {
         appState.promotePeekFileToTab(file)
         XCTAssertFalse(appState.dualPaneEnabled, "제대로 열기는 한 칸 모드로 돌아가야 한다")
     }
+    func testRetargetStalePanes은사라진폴더를조상으로되돌린다() throws {
+        appState.toggleDualPane()
+        let sub = root.appendingPathComponent("sub")
+        try FileManager.default.createDirectory(at: sub, withIntermediateDirectories: true)
+        appState.openFolderInFocusedPane(sub)
+        try FileManager.default.removeItem(at: sub)
+
+        appState.retargetStalePanes()
+        XCTAssertEqual(appState.panes[0].selectedFolder.standardizedFileURL.path, root.standardizedFileURL.path)
+    }
+
+    func testRetargetStalePanes은존재하는폴더는안건드린다() {
+        appState.toggleDualPane()
+        appState.retargetStalePanes()
+        XCTAssertEqual(appState.panes[0].selectedFolder, root)
+        XCTAssertEqual(appState.panes[1].selectedFolder, root)
+    }
+
+    func test두칸이같은폴더를가리켜도무해하다() {
+        appState.toggleDualPane()
+        // 초기화 시 이미 둘 다 currentFolder(root) — 막을 이유 없음(설계 Task 6).
+        XCTAssertEqual(appState.panes[0].selectedFolder, appState.panes[1].selectedFolder)
+        appState.focusPane(1)
+        appState.openFolderInFocusedPane(root)
+        XCTAssertEqual(appState.panes[0].selectedFolder, appState.panes[1].selectedFolder)
+    }
 }

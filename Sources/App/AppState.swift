@@ -147,6 +147,22 @@ final class AppState {
         openDocument(at: url, inNewTab: true)
     }
 
+    /// 칸이 가리키던 폴더가 rename/trash로 사라졌으면 가장 가까운 존재 조상으로 재조준
+    /// (retargetStaleSelectedFolder 동형 패턴, 계획 Task 6). 히스토리 기록 없음.
+    func retargetStalePanes() {
+        for i in panes.indices {
+            let sel = panes[i].selectedFolder
+            var isDir: ObjCBool = false
+            if FileManager.default.fileExists(atPath: sel.path, isDirectory: &isDir), isDir.boolValue { continue }
+            var candidate = sel.deletingLastPathComponent()
+            while candidate.path != "/" {
+                if FileManager.default.fileExists(atPath: candidate.path, isDirectory: &isDir), isDir.boolValue { break }
+                candidate = candidate.deletingLastPathComponent()
+            }
+            panes[i].open(folder: candidate)
+        }
+    }
+
     // MARK: - 다중 선택 (F1b)
     /// 라이브러리·트리 공유 선택 집합. URL 키 — FileTreeItem.id는 재빌드마다 새 UUID라 못 쓴다.
     var fileSelection: Set<URL> = []
@@ -3128,6 +3144,7 @@ final class AppState {
         fileOpsGeneration += 1
         pruneFileSelection()
         retargetStaleSelectedFolder()
+        retargetStalePanes()
         navHistory.prune(isValid: Self.folderExists)
         loadFileTree()
         saveSession()
