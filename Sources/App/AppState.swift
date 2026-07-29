@@ -1569,13 +1569,17 @@ final class AppState {
     // MARK: - Completion Index
 
     /// Rebuilds the wiki-link completion index off the main thread. Scans the
-    /// open folder and registered vault roots for note files (names only — file
-    /// contents are never read here).
+    /// open folder, registered vault roots, and registered content-search
+    /// folders(설정 화면 "검색 인덱스" 목록 — 2026-07-29 발견: 이 셋이 따로 놀아서
+    /// 문서/다운로드처럼 열려있지도 vault도 아닌 등록 폴더는 파일명 검색(Files 섹션)에
+    /// 안 걸리고 내용검색(In-file Matches)에서만 잡히던 어긋남을 통합) for note files
+    /// (names only — file contents are never read here).
     func rebuildNoteIndex() {
         noteIndexTask?.cancel()
         var roots: [URL] = []
         if let currentFolder { roots.append(currentFolder) }
         roots.append(contentsOf: vaults.map(\.rootPath))
+        roots.append(contentsOf: settings.indexedFolders.map { URL(fileURLWithPath: $0) })
 
         guard !roots.isEmpty else {
             linkableNotes = []
@@ -1760,6 +1764,7 @@ final class AppState {
         settings.indexedFolders = next
         saveUserData()
         startFolderWatching()
+        rebuildNoteIndex()   // 파일명 검색(Files 섹션) 범위도 즉시 넓힌다.
         reindexFolder(canonical.path)
     }
 
@@ -1770,6 +1775,7 @@ final class AppState {
         settings.indexedFolders.removeAll { $0 == canonicalPath || $0 == path }
         saveUserData()
         startFolderWatching()
+        rebuildNoteIndex()   // 뺀 폴더는 파일명 검색에서도 즉시 빠지게.
         Task { _ = await searchIndex.removeUnder(folder: canonicalPath) }
     }
 
