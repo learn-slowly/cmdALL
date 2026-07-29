@@ -113,4 +113,17 @@ final class OCRServiceTests: XCTestCase {
         // 있으므로 기본은 반드시 꺼져 있어야 한다.
         XCTAssertFalse(AppSettings().ocrScannedPDFsEnabled)
     }
+
+    func testOcrImagesEnabledDefaultsOff() {
+        // 사진 OCR도 스캔 PDF OCR과 같은 이유로 기본은 꺼져 있어야 한다.
+        XCTAssertFalse(AppSettings().ocrImagesEnabled)
+    }
+
+    func testOcrImagesEnabledIsIndependentOfScannedPDFsToggle() {
+        var settings = AppSettings()
+        settings.ocrImagesEnabled = true
+
+        XCTAssertTrue(settings.ocrImagesEnabled)
+        XCTAssertFalse(settings.ocrScannedPDFsEnabled, "사진 OCR을 켜도 스캔 PDF OCR은 별개로 꺼져 있어야 한다")
+    }
 }

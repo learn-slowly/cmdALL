@@ -116,6 +116,10 @@ struct AppSettings: Codable, Equatable {
     /// 느려, 이미 대량(16만개+) 폴더를 훑는 중인 사용자의 훑기를 더 늦출 위험이 있다.
     /// 텍스트 레이어가 있는 보통 PDF는 이 설정과 무관하게 항상 그대로 빠르게 색인된다.
     var ocrScannedPDFsEnabled: Bool = false
+    /// 사진 속 글자 검색(Docufinder 격차 3번, 이미지 OCR) — png·jpg·jpeg·heic·webp·gif에서
+    /// macOS Vision으로 글자를 뽑아 검색 대상에 포함. **기본 OFF**(스캔 PDF OCR과 같은 이유
+    /// — 사진 많은 폴더 훑기가 느려질 위험). `ocrScannedPDFsEnabled`와 별개 스위치다.
+    var ocrImagesEnabled: Bool = false
 
     // MARK: 전역 검색 오버레이
     /// ⌘⇧8 — 다른 앱을 보고 있어도 화면 중앙에 검색창을 띄운다(Raycast식). 기본 ON,
@@ -195,6 +199,7 @@ struct AppSettings: Codable, Equatable {
         claudeRoutingEnabled = try c.decodeIfPresent(Bool.self, forKey: .claudeRoutingEnabled) ?? d.claudeRoutingEnabled
         indexedFolders = try c.decodeIfPresent([String].self, forKey: .indexedFolders) ?? d.indexedFolders
         ocrScannedPDFsEnabled = try c.decodeIfPresent(Bool.self, forKey: .ocrScannedPDFsEnabled) ?? d.ocrScannedPDFsEnabled
+        ocrImagesEnabled = try c.decodeIfPresent(Bool.self, forKey: .ocrImagesEnabled) ?? d.ocrImagesEnabled
         globalSearchOverlayEnabled = try c.decodeIfPresent(Bool.self, forKey: .globalSearchOverlayEnabled) ?? d.globalSearchOverlayEnabled
         wikiFolder = try c.decodeIfPresent(String.self, forKey: .wikiFolder) ?? d.wikiFolder
         wikiRulesSummary = try c.decodeIfPresent(String.self, forKey: .wikiRulesSummary) ?? d.wikiRulesSummary
