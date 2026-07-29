@@ -235,6 +235,9 @@ final class AppState {
     /// "원본 보기" 켜진 탭(격차 5번) — MS 오피스(doc/docx/xls/xlsx)만 대상, macOS 내장
     /// QuickLook이 원본 조판을 그대로 그린다. HWP류는 QuickLook이 못 읽어 토글 자체가 안 뜬다.
     var officeShowingOriginal: Set<UUID> = []
+    /// hwpx "원본 보기"(kordoc render SVG) 상태(키 = EditorTab.id). officeShowingOriginal이
+    /// 켜져 있고 확장자가 hwpx일 때만 쓰인다 — MS 오피스(QuickLook)는 이 딕셔너리를 안 씀.
+    var hwpxRenderStates: [UUID: HwpxRenderState] = [:]
 
     // Update checking (GitHub Releases)
     var updateAvailable: Bool = false
@@ -353,6 +356,7 @@ final class AppState {
     private let aiRouter: AIRouterService
     private let kordocWriteService = KordocWriteService()
     private let kordocFillService = KordocFillService()
+    private let kordocRenderService = KordocRenderService()
     private let moveLogStore: MoveLogStore
     /// 파일 작업(F1a) 로그 — Task 6·7·8(시트·정보뷰)이 직접 읽으므로 private 아님.
     let fileOpsLogStore: FileOpsLogStore
@@ -511,16 +515,37 @@ final class AppState {
         officeShowingOriginal.remove(tabID)
     }
 
-    /// "원본 보기" 켜고 끄기(격차 5번) — MS 오피스(doc/docx/xls/xlsx)만. 호출부(뷰)가
-    /// `DocumentKind.nativelyRenderableOfficeExtensions`로 이미 걸러 보이지만, 여기서도
-    /// 같은 판정으로 한 번 더 막는다(단일 진실 원천 유지).
+    /// "원본 보기" 켜고 끄기(격차 5번) — MS 오피스(doc/docx/xls/xlsx)는 QuickLook,
+    /// hwpx는 kordoc render(SVG, 2026-07-29 추가)로 각각 그린다. 호출부(뷰)가
+    /// `canShowOriginal`로 이미 걸러 보이지만, 여기서도 같은 판정으로 한 번 더 막는다
+    /// (단일 진실 원천 유지).
     @MainActor
     func toggleOfficeOriginalView(tabID: UUID, fileURL: URL) {
-        guard DocumentKind.nativelyRenderableOfficeExtensions.contains(fileURL.pathExtension.lowercased()) else { return }
+        let ext = fileURL.pathExtension.lowercased()
+        guard DocumentKind.nativelyRenderableOfficeExtensions.contains(ext)
+            || DocumentKind.kordocRenderableExtensions.contains(ext) else { return }
         if officeShowingOriginal.contains(tabID) {
             officeShowingOriginal.remove(tabID)
         } else {
             officeShowingOriginal.insert(tabID)
+            if DocumentKind.kordocRenderableExtensions.contains(ext), hwpxRenderStates[tabID] == nil {
+                Task { await loadHwpxRender(tabID: tabID, fileURL: fileURL) }
+            }
+        }
+    }
+
+    /// hwpx "원본 보기" 렌더를 kordoc render(SVG)로 받아온다. 실패해도 크래시하지 않고
+    /// `.failed` 상태로만 남는다(뷰가 "글로 보기로 전환" 버튼을 보여줌).
+    @MainActor
+    func loadHwpxRender(tabID: UUID, fileURL: URL) async {
+        hwpxRenderStates[tabID] = .loading
+        do {
+            let html = try await kordocRenderService.renderHTML(for: fileURL)
+            guard tabs.contains(where: { $0.id == tabID }) else { return }
+            hwpxRenderStates[tabID] = .loaded(html: html)
+        } catch {
+            guard tabs.contains(where: { $0.id == tabID }) else { return }
+            hwpxRenderStates[tabID] = .failed(Self.hwpxRenderErrorMessage(error))
         }
     }
 
@@ -1528,6 +1553,7 @@ final class AppState {
             documents.removeValue(forKey: oldTab.documentId)
             originalContents.removeValue(forKey: oldTab.documentId)
             officeStates.removeValue(forKey: oldTab.id)
+            hwpxRenderStates.removeValue(forKey: oldTab.id)
             // 탭 id는 재사용되지 않으므로 여기서 안 지우면 플레이어가 영구 잔류(누수)한다.
             mediaPlayers.removeValue(forKey: oldTab.id)?.pause()
             tabs[activeIndex] = tab
@@ -2324,6 +2350,7 @@ final class AppState {
         documents.removeValue(forKey: tab.documentId)
         originalContents.removeValue(forKey: tab.documentId)
         officeStates.removeValue(forKey: tab.id)
+        hwpxRenderStates.removeValue(forKey: tab.id)
         pendingMediaScrollLines.removeValue(forKey: tab.id)
         mediaPlayers.removeValue(forKey: tab.id)?.pause()
 
@@ -3388,6 +3415,21 @@ final class AppState {
             return "문서 변환에 실패했습니다.\n\(m)"
         default:
             return "문서를 열 수 없습니다: \(error.localizedDescription)"
+        }
+    }
+
+    /// hwpx "원본 보기"(kordoc render) 실패 사유를 한국어로 — `renderFailed`는 kordoc이 이미
+    /// 한국어 stderr를 주므로(예: "조판 캐시(linesegarray) 없음…") 그대로 보여준다.
+    static func hwpxRenderErrorMessage(_ error: Error) -> String {
+        switch error {
+        case KordocRenderError.toolNotFound:
+            return "kordoc 실행에 필요한 Node(18+)/kordoc을 찾을 수 없습니다. 터미널에서 `npx kordoc` 또는 `npm i -g kordoc` 후 다시 시도하세요."
+        case KordocRenderError.timeout:
+            return "원본 그리기 시간이 초과됐습니다. 다시 시도해 주세요."
+        case KordocRenderError.renderFailed(let m):
+            return m.isEmpty ? "원본을 그리지 못했습니다. 글로 보기를 이용해 주세요." : "\(m)\n글로 보기를 이용해 주세요."
+        default:
+            return "원본을 그리지 못했습니다: \(error.localizedDescription)"
         }
     }
 
