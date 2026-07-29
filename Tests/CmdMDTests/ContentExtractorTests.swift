@@ -1,5 +1,6 @@
 import XCTest
 import PDFKit
+import AppKit
 @testable import CmdMD
 
 final class ContentExtractorTests: XCTestCase {
@@ -48,5 +49,59 @@ final class ContentExtractorTests: XCTestCase {
         let img = dir.appendingPathComponent("p.png")
         try Data([0x89, 0x50]).write(to: img)
         XCTAssertNil(ContentExtractor.localBody(for: img))   // 이미지: 본문 없음
+    }
+
+    // MARK: 사진 속 글자 검색(이미지 OCR)
+
+    private func imageWithText(_ text: String, size: CGSize) -> NSImage {
+        let image = NSImage(size: size)
+        image.lockFocus()
+        NSColor.white.setFill()
+        NSRect(origin: .zero, size: size).fill()
+        let attrs: [NSAttributedString.Key: Any] = [
+            .font: NSFont.boldSystemFont(ofSize: 60),
+            .foregroundColor: NSColor.black,
+        ]
+        NSString(string: text).draw(at: NSPoint(x: 20, y: size.height / 2 - 30), withAttributes: attrs)
+        image.unlockFocus()
+        return image
+    }
+
+    private func writePNG(_ image: NSImage, to url: URL) throws {
+        guard let tiff = image.tiffRepresentation,
+              let rep = NSBitmapImageRep(data: tiff),
+              let png = rep.representation(using: .png, properties: [:])
+        else { return XCTFail("PNG 인코딩 실패") }
+        try png.write(to: url)
+    }
+
+    func testLocalBodyIgnoresImageWhenOCRDisabled() throws {
+        let dir = tempDir()
+        let url = dir.appendingPathComponent("photo.png")
+        try writePNG(imageWithText("RECEIPT", size: CGSize(width: 400, height: 200)), to: url)
+
+        XCTAssertNil(ContentExtractor.localBody(for: url, ocrImages: false),
+                      "이미지 OCR이 꺼져 있으면(기본) 사진은 본문 없이 색인돼야 한다")
+    }
+
+    func testLocalBodyReadsImageTextWhenOCREnabled() throws {
+        let dir = tempDir()
+        let url = dir.appendingPathComponent("photo2.png")
+        try writePNG(imageWithText("RECEIPT", size: CGSize(width: 400, height: 200)), to: url)
+
+        let body = ContentExtractor.localBody(for: url, ocrImages: true)
+
+        XCTAssertNotNil(body)
+        XCTAssertTrue(body?.uppercased().contains("RECEIPT") ?? false, "OCR 결과: \(body ?? "nil")")
+    }
+
+    func testLocalBodySkipsImageOverSizeCapEvenWhenOCREnabled() throws {
+        let dir = tempDir()
+        let url = dir.appendingPathComponent("big.png")
+        // 실제 사진 내용은 필요 없다 — 크기 상한 검사가 디코딩보다 먼저 걸린다.
+        try Data(count: ContentExtractor.maxOCRImageBytes + 1).write(to: url)
+
+        XCTAssertNil(ContentExtractor.localBody(for: url, ocrImages: true),
+                      "20MB 넘는 사진은 OCR이 켜져 있어도 이름만 색인돼야 한다")
     }
 }
