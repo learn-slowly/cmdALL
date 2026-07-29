@@ -554,6 +554,7 @@ UpdateInstallError: 쓰기권한없음 | 다운로드실패 | 체크섬불일치
 - **구현**: 기존 스캔 PDF OCR(§3.7, Docufinder 격차 6번) 인프라를 이미지 파일(png·jpg·jpeg·heic·webp·gif)까지 확장. 설계·계획 문서: `docs/superpowers/specs/2026-07-29-image-ocr-search-design.md` · `docs/superpowers/plans/2026-07-29-image-ocr-search.md`. `AppSettings.ocrImagesEnabled`(기본 OFF, 스캔 PDF OCR과 별개 스위치) → `ContentExtractor.localBody`/`.body`에 이미지 분기(20MB 초과 사진은 이름만 색인) → `OCRService.loadCGImage(from:)` → 기존 `OCRService.recognizeText(in cgImage:)`(Vision) 재사용 → `SearchIndexer.indexFolder`/`.reindex` → `AppState` 세 호출부(전체 재색인·폴더 등록·파일감시 재인덱싱) 배선 → 설정 화면 "사진 속 글자도 읽기 (OCR)" 토글. 새 파일 없음(전부 기존 서비스 확장), 새 패키지 의존성 0.
 - 4단계로 나눠 구현·커밋. 신규 테스트 11개(loadCGImage 3·설정 3·ContentExtractor 3·SearchIndexer 2). `swift test` 963개(XCTest) + 18개(Swift Testing) 통과, 회귀 0. `scripts/test_package_app.sh` 패키징 가드 통과.
 - **수동 스모크 대기** — 설정에서 켜고 실제 사진 파일로 검색되는지 확인 필요.
+- **v0.9.418로 GitHub 릴리스 발행 완료(2026-07-29).** 사용자 승인 후 main 푸시 + 태그 push → release.yml CI 성공 → cmdALL-0.9.418.dmg·cmdALL-macos.zip·SHA256SUMS.txt 발행. `/Applications`도 같은 빌드로 교체 설치·재실행 완료.
 ---
 ## 부록 A. Claude Code 시작 프롬프트 (예시)
 
