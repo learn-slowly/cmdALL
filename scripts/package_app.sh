@@ -233,9 +233,21 @@ PLIST
 # 서명 전에 모드만 바꾸므로 codesign 결과는 영향 없다(chmod 후 서명 유효 실측).
 chmod -R u+w "$APP_DIR"
 
+# 서명 — 예전엔 순수 ad-hoc(--sign -)이었는데, 이 방식은 빌드마다 CDHash(내용 해시)가
+# 바뀌어 "손쉬운 사용" 권한이 매 재빌드마다 깨지는 구조적 문제가 있었다(2026-07-27·29
+# 재발 확인). 이 컴퓨터 전용 고정 인증서("cmdALL Local Dev", 로그인 키체인에 로컬 생성 —
+# 애플 발급 아님, 이 컴퓨터에서만 통용)로 서명하면 designated requirement가 "인증서
+# 지문" 기준으로 고정돼(`codesign -d -r-`로 확인 가능) 재빌드해도 안 바뀐다. 인증서가
+# 없는 다른 컴퓨터(배포용 빌드)에서는 자동으로 ad-hoc 폴백.
+CODESIGN_IDENTITY="cmdALL Local Dev"
 if command -v codesign >/dev/null 2>&1; then
-  echo "Ad-hoc signing $BUNDLE_NAME.app..."
-  codesign --force --deep --sign - "$APP_DIR"
+  if security find-identity -v -p codesigning 2>/dev/null | grep -q "$CODESIGN_IDENTITY"; then
+    echo "Signing $BUNDLE_NAME.app with local fixed identity ($CODESIGN_IDENTITY)..."
+    codesign --force --deep --sign "$CODESIGN_IDENTITY" "$APP_DIR"
+  else
+    echo "Local identity not found — falling back to ad-hoc signing $BUNDLE_NAME.app..."
+    codesign --force --deep --sign - "$APP_DIR"
+  fi
   codesign --verify --deep --strict --verbose=2 "$APP_DIR" >/dev/null
 else
   echo "codesign not found; leaving $BUNDLE_NAME.app unsigned."
