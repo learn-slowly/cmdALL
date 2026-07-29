@@ -79,6 +79,35 @@ final class AppState {
     /// 히스토리 이동·세션 복원·강제 재조준 중 didSet 기록을 막는 플래그(isRestoringLayout 동형).
     private var suppressHistoryRecording = false
 
+    // MARK: - 두 폴더 나란히 보기 (듀얼 페인, 로드맵 C/F4)
+    /// 두 칸 모드가 켜져 있는가. 꺼져 있으면 지금까지의 한 칸 모드가 완전히 그대로 동작한다(설계 §3.1).
+    var dualPaneEnabled: Bool = false
+    /// 정확히 2개(왼쪽=0·오른쪽=1). dualPaneEnabled가 꺼져도 마지막 상태를 세션 내에서만 기억한다(디스크 저장 없음, §3.4).
+    var panes: [BrowsePane] = []
+    /// 사이드바 폴더 클릭·드래그가 향할 칸(0 또는 1) — 마지막으로 포커스를 준 칸(설계 §3.1, 사용자 결정 2).
+    var focusedPaneIndex: Int = 0
+
+    /// 두 칸 모드를 켜고 끈다. 켤 때 panes가 비어 있으면(첫 진입) currentFolder로 두 칸을 초기화한다.
+    func toggleDualPane() {
+        if !dualPaneEnabled, panes.isEmpty, let root = currentFolder {
+            panes = [BrowsePane(rootFolder: root), BrowsePane(rootFolder: root)]
+            focusedPaneIndex = 0
+        }
+        dualPaneEnabled.toggle()
+    }
+
+    /// 포커스를 옮긴다(칸을 탭했을 때).
+    func focusPane(_ index: Int) {
+        guard panes.indices.contains(index) else { return }
+        focusedPaneIndex = index
+    }
+
+    /// 포커스 있는 칸의 폴더를 바꾼다(사이드바 클릭 라우팅, 설계 §3.1).
+    func openFolderInFocusedPane(_ url: URL) {
+        guard panes.indices.contains(focusedPaneIndex) else { return }
+        panes[focusedPaneIndex].open(folder: url)
+    }
+
     // MARK: - 다중 선택 (F1b)
     /// 라이브러리·트리 공유 선택 집합. URL 키 — FileTreeItem.id는 재빌드마다 새 UUID라 못 쓴다.
     var fileSelection: Set<URL> = []
