@@ -1,4 +1,5 @@
 import XCTest
+import AppKit
 @testable import CmdMD
 
 final class SearchIndexerTests: XCTestCase {
@@ -117,5 +118,50 @@ final class SearchIndexerTests: XCTestCase {
         await indexer.indexFolder(dir, progress: nil)
         let count = await index.count()
         XCTAssertEqual(count, 1, "지름길이 가리키는 폴더 밖 내용은 빼고 진짜 노트 1개만 색인돼야 한다")
+    }
+
+    // MARK: 사진 속 글자 검색(이미지 OCR)
+
+    private func writePNGWithText(_ text: String, to url: URL) throws {
+        let size = CGSize(width: 400, height: 200)
+        let image = NSImage(size: size)
+        image.lockFocus()
+        NSColor.white.setFill()
+        NSRect(origin: .zero, size: size).fill()
+        let attrs: [NSAttributedString.Key: Any] = [
+            .font: NSFont.boldSystemFont(ofSize: 60),
+            .foregroundColor: NSColor.black,
+        ]
+        NSString(string: text).draw(at: NSPoint(x: 20, y: size.height / 2 - 30), withAttributes: attrs)
+        image.unlockFocus()
+        guard let tiff = image.tiffRepresentation,
+              let rep = NSBitmapImageRep(data: tiff),
+              let png = rep.representation(using: .png, properties: [:])
+        else { return XCTFail("PNG 인코딩 실패") }
+        try png.write(to: url)
+    }
+
+    func testIndexFolderFindsImageTextWhenOCREnabled() async throws {
+        let dir = tempDir()
+        try writePNGWithText("영수증", to: dir.appendingPathComponent("photo.png"))
+
+        let index = SearchIndex(dbURL: tempDBURL())
+        let indexer = SearchIndexer(index: index, kordoc: KordocService())
+        await indexer.indexFolder(dir, ocrImages: true, progress: nil)
+
+        let hits = await index.search(query: "영수증")
+        XCTAssertFalse(hits.isEmpty, "이미지 OCR을 켜면 사진 속 글자로 검색돼야 한다")
+    }
+
+    func testIndexFolderIgnoresImageTextWhenOCRDisabled() async throws {
+        let dir = tempDir()
+        try writePNGWithText("영수증", to: dir.appendingPathComponent("photo.png"))
+
+        let index = SearchIndex(dbURL: tempDBURL())
+        let indexer = SearchIndexer(index: index, kordoc: KordocService())
+        await indexer.indexFolder(dir, progress: nil)   // ocrImages 기본값 false
+
+        let hits = await index.search(query: "영수증")
+        XCTAssertTrue(hits.isEmpty, "이미지 OCR이 꺼져 있으면(기본) 사진 속 글자로는 찾을 수 없어야 한다")
     }
 }

@@ -818,10 +818,11 @@ struct ToolsSettingsView: View {
 
                 Toggle("질의 확장 (RAG)", isOn: $state.settings.ragExpandQuery)
                 Toggle("스캔 PDF 속 글자도 읽기 (OCR)", isOn: $state.settings.ocrScannedPDFsEnabled)
+                Toggle("사진 속 글자도 읽기 (OCR)", isOn: $state.settings.ocrImagesEnabled)
             } header: {
                 Text("검색 인덱스")
             } footer: {
-                Text("여기 등록된 폴더는 이름·내용(pdf·hwp·워드·엑셀 포함) 검색(⇧⌘O) 대상이다. 폴더를 열거나 볼트를 연결하면 자동으로 등록되니, 손으로 뺄 때만 여기를 쓴다. 질의 확장은 자료에 묻기(RAG)가 검색어를 넓히는 옵션이다. OCR은 글자 레이어가 없는 스캔 PDF(사진을 스캔한 pdf 등)만 대상이고, 보통 텍스트가 있는 PDF·사진 폴더는 이 설정과 무관하다 — 사진 한 장 읽는 속도가 느려 기본은 꺼둔다. 켜면 스캔 PDF가 많을 때 폴더 훑기가 느려질 수 있다.")
+                Text("여기 등록된 폴더는 이름·내용(pdf·hwp·워드·엑셀 포함) 검색(⇧⌘O) 대상이다. 폴더를 열거나 볼트를 연결하면 자동으로 등록되니, 손으로 뺄 때만 여기를 쓴다. 질의 확장은 자료에 묻기(RAG)가 검색어를 넓히는 옵션이다. OCR(스캔 PDF)은 글자 레이어가 없는 스캔 PDF(사진을 스캔한 pdf 등)만 대상이고, 보통 텍스트가 있는 PDF·사진 폴더는 이 설정과 무관하다. OCR(사진)은 진짜 사진 파일(jpg·png·heic 등)도 켜면 안의 글자로 찾을 수 있다 — 둘 다 사진 한 장 읽는 속도가 느려 기본은 꺼둔다. 켜면 사진·스캔 PDF가 많을 때 폴더 훑기가 느려질 수 있다.")
                     .font(.caption)
             }
 

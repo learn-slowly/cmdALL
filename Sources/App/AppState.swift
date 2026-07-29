@@ -1905,7 +1905,7 @@ final class AppState {
         // 판 번호를 실제 완주 전에 적으면, 중간에 종료됐을 때 다음 실행이 "이미
         // 끝났다"고 오판해 다시 훑지 않는다(판 번호 도입 취지 자체가 무력화됨).
         for folder in settings.indexedFolders {
-            await searchIndexer.indexFolder(URL(fileURLWithPath: folder), ocrScannedPDFs: settings.ocrScannedPDFsEnabled, progress: nil)
+            await searchIndexer.indexFolder(URL(fileURLWithPath: folder), ocrScannedPDFs: settings.ocrScannedPDFsEnabled, ocrImages: settings.ocrImagesEnabled, progress: nil)
         }
         await searchIndex.setExtractorVersion(SearchIndex.currentExtractorVersion)
     }
@@ -1916,7 +1916,7 @@ final class AppState {
         indexInProgress = true
         indexProgress = (0, 0)
         Task {
-            await searchIndexer.indexFolder(URL(fileURLWithPath: path), ocrScannedPDFs: settings.ocrScannedPDFsEnabled) { done, total in
+            await searchIndexer.indexFolder(URL(fileURLWithPath: path), ocrScannedPDFs: settings.ocrScannedPDFsEnabled, ocrImages: settings.ocrImagesEnabled) { done, total in
                 Task { @MainActor in self.indexProgress = (done, total) }
             }
             await MainActor.run {
@@ -1967,7 +1967,7 @@ final class AppState {
             guard let self else { return }
             Task { @MainActor in
                 for p in Set(paths) {
-                    await self.searchIndexer.reindex(path: p, ocrScannedPDFs: self.settings.ocrScannedPDFsEnabled)
+                    await self.searchIndexer.reindex(path: p, ocrScannedPDFs: self.settings.ocrScannedPDFsEnabled, ocrImages: self.settings.ocrImagesEnabled)
                 }
             }
         }
