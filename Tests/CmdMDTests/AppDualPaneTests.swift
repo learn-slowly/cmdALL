@@ -70,4 +70,28 @@ final class AppDualPaneTests: XCTestCase {
         appState.openFolderInFocusedPane(root.appendingPathComponent("sub"))
         XCTAssertTrue(appState.panes.isEmpty)
     }
+    func testOpenPeekFile은그칸에peekFile을설정하고포커스도옮긴다() {
+        appState.toggleDualPane()
+        let file = root.appendingPathComponent("파일.md")
+        appState.openPeekFile(file, in: 1)
+        XCTAssertEqual(appState.panes[1].peekFile, file)
+        XCTAssertEqual(appState.focusedPaneIndex, 1)
+        XCTAssertNil(appState.panes[0].peekFile, "반대쪽 칸은 안 바뀌어야 한다")
+    }
+
+    func testClosePeekFile은목록으로되돌린다() {
+        appState.toggleDualPane()
+        let file = root.appendingPathComponent("파일.md")
+        appState.openPeekFile(file, in: 0)
+        appState.closePeekFile(in: 0)
+        XCTAssertNil(appState.panes[0].peekFile)
+    }
+
+    func testPromotePeekFileToTab은두칸모드를끈다() {
+        appState.toggleDualPane()
+        let file = root.appendingPathComponent("파일.md")
+        appState.openPeekFile(file, in: 0)
+        appState.promotePeekFileToTab(file)
+        XCTAssertFalse(appState.dualPaneEnabled, "제대로 열기는 한 칸 모드로 돌아가야 한다")
+    }
 }

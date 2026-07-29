@@ -127,6 +127,26 @@ final class AppState {
         panes[index].open(folder: parent)
     }
 
+    /// 칸 안에서 파일을 읽기 전용으로 열어본다(수정 없음, 설계 §3.2). 그 칸에 포커스도 옮긴다.
+    func openPeekFile(_ url: URL, in index: Int) {
+        focusPane(index)
+        guard panes.indices.contains(index) else { return }
+        panes[index].peek(url)
+    }
+
+    /// 미리보기를 닫고 목록으로 돌아간다.
+    func closePeekFile(in index: Int) {
+        guard panes.indices.contains(index) else { return }
+        panes[index].clearPeek()
+    }
+
+    /// "이 창에서 제대로 열기" — 두 칸 모드를 끄고 기존 한 칸 탭 시스템으로 정식으로 연다
+    /// (수정·저장·되돌리기 전부 지금과 동일하게 동작, 설계 §3.2).
+    func promotePeekFileToTab(_ url: URL) {
+        dualPaneEnabled = false
+        openDocument(at: url, inNewTab: true)
+    }
+
     // MARK: - 다중 선택 (F1b)
     /// 라이브러리·트리 공유 선택 집합. URL 키 — FileTreeItem.id는 재빌드마다 새 UUID라 못 쓴다.
     var fileSelection: Set<URL> = []

@@ -44,20 +44,31 @@ struct PaneView: View {
     @State private var dropTargetURL: URL? = nil
 
     var body: some View {
-        VStack(spacing: 0) {
-            header
-            Divider()
-            list
-        }
-        .frame(minWidth: 280, maxWidth: .infinity, maxHeight: .infinity)
-        .overlay(alignment: .top) {
-            if isFocused {
-                Rectangle().fill(Color.cmdsAccent).frame(height: 2)
+        if let peekFile = pane?.peekFile {
+            PaneReaderView(paneIndex: index, url: peekFile)
+                .frame(minWidth: 280, maxWidth: .infinity, maxHeight: .infinity)
+                .overlay(alignment: .top) {
+                    if isFocused {
+                        Rectangle().fill(Color.cmdsAccent).frame(height: 2)
+                    }
+                }
+                .id(peekFile)
+        } else {
+            VStack(spacing: 0) {
+                header
+                Divider()
+                list
             }
+            .frame(minWidth: 280, maxWidth: .infinity, maxHeight: .infinity)
+            .overlay(alignment: .top) {
+                if isFocused {
+                    Rectangle().fill(Color.cmdsAccent).frame(height: 2)
+                }
+            }
+            .contentShape(Rectangle())
+            .onTapGesture { appState.focusPane(index) }
+            .task(id: folderKey) { reloadEntries() }
         }
-        .contentShape(Rectangle())
-        .onTapGesture { appState.focusPane(index) }
-        .task(id: folderKey) { reloadEntries() }
     }
 
     private func reloadEntries() {
@@ -117,6 +128,9 @@ struct PaneView: View {
                 }
                 .onTapGesture {
                     appState.focusPane(index)
+                    if !item.isDirectory {
+                        appState.openPeekFile(item.url, in: index)
+                    }
                 }
                 .onDrop(of: FileDropDelegate.acceptedTypes,
                         delegate: FileDropDelegate(
