@@ -54,4 +54,12 @@ enum OCRService {
         }
         return parts.isEmpty ? nil : parts.joined(separator: "\n\n")
     }
+
+    /// 이미지 파일(png·jpg·heic·webp·gif 등)을 `CGImage`로 읽는다(사진 OCR — Docufinder
+    /// 격차 3번). 파일이 없거나 디코딩 실패하면 `nil`만 반환(크래시 없음) —
+    /// `ContentExtractor`가 이 결과를 이미지 OCR 분기의 첫 관문으로 쓴다.
+    static func loadCGImage(from url: URL) -> CGImage? {
+        guard let nsImage = NSImage(contentsOf: url) else { return nil }
+        return nsImage.cgImage(forProposedRect: nil, context: nil, hints: nil)
+    }
 }

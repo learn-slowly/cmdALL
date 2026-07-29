@@ -26,6 +26,38 @@ final class OCRServiceTests: XCTestCase {
         return image
     }
 
+    func testLoadCGImageReadsRealPNGFile() throws {
+        let dir = TempDataDirectory.make()
+        defer { TempDataDirectory.cleanup(dir) }
+        let image = imageWithText("HI", size: CGSize(width: 200, height: 100))
+        guard let tiff = image.tiffRepresentation,
+              let rep = NSBitmapImageRep(data: tiff),
+              let png = rep.representation(using: .png, properties: [:])
+        else { return XCTFail("PNG 인코딩 실패") }
+        let url = dir.appendingPathComponent("photo.png")
+        try png.write(to: url)
+
+        let cgImage = OCRService.loadCGImage(from: url)
+
+        XCTAssertNotNil(cgImage)
+        XCTAssertGreaterThan(cgImage?.width ?? 0, 0, "디코딩된 이미지 폭이 있어야 한다(화면 배율에 따라 200 또는 400)")
+    }
+
+    func testLoadCGImageReturnsNilForMissingFile() {
+        let missing = URL(fileURLWithPath: "/tmp/cmdall-없는-사진-\(UUID().uuidString).png")
+
+        XCTAssertNil(OCRService.loadCGImage(from: missing))
+    }
+
+    func testLoadCGImageReturnsNilForCorruptData() throws {
+        let dir = TempDataDirectory.make()
+        defer { TempDataDirectory.cleanup(dir) }
+        let url = dir.appendingPathComponent("깨진.png")
+        try Data([0x00, 0x01, 0x02]).write(to: url)
+
+        XCTAssertNil(OCRService.loadCGImage(from: url))
+    }
+
     func testRecognizeTextReturnsNilForBlankImage() throws {
         let image = blankImage(size: CGSize(width: 200, height: 100))
         let cgImage = try XCTUnwrap(image.cgImage(forProposedRect: nil, context: nil, hints: nil))
