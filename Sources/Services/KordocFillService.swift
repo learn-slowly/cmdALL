@@ -30,7 +30,7 @@ actor KordocFillService {
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: npx)
-        process.arguments = ["-y", "kordoc", "fill", "--dry-run", "--silent",
+        process.arguments = ["-y", KordocService.packageSpec, "fill", "--dry-run", "--silent",
                              template.path(percentEncoded: false)]
         process.environment = SubprocessEnvironment.environment(forTool: npx)
         let stderrPipe = Pipe()
@@ -88,7 +88,7 @@ actor KordocFillService {
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: npx)
-        process.arguments = ["-y", "kordoc", "fill", template.path(percentEncoded: false),
+        process.arguments = ["-y", KordocService.packageSpec, "fill", template.path(percentEncoded: false),
                              "-j", tmpJson.path(percentEncoded: false), "--silent"]
         process.environment = SubprocessEnvironment.environment(forTool: npx)
         let stderrPipe = Pipe()

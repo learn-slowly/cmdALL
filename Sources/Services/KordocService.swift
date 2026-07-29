@@ -24,7 +24,7 @@ actor KordocService {
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: npx)
-        process.arguments = ["-y", "kordoc", fileURL.path(percentEncoded: false),
+        process.arguments = ["-y", Self.packageSpec, fileURL.path(percentEncoded: false),
                              "--format", "json", "-o", tmp.path(percentEncoded: false), "--silent"]
         process.environment = SubprocessEnvironment.environment(forTool: npx)
         let stderrPipe = Pipe()
@@ -101,4 +101,9 @@ actor KordocService {
         } catch { }
         return nil
     }
+
+    /// npx에 넘길 kordoc 패키지 지정자. 버전 없이 그냥 "kordoc"만 넘기면 npx가 로컬에
+    /// 이미 받아둔 옛날 버전을 그대로 재사용하는 경우가 있어(실측 확인 — 몇 달 지난 버전이
+    /// 계속 잡혔다), "@latest"를 명시해 매번 진짜 최신 버전을 받아쓰도록 고정한다.
+    static let packageSpec = "kordoc@latest"
 }

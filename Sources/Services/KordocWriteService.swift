@@ -41,7 +41,7 @@ actor KordocWriteService {
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: npx)
-        process.arguments = ["-y", "kordoc", "patch",
+        process.arguments = ["-y", KordocService.packageSpec, "patch",
                              original.path(percentEncoded: false),
                              tmpMd.path(percentEncoded: false),
                              "-o", output.path(percentEncoded: false), "--silent"]
