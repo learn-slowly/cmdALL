@@ -415,7 +415,11 @@ struct FileTreeItemRow: View {
                             appState.toggleFileSelection(item.url)
                         } else {
                             appState.clearFileSelection()
-                            appState.selectFolderForLibrary(item.url)
+                            if appState.dualPaneEnabled {
+                                appState.openFolderInFocusedPane(item.url)
+                            } else {
+                                appState.selectFolderForLibrary(item.url)
+                            }
                         }
                     }
             }
@@ -711,8 +715,12 @@ private struct DefaultLocationRow: View {
     var body: some View {
         Label(location.name, systemImage: location.icon)
             .onTapGesture {
-                // 훑어보기용 바로가기 — 다운로드·문서 전체를 자동 내용 색인 대상으로 만들지 않는다.
-                appState.openFolder(at: location.url, autoIndex: false)
+                if appState.dualPaneEnabled {
+                    appState.openFolderInFocusedPane(location.url)
+                } else {
+                    // 훑어보기용 바로가기 — 다운로드·문서 전체를 자동 내용 색인 대상으로 만들지 않는다.
+                    appState.openFolder(at: location.url, autoIndex: false)
+                }
             }
             .contextMenu {
                 if appState.isQuickMoveFolder(location.url) {
@@ -757,7 +765,11 @@ struct FavoritesListView: View {
                         guard FileManager.default.fileExists(atPath: favorite.url.path,
                                                              isDirectory: &isDirectory) else { return }
                         if isDirectory.boolValue {
-                            appState.openFolder(at: favorite.url)
+                            if appState.dualPaneEnabled {
+                                appState.openFolderInFocusedPane(favorite.url)
+                            } else {
+                                appState.openFolder(at: favorite.url)
+                            }
                         } else {
                             appState.openDocument(at: favorite.url, inNewTab: true)
                         }

@@ -40,6 +40,8 @@ struct PaneView: View {
     }
 
     @State private var entries: [FileTreeItem] = []
+    /// 드롭 대상 하이라이트(폴더 행에 파일을 끌고 올 때).
+    @State private var dropTargetURL: URL? = nil
 
     var body: some View {
         VStack(spacing: 0) {
@@ -106,6 +108,8 @@ struct PaneView: View {
                         .lineLimit(1)
                     Spacer(minLength: 0)
                 }
+                .padding(.vertical, 2)
+                .background(dropTargetURL == item.url ? Color.cmdsAccent.opacity(0.15) : .clear)
                 .contentShape(Rectangle())
                 .onTapGesture(count: 2) {
                     guard item.isDirectory else { return }
@@ -114,8 +118,17 @@ struct PaneView: View {
                 .onTapGesture {
                     appState.focusPane(index)
                 }
+                .onDrop(of: FileDropDelegate.acceptedTypes,
+                        delegate: FileDropDelegate(
+                            destination: item.isDirectory ? item.url : (pane?.selectedFolder ?? item.url),
+                            appState: appState,
+                            onHoverChange: { dropTargetURL = $0 ? item.url : nil }))
             }
             .listStyle(.plain)
+            // 빈 자리(행 사이·목록 배경)로의 드롭 — 이 칸이 지금 보여주는 폴더로 이동(F2 재사용).
+            .onDrop(of: FileDropDelegate.acceptedTypes,
+                    delegate: FileDropDelegate(destination: pane?.selectedFolder ?? URL(fileURLWithPath: "/"),
+                                               appState: appState))
         }
     }
 }
