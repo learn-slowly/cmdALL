@@ -27,9 +27,16 @@ extension DocumentKind {
 
     /// Docufinder 격차 5번(원본 그대로 보기) — macOS 내장 QuickLook이 원본 조판을 그대로
     /// 그릴 수 있는 MS 오피스 확장자만. HWP류(hwp/hwpx/hwpml)는 맥이 아예 모르는 형식이라
-    /// QuickLook도 못 그린다 — kordoc→마크다운이 유일한 경로(실측, npx kordoc --help도
-    /// SVG·HTML 렌더 출력 없음 — CmdMD-fork_prd.md §10 격차 5 참고).
+    /// QuickLook도 못 그린다 — kordoc→마크다운이 기본 경로(hwpx는 아래
+    /// `kordocRenderableExtensions`로 별도 경로 있음, 2026-07-29 추가).
     static let nativelyRenderableOfficeExtensions: Set<String> = ["doc", "docx", "xls", "xlsx"]
+
+    /// kordoc `render`(SVG)로 원본 조판을 그릴 수 있는 확장자. **hwpx 전용** — kordoc에
+    /// hwp(구버전 바이너리)·hwpml 렌더 기능은 없다(실측 확인, 2026-07-29,
+    /// `docs/superpowers/specs/2026-07-29-hwpx-native-render-design.md` §3). 2026-07-27
+    /// 조사 당시엔 이 컴퓨터의 npx 캐시가 옛 kordoc 버전(3.1.1)을 계속 돌려줘 이 기능을
+    /// 놓쳤었다(`kordoc@latest` 고정으로 해소, `KordocService.packageSpec`).
+    static let kordocRenderableExtensions: Set<String> = ["hwpx"]
 
     /// kordoc patch가 서식 보존 라운드트립을 지원하는 확장자(소문자). HWP/HWPX 전용.
     static let patchableExtensions: Set<String> = ["hwp", "hwpx"]
