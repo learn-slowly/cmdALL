@@ -555,6 +555,13 @@ struct FileTreeContextMenu: View {
             Label("정보 보기", systemImage: "info.circle")
         }
         Button {
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(item.url.path, forType: .string)
+            appState.showToast("경로를 복사했습니다")
+        } label: {
+            Label("경로 복사", systemImage: "doc.on.clipboard")
+        }
+        Button {
             appState.promptQuickMove(urls: [item.url])
         } label: {
             Label("빠른 이동…", systemImage: "bolt.badge.a")
