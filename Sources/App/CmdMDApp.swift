@@ -1,5 +1,4 @@
 import SwiftUI
-import ApplicationServices
 
 @main
 struct CmdMDApp: App {
@@ -385,9 +384,8 @@ struct CmdMDApp: App {
 class AppDelegate: NSObject, NSApplicationDelegate {
     var statusItem: NSStatusItem?
     private let launchDefaults = AppLaunchDefaults()
-    private var globalMonitor: Any?
     private var fileOpsMonitor: Any?
-    private var globalSearchLocalMonitor: Any?
+    private var hotKeyRegistrar: GlobalHotKeyRegistrar?
     private lazy var globalSearchOverlay: GlobalSearchOverlayController? = {
         guard let appState = AppState.shared else { return nil }
         return GlobalSearchOverlayController(appState: appState)
@@ -401,34 +399,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             NSApp.activate(ignoringOtherApps: true)
         }
 
-        // ⇧⌘M·⌘⇧8 전역 단축키 둘 다 "손쉬운 사용(Accessibility)" 신뢰가 있어야 다른 앱
-        // 포커스 중에도 keyDown을 받는다. 지금까진 이 신뢰를 조용히 요구만 하고 안내가
-        // 없어, macOS 재빌드(ad-hoc 서명이라 서명이 매번 바뀜)로 예전 허가가 무효화되면
-        // 사용자가 원인을 모른 채 "단축키가 안 먹는다"만 겪었다(2026-07-27 실사고).
-        // 이미 신뢰돼 있으면 조용히 넘어가고, 아니면 macOS가 "손쉬운 사용에 추가해 달라"
-        // 표준 팝업을 띄운다(추가만 되고 체크는 사용자가 직접 — Apple API 사양).
-        Self.requestAccessibilityTrustIfNeeded()
-
-        // Register for global hotkey (Cmd+Shift+M for quick capture). Keep the
-        // returned token so it can be removed on teardown.
-        globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            if event.modifierFlags.contains([.command, .shift]) && event.keyCode == 46 { // M key
+        // ⇧⌘M·⌘⇧8 전역 단축키는 Carbon `RegisterEventHotKey`로 등록한다(§GlobalHotKeyRegistrar
+        // 참고) — 이 API는 "손쉬운 사용(Accessibility)" 신뢰가 필요 없어서, 예전에 겪던
+        // "앱 재빌드/업데이트 후 서명이 바뀌면 단축키가 조용히 안 먹는" 문제(2026-07-27
+        // 이후 반복)가 원천적으로 사라진다. 자기 앱이 최전방일 때도 그대로 동작해서, 예전에
+        // 그 경우를 보완하려 따로 두던 로컬 모니터도 더는 필요 없다.
+        let registrar = GlobalHotKeyRegistrar { [weak self] hotKey in
+            switch hotKey {
+            case .quickCapture:
                 self?.showQuickCapture()
-            } else if event.modifierFlags.contains([.command, .shift]) && event.keyCode == 28 { // 8 key(⌘⇧8) — 전역 검색 오버레이(Raycast식)
+            case .globalSearch:
                 self?.toggleGlobalSearchOverlay()
             }
         }
-
-        // 전역 검색 오버레이는 다른 앱에서만이 아니라 cmdALL이 이미 앞에 있을 때도 눌려야
-        // 한다 — addGlobalMonitorForEvents는 자기 앱 안의 이벤트는 안 넘겨준다(별도 로컬
-        // 모니터 필요, F1b `fileOpsMonitor`와 같은 이유).
-        globalSearchLocalMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            if event.modifierFlags.contains([.command, .shift]) && event.keyCode == 28 {
-                self?.toggleGlobalSearchOverlay()
-                return nil
-            }
-            return event
-        }
+        registrar.register()
+        hotKeyRegistrar = registrar
 
         // 메뉴바 상주 앱이라 창 닫기는 파괴가 아니라 숨김 — 뷰 onDisappear가 안 불려
         // 미디어가 계속 울린다(실측, 2026-07-03). 문서 창이 닫히면 전 미디어 정지.
@@ -458,17 +443,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        if let monitor = globalMonitor {
-            NSEvent.removeMonitor(monitor)
-            globalMonitor = nil
-        }
+        hotKeyRegistrar?.unregisterAll()
+        hotKeyRegistrar = nil
         if let monitor = fileOpsMonitor {
             NSEvent.removeMonitor(monitor)
             fileOpsMonitor = nil
-        }
-        if let monitor = globalSearchLocalMonitor {
-            NSEvent.removeMonitor(monitor)
-            globalSearchLocalMonitor = nil
         }
         // 업데이트 후 "지금 다시 시작" — 종료가 실제로 진행될 때만 새 인스턴스를 띄운다.
         // applicationShouldTerminate의 저장 확인에서 취소하면 여기까지 오지 않으므로
@@ -528,14 +507,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             appState.cancelPendingRelaunch()
             return .terminateCancel
         }
-    }
-
-    /// 손쉬운 사용 신뢰가 없으면 macOS 표준 안내 팝업을 띄운다("이 앱이 손쉬운 사용
-    /// 목록에 추가되게 해달라"). 이미 신뢰돼 있으면 아무 것도 안 뜨고 조용히 반환한다
-    /// (Apple `AXIsProcessTrustedWithOptions` 사양 — 실제 체크박스 on은 사용자 몫).
-    static func requestAccessibilityTrustIfNeeded() {
-        let promptKey = kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String
-        _ = AXIsProcessTrustedWithOptions([promptKey: true] as CFDictionary)
     }
 
     private func showQuickCapture() {
