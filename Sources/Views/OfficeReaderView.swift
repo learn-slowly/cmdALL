@@ -78,7 +78,9 @@ struct OfficeReaderView: View {
                     MarkdownPreviewView(
                         documentID: tabID,
                         markdown: result.markdown,
-                        baseURL: fileURL.deletingLastPathComponent(),
+                        // 사진이 있으면 kordoc이 뽑아낸 폴더를 기준 삼는다(2026-07-30 수정
+                        // — 전엔 항상 원본 폴더를 기준 삼아 사진이 안 보였다).
+                        baseURL: result.assetDirectory ?? fileURL.deletingLastPathComponent(),
                         options: appState.renderOptions(),
                         scrollSyncEnabled: false
                     )

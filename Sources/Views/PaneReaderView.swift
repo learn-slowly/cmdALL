@@ -124,11 +124,12 @@ struct PaneReaderView: View {
                         .foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-            case .loaded(let markdown):
+            case .loaded(let markdown, let assetDirectory):
                 MarkdownPreviewView(
                     documentID: nil,
                     markdown: markdown,
-                    baseURL: url.deletingLastPathComponent(),
+                    // 사진이 있으면 kordoc이 뽑아낸 폴더를 기준 삼는다(2026-07-30 수정).
+                    baseURL: assetDirectory ?? url.deletingLastPathComponent(),
                     options: appState.renderOptions(),
                     scrollSyncEnabled: false
                 )
@@ -160,7 +161,7 @@ struct PaneReaderView: View {
         officeState = .loading
         do {
             let result = try await appState.convertOfficeDocumentForPanePreview(fileURL: url)
-            officeState = .loaded(result.markdown)
+            officeState = .loaded(result.markdown, result.assetDirectory)
         } catch {
             officeState = .failed(AppState.officeErrorMessage(error))
         }
@@ -169,6 +170,6 @@ struct PaneReaderView: View {
 
 private enum PaneOfficePreviewState {
     case loading
-    case loaded(String)
+    case loaded(String, URL?)
     case failed(String)
 }

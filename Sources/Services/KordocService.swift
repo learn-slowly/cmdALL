@@ -17,13 +17,18 @@ actor KordocService {
     func convert(fileURL: URL) async throws -> KordocResult {
         guard let npx = Self.resolveNpxPath() else { throw KordocError.toolNotFound }
 
-        let tmp = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString)
-            .appendingPathExtension("json")
-        defer { try? FileManager.default.removeItem(at: tmp) }
+        // 작업 폴더를 직접 통제한다 — 예전엔 CWD를 안 정해줘서(대개 앱 실행 경로,
+        // 쓰기 금지인 경우가 흔함) kordoc이 사진을 images/ 하위에 뽑아내려다 조용히
+        // 실패하는 문제가 있었다(실사용 보고, 2026-07-30 — hwpx 사진 미표시, 에러 없이
+        // 글만 나옴). 항상 쓰기 가능한 임시 폴더를 CWD로 주면 이 문제가 해소된다.
+        let workDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("kordoc-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: workDir, withIntermediateDirectories: true)
+        let tmp = workDir.appendingPathComponent("result.json")
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: npx)
+        process.currentDirectoryURL = workDir
         process.arguments = ["-y", Self.packageSpec, fileURL.path(percentEncoded: false),
                              "--format", "json", "-o", tmp.path(percentEncoded: false), "--silent"]
         process.environment = SubprocessEnvironment.environment(forTool: npx)
@@ -56,9 +61,21 @@ actor KordocService {
         guard let data = try? Data(contentsOf: tmp) else {
             throw KordocError.conversionFailed("출력 파일이 생성되지 않았습니다.")
         }
-        guard let result = try? JSONDecoder().decode(KordocResult.self, from: data) else {
+        guard var result = try? JSONDecoder().decode(KordocResult.self, from: data) else {
             throw KordocError.decodeFailed
         }
+
+        // kordoc이 사진을 뽑아냈으면(images/ 하위 폴더 실측 확인) 그 폴더를 미리보기
+        // baseURL 후보로 알려준다 — markdown의 참조(`image_001.png`, 접두어 없음)가
+        // 이 폴더를 기준으로 해야 맞는다(kordoc 자체의 참조·실위치 어긋남 우회).
+        let imagesDir = workDir.appendingPathComponent("images", isDirectory: true)
+        if FileManager.default.fileExists(atPath: imagesDir.path) {
+            result.assetDirectory = imagesDir
+        }
+        // json 자체는 다 읽었으니 지워도 되지만, 이미지 폴더는 렌더가 나중에 읽어야
+        // 하므로 작업 폴더 전체는 앱 세션 동안(또는 다음 재부팅 때까지) 그대로 둔다.
+        try? FileManager.default.removeItem(at: tmp)
+
         return result
     }
 
