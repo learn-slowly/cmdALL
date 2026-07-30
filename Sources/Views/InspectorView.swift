@@ -46,11 +46,67 @@ struct InspectorView: View {
                 Divider()
                 
                 InspectorBottomSection()
+            } else if let url = appState.activeTab?.fileURL {
+                // PDF·한글·사진·오피스·미디어 등 마크다운이 아닌 파일 — 목차·속성 편집은
+                // 지원 안 하지만, 기존 "정보 보기"(⌥⌘I)와 같은 기본 정보는 보여준다.
+                FileBasicInfoSection(url: url)
             } else {
                 ContentUnavailableView("No Document", systemImage: "doc.text", description: Text("Open a file to see its details"))
             }
         }
         .background(Color(nsColor: .windowBackgroundColor))
+    }
+}
+
+/// 마크다운이 아닌 파일을 열었을 때 정보 패널 자리 — 새 계산 로직 없이 기존
+/// `FileInfoService`(⌥⌘I 정보 보기와 동일 소스)를 재사용한다. 폴더는 탭으로 안 열리므로
+/// 폴더 크기 비동기 계산은 다루지 않는다(그건 FileInfoView 몫).
+struct FileBasicInfoSection: View {
+    let url: URL
+
+    @State private var info: FileInfo?
+    @State private var detail: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("정보").font(.headline)
+            if let info {
+                Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 16, verticalSpacing: 6) {
+                    row("이름", info.name)
+                    row("종류", info.kindLabel)
+                    row("크기", info.sizeBytes.map(FileInfoService.formatSize) ?? "--")
+                    row("위치", info.locationPath)
+                    row("생성일", formatted(info.createdAt))
+                    row("수정일", formatted(info.modifiedAt))
+                    // 종류별 한 줄 — 도착 전에도 자리 예약(리플로우 방지, FileInfoView 관례).
+                    row("정보", detail ?? " ")
+                }
+            }
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .task(id: url) {
+            let basic = FileInfoService.loadBasic(url: url)
+            info = basic
+            detail = await FileInfoService.loadDetail(url: url, isDirectory: basic.isDirectory)
+        }
+    }
+
+    private func formatted(_ date: Date?) -> String {
+        date?.formatted(.dateTime.year().month().day().hour().minute()) ?? "--"
+    }
+
+    @ViewBuilder
+    private func row(_ label: String, _ value: String) -> some View {
+        GridRow {
+            Text(label)
+                .foregroundStyle(.secondary)
+                .gridColumnAlignment(.trailing)
+            Text(value)
+                .textSelection(.enabled)
+                .lineLimit(2)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
     }
 }
 
