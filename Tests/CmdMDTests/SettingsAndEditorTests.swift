@@ -26,11 +26,13 @@ final class SettingsAndEditorTests: XCTestCase {
         settings.previewSettings.maxWidth = 720
         settings.enableKaTeX = true
         settings.ocrImagesEnabled = true
+        settings.menuBarIconEnabled = false
 
         let data = try JSONEncoder().encode(settings)
         let decoded = try JSONDecoder().decode(AppSettings.self, from: data)
         XCTAssertEqual(decoded, settings)
         XCTAssertTrue(decoded.ocrImagesEnabled, "ocrImagesEnabled이 라운드트립에서 유지돼야 한다")
+        XCTAssertFalse(decoded.menuBarIconEnabled, "menuBarIconEnabled이 라운드트립에서 유지돼야 한다(꺼도 재시작 후 꺼진 채로 있어야 함)")
     }
 
     // MARK: Session state

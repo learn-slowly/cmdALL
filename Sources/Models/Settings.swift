@@ -148,6 +148,8 @@ struct AppSettings: Codable, Equatable {
     var showTabBar: Bool = true
     /// 숨김 파일(.으로 시작)을 트리·라이브러리에 표시할지. 보기 전용 — 검색 색인·볼트 작업은 영향 없다.
     var showHiddenFiles: Bool = false
+    /// 메뉴바(화면 위쪽) 아이콘 표시 여부. 기본 ON(기존 동작 그대로) — 꺼도 앱 자체는 그대로 실행된다.
+    var menuBarIconEnabled: Bool = true
     var sidebarWidth: CGFloat = 250
     var restoreLastSession: Bool = true
     var confirmBeforeClosingDirtyTabs: Bool = true
@@ -210,6 +212,7 @@ struct AppSettings: Codable, Equatable {
         showStatusBar = try c.decodeIfPresent(Bool.self, forKey: .showStatusBar) ?? d.showStatusBar
         showTabBar = try c.decodeIfPresent(Bool.self, forKey: .showTabBar) ?? d.showTabBar
         showHiddenFiles = try c.decodeIfPresent(Bool.self, forKey: .showHiddenFiles) ?? d.showHiddenFiles
+        menuBarIconEnabled = try c.decodeIfPresent(Bool.self, forKey: .menuBarIconEnabled) ?? d.menuBarIconEnabled
         sidebarWidth = try c.decodeIfPresent(CGFloat.self, forKey: .sidebarWidth) ?? d.sidebarWidth
         restoreLastSession = try c.decodeIfPresent(Bool.self, forKey: .restoreLastSession) ?? d.restoreLastSession
         confirmBeforeClosingDirtyTabs = try c.decodeIfPresent(Bool.self, forKey: .confirmBeforeClosingDirtyTabs) ?? d.confirmBeforeClosingDirtyTabs

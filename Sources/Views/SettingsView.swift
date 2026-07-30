@@ -312,6 +312,10 @@ struct EditorSettingsView: View {
                 Text("점(.)으로 시작하는 파일과 폴더를 목록에 보여줍니다. 검색과 볼트 작업에는 영향이 없습니다.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                Toggle("메뉴바 아이콘 표시", isOn: $state.settings.menuBarIconEnabled)
+                Text("꺼두면 화면 위쪽 메뉴바에서 cmdALL 아이콘이 사라집니다(퀵 캡처 단축키 ⇧⌘M은 그대로 동작). 앱 자체는 계속 실행됩니다.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)

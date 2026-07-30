@@ -339,8 +339,8 @@ struct CmdMDApp: App {
                 .tint(.cmdsAccent)
         }
 
-        // Menu bar quick capture
-        MenuBarExtra("cmdALL", systemImage: "book.fill") {
+        // Menu bar quick capture — 설정에서 껐다 켤 수 있다(isInserted, 기본 ON).
+        MenuBarExtra("cmdALL", systemImage: "book.fill", isInserted: $appState.settings.menuBarIconEnabled) {
             MenuBarView()
                 .environment(appState)
                 .tint(.cmdsAccent)
