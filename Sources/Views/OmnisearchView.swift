@@ -135,13 +135,25 @@ struct OmnisearchView: View {
             Divider()
 
             if hits.isEmpty {
-                ContentUnavailableView {
-                    Label(model.query.isEmpty ? "No Recent Files" : "No Matches", systemImage: "sparkle.magnifyingglass")
-                } description: {
+                // ContentUnavailableView는 주어진 공간 전체를 세로 가운데 정렬해 위에 큰 빈
+                // 공간이 생긴다(레고님 지적) — PaneReaderView.summaryPlaceholder와 동일 원인·
+                // 동일 수정: 직접 조립한 VStack + alignment: .top으로 위쪽에 붙인다.
+                VStack(spacing: 12) {
+                    Image(systemName: "sparkle.magnifyingglass")
+                        .font(.system(size: 40))
+                        .foregroundStyle(.secondary)
+                    Text(model.query.isEmpty ? "No Recent Files" : "No Matches")
+                        .font(.title3.weight(.semibold))
                     Text(model.query.isEmpty
                          ? "Open a folder or some files first — they get indexed for search."
                          : "No file names or contents match \"\(model.query)\"")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
                 }
+                .padding(.top, 48)
+                .padding(.horizontal, 24)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             } else {
                 ScrollViewReader { proxy in
                     ScrollView {
