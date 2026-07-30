@@ -11,6 +11,7 @@ import SwiftUI
 /// "큰 화면에서 보기"로 안내한다(후속 허용 — 필요하면 편집 없는 변형을 따로 만든다).
 struct PaneReaderView: View {
     @Environment(AppState.self) private var appState
+    @State private var officeState: PaneOfficePreviewState = .loading
     let paneIndex: Int
     let url: URL
 
@@ -60,11 +61,13 @@ struct PaneReaderView: View {
             PDFReaderView(url: url)
         case .quickLook:
             QuickLookPreview(url: url)
+        case .office:
+            officePreview
         default:
             if QuickLookRouting.opensAsText(url) {
                 textPreview
             } else {
-                // 오피스·미디어 등 — 편집 UI와 한 몸이라 이번엔 요약만(위 문서 주석 참고).
+                // 미디어(음악·동영상) 등 — 재생 UI가 편집·짝꿍노트 편집과 한 몸이라 이번엔 요약만.
                 summaryPlaceholder
             }
         }
@@ -106,4 +109,66 @@ struct PaneReaderView: View {
         .padding(.horizontal, 24)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
+
+    /// 오피스·한글 문서 미리보기(사용자 요청, 2026-07-30) — 탭 없이 칸에서 바로 변환·표시.
+    /// 원본 그대로 보기(hwpx 조판 렌더)·양식 채우기·편집은 탭 전용 기능이라 이번엔 뺀다 —
+    /// 여기는 kordoc이 뽑아낸 글자·표·이미지를 읽기 전용으로만 보여준다.
+    private var officePreview: some View {
+        Group {
+            switch officeState {
+            case .loading:
+                VStack(spacing: 12) {
+                    ProgressView()
+                    Text("변환 중… (첫 실행은 kordoc 다운로드로 느릴 수 있어요)")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            case .loaded(let markdown):
+                MarkdownPreviewView(
+                    documentID: nil,
+                    markdown: markdown,
+                    baseURL: url.deletingLastPathComponent(),
+                    options: appState.renderOptions(),
+                    scrollSyncEnabled: false
+                )
+            case .failed(let message):
+                VStack(spacing: 12) {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.largeTitle)
+                        .foregroundStyle(.secondary)
+                    Text(message)
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: 320)
+                    Button("다시 시도") {
+                        Task { await loadOfficePreview() }
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding()
+            }
+        }
+        .task(id: url) {
+            await loadOfficePreview()
+        }
+    }
+
+    @MainActor
+    private func loadOfficePreview() async {
+        officeState = .loading
+        do {
+            let result = try await appState.convertOfficeDocumentForPanePreview(fileURL: url)
+            officeState = .loaded(result.markdown)
+        } catch {
+            officeState = .failed(AppState.officeErrorMessage(error))
+        }
+    }
+}
+
+private enum PaneOfficePreviewState {
+    case loading
+    case loaded(String)
+    case failed(String)
 }

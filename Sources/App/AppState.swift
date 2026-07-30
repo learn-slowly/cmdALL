@@ -3417,6 +3417,12 @@ final class AppState {
         }
     }
 
+    /// 듀얼 페인 칸 미리보기 전용 — 탭 생명주기(officeStates[tabID])와 무관하게 변환만 한다
+    /// (칸엔 탭ID가 없다). 같은 kordocService 인스턴스를 재사용해 세션 캐시 이득은 그대로 본다.
+    func convertOfficeDocumentForPanePreview(fileURL: URL) async throws -> KordocResult {
+        try await kordocService.convert(fileURL: fileURL)
+    }
+
     static func officeErrorMessage(_ error: Error) -> String {
         switch error {
         case KordocError.toolNotFound:
