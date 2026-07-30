@@ -279,6 +279,24 @@ struct Command: Identifiable {
                     appState.showToast("열린 문서가 없습니다")
                 }
             },
+            Command(
+                title: "위키 변경 기록",
+                subtitle: "위키 글이 언제·무엇 때문에 바뀌었는지 보기",
+                icon: "clock.arrow.circlepath",
+                shortcut: nil,
+                keywords: ["위키", "이력", "기록", "history", "되돌리기", "wiki"]
+            ) {
+                appState.requestWikiHistory()
+            },
+            Command(
+                title: "위키 관계도 보기",
+                subtitle: "위키 글들이 서로 어떻게 이어져 있는지 점과 선으로 보기",
+                icon: "point.3.connected.trianglepath.dotted",
+                shortcut: nil,
+                keywords: ["위키", "관계도", "그래프", "graph", "링크", "wiki"]
+            ) {
+                appState.requestWikiGraph()
+            },
 
             Command(
                 title: "폴더 정리 (배치)",

@@ -196,6 +196,12 @@ struct CmdMDApp: App {
                 Button("파일 작업 기록") {
                     appState.showFileOpsHistory = true
                 }
+                Button("위키 변경 기록") {
+                    appState.requestWikiHistory()
+                }
+                Button("위키 관계도") {
+                    appState.requestWikiGraph()
+                }
 
                 Divider()
                 

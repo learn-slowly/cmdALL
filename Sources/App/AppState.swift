@@ -325,6 +325,29 @@ final class AppState {
     var wikiIngestError: String? = nil
     var wikiRulesBusy: Bool = false
     var wikiRulesMessage: String? = nil
+    // MARK: - 위키 이력 화면(WikiHistory)
+    /// 이력 시트 표시 여부.
+    var showWikiHistory: Bool = false
+    /// 특정 글만 볼 때의 필터(nil=전체).
+    var wikiHistoryPageFilter: URL? = nil
+    /// 로드 시 1회 캡처한 이력 행 스냅샷 — 행 클릭으로 재읽기하지 않는다.
+    var wikiHistoryRows: [WikiHistoryGrouping.Row] = []
+    /// 필터 무관 전체 페이지 목록(글 고르기 Picker용) — 로드 시 1회 캡처.
+    var wikiHistoryKnownPages: [URL] = []
+    /// 페이지별 마지막 저장 시각 스냅샷("기록 이후 직접 고쳐진 것 같습니다" 힌트용).
+    var wikiHistoryPageMTimes: [URL: Date] = [:]
+    var wikiHistoryBusy: Bool = false
+    var wikiHistoryError: String? = nil
+    // MARK: - 위키 관계도 화면(WikiGraph)
+    var showWikiGraph: Bool = false
+    /// 로드 시 1회 산출한 그래프+레이아웃 스냅샷 — 재계산 없이 뷰가 그대로 그린다.
+    var wikiGraphSnapshot: WikiGraphSnapshot? = nil
+    var wikiGraphBusy: Bool = false
+    var wikiGraphError: String? = nil
+    /// nil=전체 보기, 값 있으면 그 노드 중심 1-hop("주변만 보기").
+    var wikiGraphFocusedNodeID: String? = nil
+    /// 로드 완료 시 1회 결정되는 시작 안내 문구(계획 §관계도 시작 규칙).
+    var wikiGraphFocusNotice: String? = nil
 
     // MARK: - 파일 작업(F1a) 상태
 
@@ -393,6 +416,7 @@ final class AppState {
     /// 테스트가 가짜 Claude 주입 WikiIngestService로 교체할 수 있게 internal var(클린업 전례).
     var wikiIngestService: WikiIngestService
     let wikiBackupStore: WikiBackupStore
+    let wikiGraphLoader = WikiGraphLoader()
     /// 테스트에서 가짜 Claude 주입 WikiRulesService로 교체할 수 있게 internal var.
     var wikiRulesService: WikiRulesService
     let moveExecutor: MoveExecutor

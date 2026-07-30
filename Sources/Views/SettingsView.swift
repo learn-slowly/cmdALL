@@ -1012,6 +1012,14 @@ struct WikiSettingsView: View {
                 Text("위키의 루트 폴더를 지정합니다 — 규칙 파일(CLAUDE.md·templates/)이 있는 곳.")
                     .font(.caption).foregroundStyle(.secondary)
             }
+            Section("바로가기") {
+                Button("위키 변경 기록 보기") {
+                    appState.requestWikiHistory()
+                }
+                Button("위키 관계도 보기") {
+                    appState.requestWikiGraph()
+                }
+            }
 
             Section("위키 규칙") {
                 HStack(spacing: 10) {
