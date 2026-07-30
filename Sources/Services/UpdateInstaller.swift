@@ -273,31 +273,54 @@ struct CodesignVerifier: BundleVerifying {
     }
 }
 /// `security find-identity`·`codesign`을 직접 호출해 이 컴퓨터에 로컬 고정 인증서가
-/// 있는지 확인하고, 있으면 그걸로 재서명한다. `scripts/package_app.sh`(로컬 빌드 경로)의
-/// 같은 로직·같은 인증서 이름을 쓴다 — 둘 다 갱신되면 CDHash가 안정된다.
+/// 있는지 확인하고, 있으면 그 SHA-1 지문으로 재서명한다(이름이 아니라 지문으로 —
+/// 인증서를 재발급해 동명 인증서가 두 개 이상 생기면(정상적인 결말) 이름 substring
+/// 매칭은 `ambiguous(matches multiple identities)`로 실패하지만, 지문은 항상 하나만
+/// 정확히 가리킨다. 2026-07-30 opus 자문 S2). `scripts/package_app.sh`(로컬 빌드
+/// 경로)의 같은 로직·같은 인증서 이름을 쓴다 — 둘 다 갱신되면 CDHash가 안정된다.
 struct LocalIdentityResigner: BundleSigning {
     static let identityName = "cmdALL Local Dev"
 
     func resignWithLocalIdentityIfAvailable(bundleAt url: URL) throws {
-        guard hasLocalIdentity() else { return }
+        guard let hash = localIdentityHash() else { return }
         try UpdateInstaller.run(
             "/usr/bin/codesign",
-            ["--force", "--deep", "--sign", Self.identityName, url.path],
+            ["--force", "--deep", "--sign", hash, url.path],
             failure: { UpdateInstallError.bundleVerificationFailed("로컬 인증서 재서명 실패: \($0)") }
         )
     }
 
-    private func hasLocalIdentity() -> Bool {
+    /// `security find-identity -v -p codesigning` 출력에서 이름이 일치하는 첫 항목의
+    /// SHA-1 지문(형식: `  1) <40자리 hex> "이름"`)을 뽑는다. 순수 문자열 파싱만
+    /// 골라내 별도 함수로 두어 단위 테스트 대상으로 삼는다.
+    private func localIdentityHash() -> String? {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/security")
         process.arguments = ["find-identity", "-v", "-p", "codesigning"]
         let outPipe = Pipe()
         process.standardOutput = outPipe
         process.standardError = Pipe()
-        guard (try? process.run()) != nil else { return false }
+        guard (try? process.run()) != nil else { return nil }
         let data = outPipe.fileHandleForReading.readDataToEndOfFile()
         process.waitUntilExit()
-        guard process.terminationStatus == 0 else { return false }
-        return String(decoding: data, as: UTF8.self).contains(Self.identityName)
+        guard process.terminationStatus == 0 else { return nil }
+        return Self.parseHash(fromFindIdentityOutput: String(decoding: data, as: UTF8.self),
+                               identityName: Self.identityName)
+    }
+
+    /// `security find-identity -v -p codesigning`의 사람이 읽는 출력에서, 이름이
+    /// 정확히 일치하는(`"이름"` 따옴표째 매칭 — 부분 문자열 오매칭 방지) 첫 줄의
+    /// 40자리 SHA-1 지문을 뽑는다. 순수 함수 — 테스트 대상.
+    static func parseHash(fromFindIdentityOutput output: String, identityName: String) -> String? {
+        let marker = "\"\(identityName)\""
+        for line in output.split(separator: "\n") {
+            guard line.contains(marker) else { continue }
+            let parts = line.split(separator: " ", omittingEmptySubsequences: true)
+            guard parts.count >= 2 else { continue }
+            let candidate = String(parts[1])
+            guard candidate.count == 40, candidate.allSatisfy(\.isHexDigit) else { continue }
+            return candidate
+        }
+        return nil
     }
 }

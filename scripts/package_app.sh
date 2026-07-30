@@ -239,11 +239,20 @@ chmod -R u+w "$APP_DIR"
 # 애플 발급 아님, 이 컴퓨터에서만 통용)로 서명하면 designated requirement가 "인증서
 # 지문" 기준으로 고정돼(`codesign -d -r-`로 확인 가능) 재빌드해도 안 바뀐다. 인증서가
 # 없는 다른 컴퓨터(배포용 빌드)에서는 자동으로 ad-hoc 폴백.
-CODESIGN_IDENTITY="cmdALL Local Dev"
+# 이름 대신 SHA-1 지문으로 서명한다 — 인증서를 재발급해 동명 인증서가 두 개 이상
+# 생기면(정상적인 결말) 이름 substring 매칭은 `ambiguous(matches multiple identities)`로
+# 실패하지만, 지문은 항상 하나의 인증서만 정확히 가리킨다(2026-07-30 opus 자문 S2).
+# `--deep`은 Apple이 배포용 서명에 권장하지 않는 옵션이다(중첩 코드의 기존
+# entitlements·requirement를 전부 버리고 덮어쓴다) — 지금은 커스텀 entitlements가
+# 없어 안전하지만, 나중에 하나라도 추가하면 `--entitlements`를 반드시 같이 지정해야
+# 한다(안 그러면 조용히 사라진다, 2026-07-30 opus 자문 S4).
+CODESIGN_IDENTITY_NAME="cmdALL Local Dev"
 if command -v codesign >/dev/null 2>&1; then
-  if security find-identity -v -p codesigning 2>/dev/null | grep -q "$CODESIGN_IDENTITY"; then
-    echo "Signing $BUNDLE_NAME.app with local fixed identity ($CODESIGN_IDENTITY)..."
-    codesign --force --deep --sign "$CODESIGN_IDENTITY" "$APP_DIR"
+  CODESIGN_HASH="$(security find-identity -v -p codesigning 2>/dev/null \
+    | grep "\"$CODESIGN_IDENTITY_NAME\"" | head -1 | awk '{print $2}')"
+  if [ -n "$CODESIGN_HASH" ]; then
+    echo "Signing $BUNDLE_NAME.app with local fixed identity ($CODESIGN_IDENTITY_NAME, $CODESIGN_HASH)..."
+    codesign --force --deep --sign "$CODESIGN_HASH" "$APP_DIR"
   else
     echo "Local identity not found — falling back to ad-hoc signing $BUNDLE_NAME.app..."
     codesign --force --deep --sign - "$APP_DIR"
