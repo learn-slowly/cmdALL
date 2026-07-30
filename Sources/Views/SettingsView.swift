@@ -180,8 +180,18 @@ struct GeneralSettingsView: View {
             } header: {
                 Text("About")
             } footer: {
-                Text("cmdALL — CmdMD(© 2026 CMDSPACE) 포크 · MIT License")
-                    .font(.caption)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("cmdALL — CmdMD(© 2026 CMDSPACE) 포크 · MIT License")
+                    if BuildSignatureStatus.current() == .adHoc {
+                        // 이 컴퓨터 전용 고정 인증서가 아니라 ad-hoc으로 서명된 빌드 —
+                        // 다음 재빌드·업데이트 때 전체 디스크 접근 등 권한이 다시
+                        // 필요해질 수 있다는 뜻이라 미리 알려준다(§CLAUDE.md, opus 자문).
+                        Label("이 빌드는 임시 서명 상태입니다 — 다음 업데이트 후 권한을 다시 허용해야 할 수 있습니다.",
+                              systemImage: "exclamationmark.triangle")
+                            .foregroundStyle(.orange)
+                    }
+                }
+                .font(.caption)
             }
         }
         .formStyle(.grouped)
