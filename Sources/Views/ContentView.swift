@@ -198,15 +198,16 @@ struct MainModePicker: View {
 
         Picker("Main Mode", selection: $state.mainMode) {
             Label("리더", systemImage: "doc.text")
+                .help("리더 모드 — 문서 하나 읽기/편집")
                 .tag(MainMode.reader)
             Label("라이브러리", systemImage: "square.grid.2x2")
+                .help("라이브러리 모드 — 폴더 훑어보기")
                 .tag(MainMode.library)
         }
         .pickerStyle(.segmented)
         .labelStyle(.iconOnly)
         .controlSize(.regular)
         .fixedSize()
-        .help("리더 모드 · 라이브러리 모드")
     }
 }
 
@@ -219,17 +220,19 @@ struct ViewModePicker: View {
 
         Picker("View Mode", selection: $state.viewMode) {
             Label("Source", systemImage: "text.alignleft")
+                .help("원문 보기(⌘1) — 마크다운 글자 그대로")
                 .tag(ViewMode.source)
             Label("Split", systemImage: "rectangle.split.2x1")
+                .help("분할 보기(⌘2) — 원문+미리보기를 한 문서 안에서 동시에")
                 .tag(ViewMode.split)
             Label("Preview", systemImage: "eye")
+                .help("미리보기(⌘3) — 렌더링된 모습만")
                 .tag(ViewMode.preview)
         }
         .pickerStyle(.segmented)
         .labelStyle(.iconOnly)
         .controlSize(.regular)
         .fixedSize()
-        .help("Source ⌘1 · Split ⌘2 · Preview ⌘3")
     }
 }
 
@@ -242,15 +245,16 @@ struct LibraryLayoutPicker: View {
 
         Picker("Library Layout", selection: $state.libraryLayout) {
             Label("리스트", systemImage: "list.bullet")
+                .help("리스트로 보기")
                 .tag(LibraryLayout.list)
             Label("격자", systemImage: "square.grid.2x2")
+                .help("격자로 보기")
                 .tag(LibraryLayout.grid)
         }
         .pickerStyle(.segmented)
         .labelStyle(.iconOnly)
         .controlSize(.regular)
         .fixedSize()
-        .help("리스트 · 격자")
     }
 }
 

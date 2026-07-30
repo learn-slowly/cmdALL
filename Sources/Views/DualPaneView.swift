@@ -157,7 +157,9 @@ struct DualPaneToggleButton: View {
         Button {
             appState.toggleDualPane()
         } label: {
-            Image(systemName: "rectangle.split.2x1")
+            // 채워진 모양 — 리더 화면의 "분할 보기"(rectangle.split.2x1, 테두리만)와
+            // 아이콘이 완전히 같아 혼동된다는 사용자 지적(2026-07-30)으로 구분.
+            Image(systemName: "rectangle.split.2x1.fill")
         }
         .buttonStyle(.borderless)
         .foregroundStyle(appState.dualPaneEnabled ? Color.cmdsAccent : .primary)
