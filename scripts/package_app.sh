@@ -249,7 +249,7 @@ chmod -R u+w "$APP_DIR"
 CODESIGN_IDENTITY_NAME="cmdALL Local Dev"
 if command -v codesign >/dev/null 2>&1; then
   CODESIGN_HASH="$(security find-identity -v -p codesigning 2>/dev/null \
-    | grep "\"$CODESIGN_IDENTITY_NAME\"" | head -1 | awk '{print $2}')"
+    | grep "\"$CODESIGN_IDENTITY_NAME\"" | head -1 | awk '{print $2}')" || true
   if [ -n "$CODESIGN_HASH" ]; then
     echo "Signing $BUNDLE_NAME.app with local fixed identity ($CODESIGN_IDENTITY_NAME, $CODESIGN_HASH)..."
     codesign --force --deep --sign "$CODESIGN_HASH" "$APP_DIR"

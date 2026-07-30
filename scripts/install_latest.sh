@@ -69,7 +69,7 @@ CODESIGN_IDENTITY_NAME="cmdALL Local Dev"
 CODESIGN_HASH=""
 if command -v codesign >/dev/null 2>&1; then
   CODESIGN_HASH="$(security find-identity -v -p codesigning 2>/dev/null \
-    | grep "\"$CODESIGN_IDENTITY_NAME\"" | head -1 | awk '{print $2}')"
+    | grep "\"$CODESIGN_IDENTITY_NAME\"" | head -1 | awk '{print $2}')" || true
 fi
 
 if [ -n "$CODESIGN_HASH" ]; then
