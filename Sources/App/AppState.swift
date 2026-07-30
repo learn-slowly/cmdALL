@@ -11,7 +11,7 @@ final class AppState {
     /// Weak shared reference so the AppDelegate (created independently via
     /// @NSApplicationDelegateAdaptor) can consult app state on quit.
     static weak var shared: AppState?
-    private static let launchDefaults = AppLaunchDefaults()
+    static let launchDefaults = AppLaunchDefaults()
 
     // Tab System
     var tabs: [EditorTab] = []
@@ -19,7 +19,7 @@ final class AppState {
         didSet { activeTabIdChangeCount += 1 }
     }
     /// 테스트 관찰용 — 배치 복원이 활성 탭을 정확히 1회만 지정하는지 검증(스펙 §3-1).
-    private(set) var activeTabIdChangeCount = 0
+    var activeTabIdChangeCount = 0
     /// 외부 열기(더블클릭·드롭)와 세션 복원을 도착 순으로 직렬 처리하는 체인(스펙 §2.3).
     /// 마지막에 처리된 파일이 활성 탭이 된다. 내부 열기(라이브러리·트리 클릭)는 이 큐를 타지 않는다.
     var externalOpenChain: Task<Void, Never>?
@@ -67,21 +67,21 @@ final class AppState {
         didSet { persistLibraryLayoutForCurrentFolder(oldValue: oldValue) }
     }
     /// 복원 중 libraryLayout didSet이 재저장하지 않도록 막는 플래그.
-    private var isRestoringLayout = false
+    var isRestoringLayout = false
 
     /// 라이브러리·트리 정렬(F3). 폴더별 기억 포함 — 기억 없으면 PARA 기본.
     var librarySort: LibrarySort = .default {
         didSet { persistLibrarySortForCurrentFolder(oldValue: oldValue) }
     }
     /// 복원 중 librarySort didSet이 재저장하지 않도록 막는 플래그.
-    private var isRestoringSort = false
+    var isRestoringSort = false
 
     // MARK: - 폴더 네비게이션 히스토리 (F3)
 
     /// 뒤로/앞으로 폴더 히스토리(세션 내 휘발 — SessionState 무변경, 스펙 §3).
     var navHistory = NavigationHistory()
     /// 히스토리 이동·세션 복원·강제 재조준 중 didSet 기록을 막는 플래그(isRestoringLayout 동형).
-    private var suppressHistoryRecording = false
+    var suppressHistoryRecording = false
 
     // MARK: - 두 폴더 나란히 보기 (듀얼 페인, 로드맵 C/F4)
     /// 두 칸 모드가 켜져 있는가. 꺼져 있으면 지금까지의 한 칸 모드가 완전히 그대로 동작한다(설계 §3.1).
@@ -278,7 +278,7 @@ final class AppState {
     /// 종료가 실제로 진행될 때 재실행할 번들. AppDelegate가 읽는다.
     var pendingRelaunchBundleURL: URL?
     /// 진행 중인 설치의 식별자. 완료 후 늦게 도착하는 진행률 보고를 버리는 데 쓴다.
-    private var installToken: UUID?
+    var installToken: UUID?
     /// Editor/preview width ratio in split view (runtime-only).
     var splitFraction: CGFloat = 0.5
     /// Non-empty while the Send sheet is operating on a batch of files
@@ -290,9 +290,9 @@ final class AppState {
     var searchResults: [SearchResult] = []
     var isSearching: Bool = false
     /// 사이드바 폴더 검색 Task(새 검색 시작 시 이전 것을 취소해 낡은 결과 덮어쓰기 방지).
-    private var folderSearchTask: Task<Void, Never>?
+    var folderSearchTask: Task<Void, Never>?
     /// 파일트리 백그라운드 빌드 Task(연타·연속 호출 시 선행 task 취소).
-    private var fileTreeTask: Task<Void, Never>?
+    var fileTreeTask: Task<Void, Never>?
 
     // MARK: 자료에 묻기(RAG)
     var showAskCorpus: Bool = false
@@ -368,24 +368,24 @@ final class AppState {
     var cursorColumn: Int = 1
 
     // Completion index
-    private(set) var linkableNotes: [VaultNote] = []
-    private(set) var knownTags: Set<String> = []
-    private var noteIndexTask: Task<Void, Never>?
+    var linkableNotes: [VaultNote] = []
+    var knownTags: Set<String> = []
+    var noteIndexTask: Task<Void, Never>?
 
     // Services
-    private let fileService: FileService
-    private let exportService: ExportService
-    private let kordocService = KordocService()
-    private let claudeService = ClaudeService()
-    private let codexService = CodexService()
+    let fileService: FileService
+    let exportService: ExportService
+    let kordocService = KordocService()
+    let claudeService = ClaudeService()
+    let codexService = CodexService()
     /// 클로드·챗GPT 중 로그인된(설정에 저장된) 쪽으로만 질의를 위임 — cleanupService 등은
     /// 이 라우터 하나만 주입받아 provider 전환 시 재구성 없이 바로 반영된다(init 하단 참고).
-    private let aiRouter: AIRouterService
-    private let kordocWriteService = KordocWriteService()
-    private let kordocFillService = KordocFillService()
-    private let kordocRenderService = KordocRenderService()
-    private let hwpConvertRenderService = HwpConvertRenderService()
-    private let moveLogStore: MoveLogStore
+    let aiRouter: AIRouterService
+    let kordocWriteService = KordocWriteService()
+    let kordocFillService = KordocFillService()
+    let kordocRenderService = KordocRenderService()
+    let hwpConvertRenderService = HwpConvertRenderService()
+    let moveLogStore: MoveLogStore
     /// 파일 작업(F1a) 로그 — Task 6·7·8(시트·정보뷰)이 직접 읽으므로 private 아님.
     let fileOpsLogStore: FileOpsLogStore
     /// 테스트가 FakeClaude 주입 CleanupService로 교체할 수 있게 internal var(실사용 재대입 없음).
@@ -395,15 +395,15 @@ final class AppState {
     let wikiBackupStore: WikiBackupStore
     /// 테스트에서 가짜 Claude 주입 WikiRulesService로 교체할 수 있게 internal var.
     var wikiRulesService: WikiRulesService
-    private let moveExecutor: MoveExecutor
-    private let dataURL: URL
+    let moveExecutor: MoveExecutor
+    let dataURL: URL
 
     // 내용 검색(인덱스) — init에서 대입
-    private let searchIndex: SearchIndex
-    private let searchIndexer: SearchIndexer
-    private let folderWatcher = FolderWatcher()
-    private let ragService: RagService
-    private var fileWatchers: [UUID: DispatchSourceFileSystemObject] = [:]
+    let searchIndex: SearchIndex
+    let searchIndexer: SearchIndexer
+    let folderWatcher = FolderWatcher()
+    let ragService: RagService
+    var fileWatchers: [UUID: DispatchSourceFileSystemObject] = [:]
 
     // Computed Properties
     var activeTab: EditorTab? {
@@ -1306,13 +1306,13 @@ final class AppState {
 
     // MARK: - 뒤로/앞으로/상위 (F3)
 
-    private func recordNavigationIfNeeded() {
+    func recordNavigationIfNeeded() {
         guard !suppressHistoryRecording, let root = currentFolder else { return }
         navHistory.record(FolderLocation(root: root, display: selectedFolder ?? root))
     }
 
     /// 히스토리 항목의 두 폴더가 모두 디렉터리로 실존하는가.
-    private static func folderExists(_ loc: FolderLocation) -> Bool {
+    static func folderExists(_ loc: FolderLocation) -> Bool {
         var isDir: ObjCBool = false
         guard FileManager.default.fileExists(atPath: loc.root.path, isDirectory: &isDir),
               isDir.boolValue else { return false }
@@ -1333,7 +1333,7 @@ final class AppState {
 
     /// 히스토리 항목 적용 — 루트가 다르면 openFolder 경로 재사용(트리·인덱스·세션까지 복원).
     /// 항상 라이브러리 모드로 전환 — 리더에 남아 화면이 안 바뀌는 함정 방지(스펙 §3.2).
-    private func applyHistoryLocation(_ loc: FolderLocation) {
+    func applyHistoryLocation(_ loc: FolderLocation) {
         suppressHistoryRecording = true
         defer { suppressHistoryRecording = false }
         if currentFolder?.standardizedFileURL.path != loc.root.standardizedFileURL.path {
@@ -1405,11 +1405,11 @@ final class AppState {
 
     /// 폴더별 기억의 기준 폴더 — 복원·저장이 같은 폴백을 쓴다(기존 restore가
     /// selectedFolder만 보던 비대칭 해소, 스펙 §2.3).
-    private var folderMemoryTarget: URL? { selectedFolder ?? currentFolder }
+    var folderMemoryTarget: URL? { selectedFolder ?? currentFolder }
 
     /// selectedFolder가 바뀔 때 해당 폴더의 기억된 레이아웃을 복원한다.
     /// 기억이 없으면 현재 레이아웃을 그대로 유지한다.
-    private func restoreLibraryLayoutForSelectedFolder() {
+    func restoreLibraryLayoutForSelectedFolder() {
         guard let url = folderMemoryTarget else { return }
         guard let remembered = settings.libraryLayouts[Self.folderMemoryKey(for: url)] else { return }
         guard remembered != libraryLayout else { return }
@@ -1419,7 +1419,7 @@ final class AppState {
     }
 
     /// libraryLayout이 바뀔 때 현재 폴더에 레이아웃을 기억하고 즉시 영속한다.
-    private func persistLibraryLayoutForCurrentFolder(oldValue: LibraryLayout) {
+    func persistLibraryLayoutForCurrentFolder(oldValue: LibraryLayout) {
         guard !isRestoringLayout else { return }
         guard oldValue != libraryLayout else { return }
         guard let url = folderMemoryTarget else { return }
@@ -1429,7 +1429,7 @@ final class AppState {
 
     /// selectedFolder가 바뀔 때 해당 폴더의 기억된 정렬을 복원한다.
     /// 레이아웃과 달리 기억이 없으면 **기본(PARA)으로 복귀**한다 — 정렬은 폴더 속성(스펙 §2.3).
-    private func restoreLibrarySortForSelectedFolder() {
+    func restoreLibrarySortForSelectedFolder() {
         guard let url = folderMemoryTarget else { return }
         let remembered = settings.librarySorts[Self.folderMemoryKey(for: url)] ?? .default
         guard remembered != librarySort else { return }
@@ -1439,7 +1439,7 @@ final class AppState {
     }
 
     /// librarySort가 바뀔 때 현재 폴더에 정렬을 기억하고 즉시 영속한다.
-    private func persistLibrarySortForCurrentFolder(oldValue: LibrarySort) {
+    func persistLibrarySortForCurrentFolder(oldValue: LibrarySort) {
         guard !isRestoringSort else { return }
         guard oldValue != librarySort else { return }
         guard let url = folderMemoryTarget else { return }
@@ -1532,7 +1532,7 @@ final class AppState {
     }
 
     /// PDF 탭이 떠서 PDFReaderView가 구독을 마칠 시간을 준 뒤 페이지 점프 노티 게시.
-    private func scrollPDF(toPage page: Int, url: URL) {
+    func scrollPDF(toPage page: Int, url: URL) {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             NotificationCenter.default.post(name: .scrollToPDFPage,
                                             object: PDFPageJump(url: url, page: page))
@@ -1585,7 +1585,7 @@ final class AppState {
     }
 
     /// 새 탭을 추가하거나 활성 탭을 교체(교체 시 옛 탭 자원 정리).
-    private func placeTab(_ tab: EditorTab, inNewTab: Bool) {
+    func placeTab(_ tab: EditorTab, inNewTab: Bool) {
         if inNewTab || tabs.isEmpty {
             tabs.append(tab)
         } else if let activeIndex = tabs.firstIndex(where: { $0.id == activeTabId }) {
@@ -1613,7 +1613,7 @@ final class AppState {
     }
 
     @MainActor
-    private func loadAndActivateDocument(at url: URL, inNewTab: Bool) async {
+    func loadAndActivateDocument(at url: URL, inNewTab: Bool) async {
         // 짝꿍 노트를 직접 열면 대응 미디어로 리다이렉트 — 노트는 미디어 뷰 안에서 열람·편집한다.
         let target = Self.mediaRedirectTarget(for: url) ?? url
         if let existingTab = tabs.first(where: { $0.fileURL == target }) {
@@ -1629,7 +1629,7 @@ final class AppState {
     /// 문서를 읽어 "미배치" 탭을 만든다 — placeTab/활성화/saveSession 없음(스펙 §2.4).
     /// 리다이렉트·중복 판별은 호출자 몫. markdown 로드 실패 시 errorMessage 세팅 후 nil.
     @MainActor
-    private func loadDocument(at url: URL) async -> EditorTab? {
+    func loadDocument(at url: URL) async -> EditorTab? {
         // 이미지·PDF·오피스·미디어: MarkdownDocument/워처/originalContents 없이 탭만.
         let kind = DocumentKind(from: url)
         if kind != .markdown {
@@ -1658,7 +1658,7 @@ final class AppState {
     /// 열기 마무리 부수효과(최근 파일·오피스 변환 재시도·파일 워처·태그 수확) —
     /// 단건(loadAndActivateDocument)·배치(restoreSessionIfNeeded) 공용.
     @MainActor
-    private func finishOpening(_ tab: EditorTab) {
+    func finishOpening(_ tab: EditorTab) {
         guard let url = tab.fileURL else { return }
         addToRecentFiles(url)
         switch tab.kind {
@@ -1676,7 +1676,7 @@ final class AppState {
 
     /// Posts the scroll request after a short delay so a freshly-created editor
     /// (the editor subtree is keyed to document identity) has time to subscribe.
-    private func scrollEditor(toLine line: Int) {
+    func scrollEditor(toLine line: Int) {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
             NotificationCenter.default.post(name: .scrollToLine, object: line)
             guard let self, self.viewMode != .source else { return }
@@ -1687,7 +1687,7 @@ final class AppState {
         }
     }
 
-    private func nearestHeadingSlug(before line: Int) -> String? {
+    func nearestHeadingSlug(before line: Int) -> String? {
         Self.nearestHeadingSlug(in: currentDocument?.content ?? "", before: line)
     }
 
@@ -1755,7 +1755,7 @@ final class AppState {
         }
     }
 
-    private static let inlineTagPattern = try! NSRegularExpression(
+    static let inlineTagPattern = try! NSRegularExpression(
         pattern: #"(?<!\S)#([a-zA-Z][a-zA-Z0-9_/-]*)"#
     )
 
@@ -1773,7 +1773,7 @@ final class AppState {
 
     // MARK: - File Watching
 
-    private func startWatchingFile(at url: URL, for tabId: UUID) {
+    func startWatchingFile(at url: URL, for tabId: UUID) {
         stopWatchingFile(for: tabId)
 
         let fileDescriptor = open(url.path, O_EVTONLY)
@@ -1797,7 +1797,7 @@ final class AppState {
         fileWatchers[tabId] = source
     }
 
-    private func stopWatchingFile(for tabId: UUID? = nil) {
+    func stopWatchingFile(for tabId: UUID? = nil) {
         if let tabId = tabId {
             fileWatchers[tabId]?.cancel()
             fileWatchers.removeValue(forKey: tabId)
@@ -1809,7 +1809,7 @@ final class AppState {
         }
     }
 
-    private func handleExternalFileChange(at url: URL, event: DispatchSource.FileSystemEvent) {
+    func handleExternalFileChange(at url: URL, event: DispatchSource.FileSystemEvent) {
         guard let tab = tabs.first(where: { $0.fileURL == url }) else { return }
 
         // Atomic saves (Obsidian, vim, VS Code, and most editors) write to a temp
@@ -1848,7 +1848,7 @@ final class AppState {
     /// Reloads a tab's content from disk after an external change, preserving the
     /// document's identity (so scroll/selection survive). Won't clobber unsaved
     /// in-app edits — those get a toast prompting a manual reload instead.
-    private func reloadExternally(url: URL, tab: EditorTab) {
+    func reloadExternally(url: URL, tab: EditorTab) {
         guard !isTabDirty(tab) else {
             showToast("File changed externally — ⌥⌘R to reload")
             return
@@ -1932,7 +1932,7 @@ final class AppState {
 
     /// 인덱스 DB가 스키마 변경으로 재구성됐거나 추출 규칙이 바뀌었으면 등록된 모든 폴더를 재인덱싱한다.
     @MainActor
-    private func reindexAfterSchemaMigration() async {
+    func reindexAfterSchemaMigration() async {
         let schemaChanged = await searchIndex.didResetForSchemaChange
         // 추출 규칙이 넓어져도 파일 수정 시각은 그대로라 needsIndex만으로는 갱신되지
         // 않는다 → 판 번호로 한 번 다시 훑는다(스펙 §3.6).
@@ -2298,12 +2298,12 @@ final class AppState {
 
     // MARK: - Autosave
 
-    private var autosaveWorkItem: DispatchWorkItem?
+    var autosaveWorkItem: DispatchWorkItem?
 
     /// Debounced autosave: each edit reschedules, so a save fires only after the
     /// user pauses for `autosaveInterval` seconds. Only saves file-backed
     /// documents so it never pops a Save panel unexpectedly.
-    private func scheduleAutosaveIfNeeded() {
+    func scheduleAutosaveIfNeeded() {
         guard settings.autosaveEnabled, currentDocument?.fileURL != nil else { return }
         autosaveWorkItem?.cancel()
         let work = DispatchWorkItem { [weak self] in
@@ -2319,9 +2319,9 @@ final class AppState {
 
     // MARK: - Drafts
 
-    private var draftPersistWorkItem: DispatchWorkItem?
+    var draftPersistWorkItem: DispatchWorkItem?
 
-    private func scheduleDraftPersist() {
+    func scheduleDraftPersist() {
         draftPersistWorkItem?.cancel()
         let work = DispatchWorkItem { [weak self] in
             self?.persistDrafts()
@@ -2437,7 +2437,7 @@ final class AppState {
     /// 듀얼 페인 칸 미리보기 미디어만 정지(탭 플레이어는 안 건드림) — 듀얼 페인을 끌 때·
     /// "큰 화면에서 보기"로 승격할 때 씀(closePeekFile은 removeValue로 완전히 정리, 여긴 일시정지만
     /// — 나중에 같은 파일을 다시 칸에서 열면 이어서 재생되도록 레지스트리 항목은 남긴다).
-    private func pauseAllPaneMediaPlayers() {
+    func pauseAllPaneMediaPlayers() {
         for tabID in panePeekMediaTabIDs { mediaPlayers[tabID]?.pause() }
     }
 
@@ -2874,12 +2874,12 @@ final class AppState {
         return (targets.count - failedTargets, failedTargets)
     }
 
-    private enum CompanionRelocateMode { case move, copy }
+    enum CompanionRelocateMode { case move, copy }
 
     /// 짝꿍 노트 동반 이동/복사 — 결과 이름은 본체 결과에서 파생(파일명.ext.md 규칙 유지).
     /// 본체가 uniquify로 개명됐으면(노래.mp3→노래 (1).mp3) 노트도 "노래 (1).mp3.md"로 맞춘다.
     /// 파생 이름이 점유돼 있으면 노트만 uniquify하고 연결 끊김을 failures에 기록(스펙 §4.3).
-    private func relocateCompanion(_ companion: URL, mode: CompanionRelocateMode,
+    func relocateCompanion(_ companion: URL, mode: CompanionRelocateMode,
                                    to destinationDir: URL, alongside movedBody: URL,
                                    failures: inout [String]) throws -> URL {
         let relocated: URL
@@ -2897,7 +2897,7 @@ final class AppState {
     }
 
     /// 부분 실패 요약 — errorMessage는 단일 문자열이라 건별 나열 대신 개수+예시.
-    private func reportBatchFailures(_ failures: [String], action: String) {
+    func reportBatchFailures(_ failures: [String], action: String) {
         guard !failures.isEmpty else { return }
         let sample = failures.prefix(3).joined(separator: ", ")
         errorMessage = "\(action) 중 \(failures.count)건을 처리하지 못했습니다: \(sample)"
@@ -2986,7 +2986,7 @@ final class AppState {
 
     /// 드롭 다운스트림 공유 — 내부(동기 스냅샷)·외부(비동기 수집) 공통: draggingURLs 비우기 →
     /// 2차 필터(자기/하위 제거) → 배치 1회(이동/⌥복사) → 전량 same-parent skip 시 토스트.
-    private func completeFileDrop(_ urls: [URL], into destination: URL, isCopy: Bool) {
+    func completeFileDrop(_ urls: [URL], into destination: URL, isCopy: Bool) {
         Task { @MainActor in
             self.draggingURLs = []
             // 2차 방어 — 뷰 사전 차단(1차)이 못 거른 경로(배경 타깃 등) 대비.
@@ -3206,7 +3206,7 @@ final class AppState {
     }
 
     /// 파일 작업 후 사라진 URL을 선택에서 제거 — 유령 선택에 배치가 실행되는 것을 방지.
-    private func pruneFileSelection() {
+    func pruneFileSelection() {
         fileSelection = fileSelection.filter { FileManager.default.fileExists(atPath: $0.path) }
         if let anchor = selectionAnchor, !FileManager.default.fileExists(atPath: anchor.path) {
             selectionAnchor = nil
@@ -3214,7 +3214,7 @@ final class AppState {
     }
 
     /// 파일 작업 성공 후 공통 갱신 — 세대 토큰·트리·세션·선택 prune·표시 폴더/히스토리 정합(F3).
-    private func completeFileOperation() {
+    func completeFileOperation() {
         fileOpsGeneration += 1
         pruneFileSelection()
         retargetStaleSelectedFolder()
@@ -3226,7 +3226,7 @@ final class AppState {
 
     /// rename된 경로를 보는 열린 탭들의 URL·제목·문서·파일워처를 새 경로로 옮긴다.
     /// 폴더 rename이면 하위 경로 탭 전부 — '/' 경계 prefix 비교(형제 폴더 오매칭 방지).
-    private func retargetOpenTabs(from oldURL: URL, to newURL: URL, isDirectory: Bool) {
+    func retargetOpenTabs(from oldURL: URL, to newURL: URL, isDirectory: Bool) {
         let oldPath = oldURL.standardizedFileURL.path
         for index in tabs.indices {
             guard let tabURL = tabs[index].fileURL else { continue }
@@ -3260,7 +3260,7 @@ final class AppState {
     }
 
     /// url(폴더면 하위 포함)을 보는 열린 탭들을 닫는다.
-    private func closeTabs(under url: URL, isDirectory: Bool) {
+    func closeTabs(under url: URL, isDirectory: Bool) {
         let basePath = url.standardizedFileURL.path
         let affected = tabs.filter { tab in
             guard let tabURL = tab.fileURL else { return false }
@@ -3271,7 +3271,7 @@ final class AppState {
     }
 
     /// url 하위(또는 자신)에 더티 탭이 있는가 — 휴지통 확인 문구용.
-    private func hasDirtyTab(under url: URL, isDirectory: Bool) -> Bool {
+    func hasDirtyTab(under url: URL, isDirectory: Bool) -> Bool {
         let basePath = url.standardizedFileURL.path
         return tabs.contains { tab in
             guard let tabURL = tab.fileURL else { return false }
@@ -3282,7 +3282,7 @@ final class AppState {
     }
 
     /// 경로가 디렉터리인가(워처 재장전 가드용 — 탭은 파일만 보지만 방어적으로).
-    private func isDirectoryPath(_ url: URL) -> Bool {
+    func isDirectoryPath(_ url: URL) -> Bool {
         (try? url.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory ?? false
     }
 
@@ -3291,7 +3291,7 @@ final class AppState {
     /// 스냅샷을 documents에 통째로 되돌려쓰지 않는다 — 비동기 쓰기 중 입력된
     /// 키스트로크를 덮어쓰는 레이스 방지(saveCurrentDocument와 동일 규칙).
     @MainActor
-    private func saveDocument(forTabId tabId: UUID) async -> Bool {
+    func saveDocument(forTabId tabId: UUID) async -> Bool {
         guard let tab = tabs.first(where: { $0.id == tabId }),
               let document = documents[tab.documentId],
               let url = document.fileURL else { return false }
@@ -3380,7 +3380,7 @@ final class AppState {
 
     // MARK: - Recents & Favorites
 
-    private func addToRecentFiles(_ url: URL) {
+    func addToRecentFiles(_ url: URL) {
         recentFiles.removeAll { $0 == url }
         recentFiles.insert(url, at: 0)
         if recentFiles.count > 20 {
@@ -3543,7 +3543,7 @@ final class AppState {
         return results
     }
 
-    private func performSearch(query: String, in folder: URL,
+    func performSearch(query: String, in folder: URL,
                               includeFilenames: Bool = true,
                               includePDFBody: Bool = true,
                               includeOfficeBody: Bool = true) async -> [SearchResult] {
@@ -3801,7 +3801,7 @@ final class AppState {
     /// Returns the URL to write to, or `nil` when the write should be skipped
     /// (the file exists and resolution is `.skip`). Distinguishing skip from
     /// overwrite is what stops "Skip" from silently clobbering the existing note.
-    private func resolveConflict(for url: URL, resolution: FileConflictResolution) -> URL? {
+    func resolveConflict(for url: URL, resolution: FileConflictResolution) -> URL? {
         guard FileManager.default.fileExists(atPath: url.path) else { return url }
 
         switch resolution {
@@ -3998,13 +3998,13 @@ final class AppState {
 
     /// 대상 페이지가 열린 탭에서 저장 안 된 편집 상태면 true — 인제스트/복원이 디스크를
     /// 덮으면 이후 사용자의 ⌘S가 병합 결과를 조용히 되덮는다(F1a rename flush와 동류).
-    private func wikiTargetHasDirtyTab(_ url: URL) -> Bool {
+    func wikiTargetHasDirtyTab(_ url: URL) -> Bool {
         guard let tab = tabs.first(where: { $0.fileURL == url }) else { return false }
         return isTabDirty(tab)
     }
 
     /// 진행 중인 병합 생성 태스크 — 시트의 "중단"·닫기가 실제로 취소할 수 있게 핸들을 쥔다.
-    private var wikiMergeTask: Task<Void, Never>? = nil
+    var wikiMergeTask: Task<Void, Never>? = nil
 
     /// 병합 생성을 취소 가능한 태스크로 시작한다(시트 진입점). 완주·취소 모두 핸들을 비운다.
     @MainActor
@@ -4159,7 +4159,7 @@ final class AppState {
         }
     }
 
-    private static func wikiErrorMessage(_ e: WikiIngestError) -> String {
+    static func wikiErrorMessage(_ e: WikiIngestError) -> String {
         switch e {
         case .sourceUnreadable: return "소스 문서의 본문을 읽지 못했습니다(미지원 형식이거나 변환 실패)."
         case .pageUnreadable: return "대상 페이지를 읽지 못했습니다."
@@ -4171,7 +4171,7 @@ final class AppState {
         }
     }
 
-    private static let wikiTodayFormatter: DateFormatter = {
+    static let wikiTodayFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "yyyy-MM-dd"
         f.locale = Locale(identifier: "en_US_POSIX")
@@ -4271,7 +4271,7 @@ final class AppState {
 
     // MARK: - Session Persistence
 
-    private var sessionURL: URL { dataURL.appendingPathComponent("session.json") }
+    var sessionURL: URL { dataURL.appendingPathComponent("session.json") }
 
     func saveSession() {
         let openFiles = tabs.compactMap(\.fileURL)
@@ -4302,7 +4302,7 @@ final class AppState {
         return restoredTabIds.contains(current)
     }
 
-    private func restoreSessionIfNeeded() {
+    func restoreSessionIfNeeded() {
         guard settings.restoreLastSession,
               let data = try? Data(contentsOf: sessionURL),
               let session = try? JSONDecoder().decode(SessionState.self, from: data) else { return }
@@ -4369,7 +4369,7 @@ final class AppState {
 
     // MARK: - User Data Persistence
 
-    private func loadUserData() {
+    func loadUserData() {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
 
