@@ -5,6 +5,7 @@ struct MenuBarView: View {
     @Environment(AppState.self) private var appState
     @State private var mode: MenuBarViewMode = .capture
     @State private var searchText: String = ""
+    @State private var selectedDraft: Draft?
 
     private var activeDrafts: [Draft] {
         appState.drafts.filter { $0.status == .active }
@@ -64,6 +65,17 @@ struct MenuBarView: View {
     }
 
     private var draftsList: some View {
+        Group {
+            if let draft = selectedDraft {
+                draftDetail(draft)
+            } else {
+                draftSearchAndList
+            }
+        }
+        .frame(width: 360)
+    }
+
+    private var draftSearchAndList: some View {
         VStack(spacing: 0) {
             TextField("메모 검색…", text: $searchText)
                 .textFieldStyle(.roundedBorder)
@@ -84,8 +96,9 @@ struct MenuBarView: View {
                                 .padding(.horizontal, 8)
                                 .contentShape(Rectangle())
                                 .onTapGesture {
-                                    appState.openDraft(draft)
-                                    appState.presentMainWindowIfNeeded()
+                                    // 메인 창을 열지 않고 팝오버 안에서 바로 내용을 본다
+                                    // (사용자 요청, 2026-07-30 — "메뉴바에 달린채로" 보고 싶다).
+                                    selectedDraft = draft
                                 }
                             Divider()
                         }
@@ -94,7 +107,51 @@ struct MenuBarView: View {
                 .frame(maxHeight: 260)
             }
         }
-        .frame(width: 360)
+    }
+
+    /// 메뉴바 팝오버 안에서 메모 하나의 전체 내용을 읽기 전용으로 본다(수정하려면
+    /// "큰 화면에서 보기"로 메인 창의 정식 편집기를 연다 — 듀얼 페인 칸 미리보기와 같은 어법).
+    private func draftDetail(_ draft: Draft) -> some View {
+        VStack(spacing: 0) {
+            HStack {
+                Button {
+                    selectedDraft = nil
+                } label: {
+                    Label("목록", systemImage: "chevron.left")
+                        .font(.caption)
+                }
+                .buttonStyle(.borderless)
+
+                Spacer()
+
+                Button("큰 화면에서 보기") {
+                    appState.openDraft(draft)
+                    appState.presentMainWindowIfNeeded()
+                }
+                .buttonStyle(.link)
+                .font(.caption)
+            }
+            .padding(8)
+
+            Divider()
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(draft.displayTitle)
+                        .font(.headline)
+                    Text(draft.updatedAt.formatted(.relative(presentation: .named)))
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                    Divider()
+                    Text(draft.body)
+                        .font(.body)
+                        .textSelection(.enabled)
+                }
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .frame(maxHeight: 320)
+        }
     }
 }
 
