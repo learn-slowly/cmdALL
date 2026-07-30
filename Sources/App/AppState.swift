@@ -36,6 +36,10 @@ final class AppState {
     /// 시맨틱(사용자 결정, 2026-07-03): 탭 전환 = 재생 유지(백그라운드 청취),
     /// 탭 닫기·메인 창 닫기 = 정지.
     var mediaPlayers: [UUID: AVPlayer] = [:]
+    /// 듀얼 페인 칸 미리보기용 미디어 플레이어 키(2026-07-30, 로드맵 §3 후속) — 칸(`BrowsePane`)은
+    /// 탭이 아니라 UUID가 없어 `mediaPlayers` 레지스트리를 그대로 못 쓴다. 칸 인덱스(0/1)마다
+    /// 고정 키를 하나씩 재사용해 같은 레지스트리·재생/정지 배선(`mediaPlayer(forTab:url:)`)을 그대로 쓴다.
+    let panePeekMediaTabIDs: [UUID] = [UUID(), UUID()]
 
     // View State
     var viewMode: ViewMode = AppState.launchDefaults.viewMode
@@ -92,6 +96,10 @@ final class AppState {
         if !dualPaneEnabled, panes.isEmpty, let root = currentFolder {
             panes = [BrowsePane(rootFolder: root), BrowsePane(rootFolder: root)]
             focusedPaneIndex = 0
+        } else if dualPaneEnabled {
+            // 끌 때 칸 뷰가 사라져도 등록된 미디어 플레이어는 안 멈추면 배경에서 계속 재생된다
+            // (§ mediaPlayers 주석과 동일한 사고 — 실측 방지).
+            pauseAllPaneMediaPlayers()
         }
         dualPaneEnabled.toggle()
     }
@@ -138,11 +146,15 @@ final class AppState {
     func closePeekFile(in index: Int) {
         guard panes.indices.contains(index) else { return }
         panes[index].clearPeek()
+        if panePeekMediaTabIDs.indices.contains(index) {
+            mediaPlayers.removeValue(forKey: panePeekMediaTabIDs[index])?.pause()
+        }
     }
 
     /// "큰 화면에서 보기" — 두 칸 모드를 끄고 기존 한 칸 탭 시스템으로 정식으로 연다
     /// (수정·저장·되돌리기 전부 지금과 동일하게 동작, 설계 §3.2).
     func promotePeekFileToTab(_ url: URL) {
+        pauseAllPaneMediaPlayers()
         dualPaneEnabled = false
         openDocument(at: url, inNewTab: true)
     }
@@ -2421,6 +2433,12 @@ final class AppState {
     /// 모든 미디어 플레이어를 정지한다(창 닫기 — 메뉴바 상주 앱이라 창은 숨겨질 뿐 뷰가 살아 있다).
     func pauseAllMediaPlayers() {
         for player in mediaPlayers.values { player.pause() }
+    }
+    /// 듀얼 페인 칸 미리보기 미디어만 정지(탭 플레이어는 안 건드림) — 듀얼 페인을 끌 때·
+    /// "큰 화면에서 보기"로 승격할 때 씀(closePeekFile은 removeValue로 완전히 정리, 여긴 일시정지만
+    /// — 나중에 같은 파일을 다시 칸에서 열면 이어서 재생되도록 레지스트리 항목은 남긴다).
+    private func pauseAllPaneMediaPlayers() {
+        for tabID in panePeekMediaTabIDs { mediaPlayers[tabID]?.pause() }
     }
 
     func closeTabWithConfirmation(_ tab: EditorTab) {

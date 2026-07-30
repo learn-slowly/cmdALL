@@ -129,4 +129,60 @@ final class AppMediaPlayerLifecycleTests: XCTestCase {
         XCTAssertEqual(playerA.rate, 0, "창 닫기(=숨김) 시 전 플레이어가 정지해야 한다")
         XCTAssertEqual(playerB.rate, 0, "창 닫기(=숨김) 시 전 플레이어가 정지해야 한다")
     }
+
+    // MARK: - 듀얼 페인 칸 미리보기 미디어(2026-07-30, PaneMediaPreview 후속)
+
+    @MainActor
+    func testClosePeekFileRemovesAndPausesPanePlayer() {
+        let app = AppState(dataDirectory: tempDir)
+        app.currentFolder = tempDir
+        app.toggleDualPane()
+        let url = makeURL()
+        app.openPeekFile(url, in: 0)
+        let player = app.mediaPlayer(forTab: app.panePeekMediaTabIDs[0], url: url)
+        startPlaying(player, "칸 0 미리보기 플레이어")
+
+        app.closePeekFile(in: 0)
+
+        XCTAssertEqual(player.rate, 0, "칸 미리보기를 닫으면 그 플레이어는 정지해야 한다")
+        XCTAssertNil(app.mediaPlayers[app.panePeekMediaTabIDs[0]], "닫으면 레지스트리에서도 제거돼야 한다")
+    }
+
+    @MainActor
+    func testTogglingDualPaneOffPausesPanePlayersButNotTabPlayers() {
+        let app = AppState(dataDirectory: tempDir)
+        app.currentFolder = tempDir
+        app.toggleDualPane()
+        let paneURL = makeURL("pane")
+        app.openPeekFile(paneURL, in: 0)
+        let panePlayer = app.mediaPlayer(forTab: app.panePeekMediaTabIDs[0], url: paneURL)
+        startPlaying(panePlayer, "칸 미리보기 플레이어")
+
+        let tab = EditorTab(fileURL: URL(fileURLWithPath: "/tmp/tab.mp3"), title: "tab", kind: .media)
+        app.tabs = [tab]
+        let tabPlayer = app.mediaPlayer(forTab: tab.id, url: makeURL("tab"))
+        startPlaying(tabPlayer, "일반 탭 플레이어")
+
+        app.toggleDualPane()
+
+        XCTAssertFalse(app.dualPaneEnabled)
+        XCTAssertEqual(panePlayer.rate, 0, "듀얼 페인을 끄면 칸 미리보기 플레이어는 정지해야 한다")
+        XCTAssertNotEqual(tabPlayer.rate, 0, "듀얼 페인을 꺼도 일반 탭 플레이어는 안 건드려야 한다")
+    }
+
+    @MainActor
+    func testPromotePeekFileToTabPausesPanePlayer() {
+        let app = AppState(dataDirectory: tempDir)
+        app.currentFolder = tempDir
+        app.toggleDualPane()
+        let url = makeURL()
+        app.openPeekFile(url, in: 0)
+        let panePlayer = app.mediaPlayer(forTab: app.panePeekMediaTabIDs[0], url: url)
+        startPlaying(panePlayer, "칸 미리보기 플레이어")
+
+        app.promotePeekFileToTab(url)
+
+        XCTAssertFalse(app.dualPaneEnabled)
+        XCTAssertEqual(panePlayer.rate, 0, "큰 화면에서 보기로 승격하면 칸 플레이어는 정지해야 한다")
+    }
 }

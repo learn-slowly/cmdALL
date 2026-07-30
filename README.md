@@ -138,7 +138,7 @@ cd cmdALL
 
 swift build                         # debug build
 swift run                           # run it
-swift test                          # 990 tests (XCTest 972 + Swift Testing 18, 정식 Xcode 필요)
+swift test                          # 993 tests (XCTest 975 + Swift Testing 18, 정식 Xcode 필요)
 
 swift build -c release              # release binary
 bash scripts/package_app.sh         # → dist/cmdALL.app + dist/cmdALL-macos.zip

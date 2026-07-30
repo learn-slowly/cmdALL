@@ -1,14 +1,16 @@
 import SwiftUI
+import AVKit
 
 // MARK: - PaneReaderView
 
 /// 듀얼 페인 칸 안 읽기 전용 미리보기(설계 §3.2) — 기존 렌더러를 그대로 재사용하되
 /// 수정 기능은 없다. 고치려면 "큰 화면에서 보기"로 한 칸 모드의 정식 탭을 연다.
 ///
-/// 이번 조각은 글자(md/txt 등)·이미지·PDF·QuickLook(못 여는 형식)까지 지원한다.
-/// 오피스·미디어는 원본 렌더러가 편집(패치·양식 채우기·짝꿍 노트 편집) 버튼과 한 몸이라
-/// 칸에서 그대로 쓰면 "읽기 전용" 약속이 깨진다 — 이번엔 이름·크기 요약만 보여주고
-/// "큰 화면에서 보기"로 안내한다(후속 허용 — 필요하면 편집 없는 변형을 따로 만든다).
+/// 이번 조각은 글자(md/txt 등)·이미지·PDF·QuickLook(못 여는 형식)·미디어(음악·동영상)까지 지원한다.
+/// 오피스는 원본 렌더러가 편집(패치·양식 채우기) 버튼과 한 몸이라 칸에서 그대로 쓰면
+/// "읽기 전용" 약속이 깨진다 — kordoc 변환 결과만 읽기 전용으로 보여준다(§officePreview).
+/// 미디어도 같은 원칙 — 재생은 그대로 하되 짝꿍 노트는 읽기 전용 미리보기만, 편집·메모 생성은
+/// "큰 화면에서 보기"로 안내한다(2026-07-30, 사용자 요청으로 요약 전용에서 승격).
 struct PaneReaderView: View {
     @Environment(AppState.self) private var appState
     @State private var officeState: PaneOfficePreviewState = .loading
@@ -63,11 +65,12 @@ struct PaneReaderView: View {
             QuickLookPreview(url: url)
         case .office:
             officePreview
+        case .media:
+            PaneMediaPreview(paneIndex: paneIndex, url: url)
         default:
             if QuickLookRouting.opensAsText(url) {
                 textPreview
             } else {
-                // 미디어(음악·동영상) 등 — 재생 UI가 편집·짝꿍노트 편집과 한 몸이라 이번엔 요약만.
                 summaryPlaceholder
             }
         }
@@ -172,4 +175,132 @@ private enum PaneOfficePreviewState {
     case loading
     case loaded(String, URL?)
     case failed(String)
+}
+// MARK: - PaneMediaPreview
+
+/// 듀얼 페인 칸 안 미디어(음악·동영상) 읽기 전용 미리보기(2026-07-30) — 재생은 `MediaReaderView`와
+/// 같은 배선(`AppState.mediaPlayer(forTab:url:)`)을 재사용하되, 짝꿍 노트는 편집 없이 읽기 전용
+/// 미리보기만 보여준다(메모 생성·편집은 "큰 화면에서 보기"로만). `paneIndex`로 고정된
+/// `AppState.panePeekMediaTabIDs` 키를 써서 탭이 아닌 칸도 같은 재생/정지 레지스트리에 올라탄다.
+private struct PaneMediaPreview: View {
+    @Environment(AppState.self) private var appState
+    let paneIndex: Int
+    let url: URL
+
+    @State private var player: AVPlayer?
+    @State private var playerFailed = false
+    @State private var noteState: PaneMediaNoteState = .loading
+
+    private var noteURL: URL { CompanionNote.noteURL(for: url) }
+
+    var body: some View {
+        Group {
+            if DocumentKind.isVideo(url) {
+                HSplitView {
+                    playerArea
+                        .frame(minWidth: 240, maxWidth: .infinity, maxHeight: .infinity)
+                    notePreview
+                        .frame(minWidth: 200, maxWidth: .infinity, maxHeight: .infinity)
+                }
+            } else {
+                VStack(spacing: 0) {
+                    playerArea
+                        .frame(height: 72)
+                    Divider()
+                    notePreview
+                }
+            }
+        }
+        .task(id: url) {
+            await setUpPlayer()
+            loadNote()
+        }
+    }
+
+    @ViewBuilder
+    private var playerArea: some View {
+        if playerFailed {
+            VStack(spacing: 8) {
+                Image(systemName: "play.slash")
+                    .font(.largeTitle)
+                    .foregroundStyle(.secondary)
+                Text("이 파일은 재생할 수 없습니다")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if let player {
+            VideoPlayer(player: player)
+        } else {
+            ProgressView()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+
+    /// 재생 가능 여부를 먼저 확인해 실패 시 플레이스홀더로(MediaReaderView와 동일 패턴).
+    private func setUpPlayer() async {
+        playerFailed = false
+        let asset = AVURLAsset(url: url)
+        let playable = (try? await asset.load(.isPlayable)) ?? false
+        if playable {
+            player = appState.mediaPlayer(forTab: appState.panePeekMediaTabIDs[paneIndex], url: url)
+        } else {
+            player = nil
+            playerFailed = true
+        }
+    }
+
+    @ViewBuilder
+    private var notePreview: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 6) {
+                Image(systemName: "note.text")
+                    .foregroundStyle(.secondary)
+                Text("짝꿍 노트")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Spacer(minLength: 0)
+            }
+            .padding(8)
+            Divider()
+            switch noteState {
+            case .loading:
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            case .missing:
+                VStack(spacing: 8) {
+                    Image(systemName: "note.text")
+                        .font(.system(size: 32))
+                        .foregroundStyle(.secondary)
+                    Text("짝꿍 노트가 없습니다")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.top, 32)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            case .loaded(let body):
+                MarkdownPreviewView(
+                    documentID: nil,
+                    markdown: body,
+                    baseURL: url.deletingLastPathComponent(),
+                    options: appState.renderOptions(),
+                    scrollSyncEnabled: false
+                )
+            }
+        }
+    }
+
+    private func loadNote() {
+        if let content = try? String(contentsOf: noteURL, encoding: .utf8) {
+            noteState = .loaded(CompanionNote.bodyStrippingFrontmatter(content))
+        } else {
+            noteState = .missing
+        }
+    }
+}
+
+private enum PaneMediaNoteState {
+    case loading
+    case missing
+    case loaded(String)
 }
