@@ -548,9 +548,8 @@ UpdateInstallError: 쓰기권한없음 | 다운로드실패 | 체크섬불일치
      hwpml은 못 읽는다(실측 확인). 신규 테스트 9개(`HwpConvertRenderServiceTests` 5·
      `DocumentKindTests` 1·`AppOfficeTabTests` 갱신 1), `swift test` 전체 972개 통과.
      THIRD-PARTY-NOTICES.md에 hwp-convert MIT 고지(원본 hwpxjs·rhwp 저작권 포함) 추가.
-     **실제 앱(WKWebView) 안에서 실제 hwp 파일로 원본 보기 버튼 눌러보는 수동 스모크는 아직
-     대기**(헤드리스 Chromium 검증까지만 완료 — WKWebView는 별개 엔진이라 레고님이 실제
-     앱에서 한 번 확인 필요).
+     **수동 스모크 완료(2026-07-30)** — 레고님이 실제 앱에서 진짜 hwp 파일로 "원본 보기"
+     버튼을 눌러 정상 표시됨을 확인.
   6. **완료(2026-07-27)** — 사용자가 "토글 스위치 만들자"로 확정. 스캔 PDF(글자 레이어 없는
      이미지 PDF)에서 macOS 내장 `Vision`(`VNRecognizeTextRequest`, 한국어 지원)으로 OCR해
      검색 대상에 포함. 새 `OCRService`(순수 함수, 새 패키지 의존성 0) + 설정 토글
