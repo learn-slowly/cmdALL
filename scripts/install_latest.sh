@@ -61,10 +61,20 @@ xattr -cr "$DEST/$APP" 2>/dev/null || true
 # 재서명한다 — GitHub Release는 ad-hoc 서명이라 그대로 설치하면 빌드마다 CDHash가
 # 바뀌어 "손쉬운 사용" 권한이 재발한다(package_app.sh와 동일 로직, 2026-07-30 실측).
 # 인증서가 없는 다른 컴퓨터에서는 조용히 건너뛰고 ad-hoc 그대로 둔다.
+# 재서명은 보안 통제가 아니라 편의 최적화라(체크섬 검증은 이미 위에서 끝남) 실패해도
+# 설치 자체를 막지 않는다 — 다만 성공했다면 반드시 재검증해 서명이 섞인 채 남는 사고를
+# 막는다(SwiftPM 리소스가 0444로 배포돼 재서명이 실패하는 전례가 있어 chmod도 먼저 한다).
 CODESIGN_IDENTITY="cmdALL Local Dev"
 if command -v codesign >/dev/null 2>&1 && security find-identity -v -p codesigning 2>/dev/null | grep -q "$CODESIGN_IDENTITY"; then
   echo "▸ 로컬 고정 인증서로 재서명 중… (손쉬운 사용 권한 재발 방지)"
-  codesign --force --deep --sign "$CODESIGN_IDENTITY" "$DEST/$APP"
+  chmod -R u+w "$DEST/$APP" 2>/dev/null || true
+  if codesign --force --deep --sign "$CODESIGN_IDENTITY" "$DEST/$APP"; then
+    if ! codesign --verify --deep --strict "$DEST/$APP" 2>&1; then
+      echo "⚠ 재서명 후 확인 실패 — 이번엔 손쉬운 사용 권한을 다시 허용해야 할 수 있습니다."
+    fi
+  else
+    echo "⚠ 재서명 실패 — 설치는 계속 진행합니다(권한을 다시 허용해야 할 수 있습니다)."
+  fi
 fi
 
 VER="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$DEST/$APP/Contents/Info.plist" 2>/dev/null || echo '?')"

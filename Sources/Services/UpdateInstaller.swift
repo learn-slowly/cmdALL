@@ -97,7 +97,12 @@ actor UpdateInstaller {
 
         // 5.5) 이 컴퓨터 전용 고정 인증서가 있으면 재서명(§BundleSigning 참고) —
         // ad-hoc 그대로 설치하면 CDHash가 바뀌어 "손쉬운 사용" 권한이 재발한다.
-        try signer.resignWithLocalIdentityIfAvailable(bundleAt: staged)
+        // 재서명은 보안 통제가 아니라 편의 최적화다(보안 검증은 위 verify()가 이미
+        // 담당) — 그래서 재서명 자체가 실패해도(키체인 잠김 등) 업데이트를 막지 않는다.
+        // 다만 재서명을 시도한 뒤에는 반드시 다시 검증해, 서명이 섞인 채로 남은 번들이
+        // 그대로 설치되는 사고("재서명 성공"이 아니라 "여전히 유효한 서명"을 확인)를 막는다.
+        try? signer.resignWithLocalIdentityIfAvailable(bundleAt: staged)
+        try verifier.verify(bundleAt: staged, expectedVersion: expectedVersion)
 
         // 6) 교체
         onProgress(.installing)
@@ -118,7 +123,12 @@ actor UpdateInstaller {
     }
 
     /// 외부 도구 실행. 실패하면 stderr를 실어 지정된 오류로 던진다.
+    /// 로그인 키체인이 잠겨 있으면 codesign이 잠금 해제 패널을 띄우고 무한정 응답을
+    /// 기다릴 수 있다(패널이 다른 창 뒤에 있으면 사용자 눈엔 "업데이트가 멈췄다"로만
+    /// 보인다 — claude CLI 120초·위키 병합 300초 상한과 같은 부류 문제) — 그래서
+    /// 기본 30초 상한을 두고, 초과하면 강제 종료해 실패로 처리한다.
     static func run(_ launchPath: String, _ arguments: [String],
+                    timeout: TimeInterval = 30,
                     failure: (String) -> UpdateInstallError) throws {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: launchPath)
@@ -131,12 +141,21 @@ actor UpdateInstaller {
         } catch {
             throw failure(error.localizedDescription)
         }
+
+        let watchdog = DispatchWorkItem { [weak process] in
+            guard let process, process.isRunning else { return }
+            process.terminate()
+        }
+        DispatchQueue.global().asyncAfter(deadline: .now() + timeout, execute: watchdog)
+
         let errData = errPipe.fileHandleForReading.readDataToEndOfFile()
         process.waitUntilExit()
+        watchdog.cancel()
+
         guard process.terminationStatus == 0 else {
             let text = String(decoding: errData, as: UTF8.self)
                 .trimmingCharacters(in: .whitespacesAndNewlines)
-            throw failure(text.isEmpty ? "종료 코드 \(process.terminationStatus)" : text)
+            throw failure(text.isEmpty ? "종료 코드 \(process.terminationStatus)(시간 초과 포함 가능)" : text)
         }
     }
 }
