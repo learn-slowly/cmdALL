@@ -22,7 +22,7 @@ Native Swift / SwiftUI · macOS 14+ · light & dark.
 
 > **이 저장소는 [CmdMD](https://github.com/johnfkoo951/CmdMD)(MIT, 구요한/CMDSPACE)의 포크 `cmdALL`입니다.** 원본 프로젝트: [cmdmd.cmdspace.work](https://cmdmd.cmdspace.work) · [Website source](https://github.com/johnfkoo951/CmdMD-web)
 > 원본의 마크다운 리더 위에 **이미지·PDF 보기**, **한글/오피스(HWP·DOCX·XLSX) 읽기**, **HWP/HWPX 편집·양식 채우기(서식 보존)**, **종류를 가로지르는 내용 검색(FTS5 인덱스·한국어 부분일치)**, **Claude 연동(`claude -p`) — 문서 질의·자료에 묻기(RAG)·PARA 라우팅·폴더 정리**, **PARA 라이브러리 뷰**를 더한 개인용 도구입니다.
-> 문서 엔진은 외부 CLI [kordoc](https://www.npmjs.com/package/kordoc), AI는 로컬 `claude` CLI를 `Process`로 호출합니다(앱에 재구현하지 않음).
+> 문서 엔진은 외부 CLI [kordoc](https://www.npmjs.com/package/kordoc), AI는 로컬 `claude` CLI를 `Process`로 호출합니다(앱에 재구현하지 않음). 구형 `.hwp` 원본 보기는 동봉 JS 번들 [hwp-convert](https://github.com/shyang1012/hwp-convert)를 `WKWebView` 안에서 실행합니다(Node 프로세스 호출 없음).
 > 원작자와 라이선스(MIT) 고지는 그대로 유지합니다. 원본과 무관하며 원작자의 보증을 받지 않았습니다.
 
 ---
@@ -63,7 +63,7 @@ read connects onward: content search, ask-your-corpus (RAG), PARA routing, file 
 
 ## cmd‑docu 포크가 더한 것
 
-리더를 마크다운 너머로 넓히고, 읽은 문서를 바로 질의·검색·편집하는 흐름을 더했습니다. 외부 도구(kordoc·claude)는 `Process`로 호출하며 앱에 재구현하지 않습니다.
+리더를 마크다운 너머로 넓히고, 읽은 문서를 바로 질의·검색·편집하는 흐름을 더했습니다. 외부 CLI(kordoc·claude)는 `Process`로 호출하며, 구형 `.hwp` 원본 보기는 동봉 JS 번들(hwp-convert)을 씁니다 — 전부 앱에 재구현하지 않습니다.
 
 - **이미지 리더** — png/jpg/heic/webp/gif 탭 보기(줌·팬·맞춤, GIF 재생).
 - **PDF 리더** — PDFKit 기반(페이지·썸네일·문서 내 검색·회전·선택/복사).
@@ -182,8 +182,10 @@ The `cmdmd://open?note=<name>` URL scheme resolves a note against the open folde
 
 포크 추가 분은 보기에 **PDFKit**(PDF)·**ImageIO/AppKit**(이미지), 문서 변환·편집에 외부 CLI
 [**kordoc**](https://www.npmjs.com/package/kordoc)(Node), AI 질의에 로컬 **`claude`** CLI를
-`Process`로 호출합니다. 내용 검색·RAG 근거는 **SQLite FTS5**(macOS 내장, trigram 토크나이저)
-로컬 인덱스를 씁니다. 외부 도구는 비샌드박스 환경에서 서브프로세스로 실행됩니다.
+`Process`로 호출합니다. 구형 `.hwp` 원본 그대로 보기는 **[hwp-convert](https://github.com/shyang1012/hwp-convert)**(MIT)를
+브라우저용 JS 번들로 앱에 동봉해 `WKWebView` 안에서 직접 실행합니다(Node 프로세스 호출 없음 —
+kordoc과는 다른 방식, 상세는 THIRD-PARTY-NOTICES.md). 내용 검색·RAG 근거는 **SQLite FTS5**(macOS 내장,
+trigram 토크나이저) 로컬 인덱스를 씁니다. 외부 CLI(kordoc·claude)는 비샌드박스 환경에서 서브프로세스로 실행됩니다.
 
 ## License
 
