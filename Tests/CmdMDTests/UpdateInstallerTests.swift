@@ -182,6 +182,26 @@ final class UpdateInstallerTests: XCTestCase {
             .filter { $0.hasPrefix(".cmdALL-update-") } ?? []
         XCTAssertTrue(leftovers.isEmpty, "작업 폴더가 남으면 안 된다: \(leftovers)")
     }
+
+    // MARK: - runCapturingOutput 워치독(2026-07-30 응답없음 신고 회귀 방지)
+
+    /// 정상 종료 — stdout이 그대로 캡처된다.
+    func testRunCapturingOutputReturnsStdout() {
+        let result = UpdateInstaller.runCapturingOutput("/bin/echo", ["hello"])
+        XCTAssertEqual(result?.exitCode, 0)
+        XCTAssertEqual(result?.stdout.trimmingCharacters(in: .whitespacesAndNewlines), "hello")
+    }
+
+    /// 시간을 넘기는 프로세스는 워치독이 강제 종료해 짧은 시간 안에 돌아온다 —
+    /// `localIdentityHash()`가 이 헬퍼 없이 직접 `Process().waitUntilExit()`를 불러
+    /// 무한정 대기하던 실사용자 응답없음 신고의 회귀 테스트.
+    func testRunCapturingOutputTerminatesAfterTimeout() {
+        let start = Date()
+        let result = UpdateInstaller.runCapturingOutput("/bin/sleep", ["10"], timeout: 0.5)
+        let elapsed = Date().timeIntervalSince(start)
+        XCTAssertLessThan(elapsed, 5.0, "워치독이 프로세스를 제때 죽이지 못해 10초 가까이 대기했다")
+        XCTAssertNotEqual(result?.exitCode, 0, "강제 종료됐으므로 정상 종료(0)가 아니어야 함")
+    }
 }
 
 /// 진행률 콜백은 @Sendable이라 지역 배열에 직접 담을 수 없다.

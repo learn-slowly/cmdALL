@@ -158,6 +158,34 @@ actor UpdateInstaller {
             throw failure(text.isEmpty ? "종료 코드 \(process.terminationStatus)(시간 초과 포함 가능)" : text)
         }
     }
+
+    /// `run()`과 같은 워치독을 쓰되 stdout을 문자열로 돌려준다 — `run()`이 실패만 던지고
+    /// 표준출력은 버리는 것과 달리, 출력 파싱이 필요한 호출(예: `security find-identity`)에
+    /// 쓴다. 2026-07-30 실사용자 신고("앱이 계속 응답없음")로 발견: `LocalIdentityResigner.
+    /// localIdentityHash()`가 이 워치독 없이 `Process().waitUntilExit()`를 직접 불러
+    /// 로그인 키체인 잠금 등으로 걸리면 무한정 대기했다 — 이 헬퍼로 같은 30초 상한을 준다.
+    static func runCapturingOutput(_ launchPath: String, _ arguments: [String],
+                                   timeout: TimeInterval = 30) -> (exitCode: Int32, stdout: String)? {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: launchPath)
+        process.arguments = arguments
+        let outPipe = Pipe()
+        process.standardOutput = outPipe
+        process.standardError = Pipe()
+        guard (try? process.run()) != nil else { return nil }
+
+        let watchdog = DispatchWorkItem { [weak process] in
+            guard let process, process.isRunning else { return }
+            process.terminate()
+        }
+        DispatchQueue.global().asyncAfter(deadline: .now() + timeout, execute: watchdog)
+
+        let data = outPipe.fileHandleForReading.readDataToEndOfFile()
+        process.waitUntilExit()
+        watchdog.cancel()
+
+        return (process.terminationStatus, String(decoding: data, as: UTF8.self))
+    }
 }
 
 // MARK: - 실제 구현체
@@ -294,18 +322,10 @@ struct LocalIdentityResigner: BundleSigning {
     /// SHA-1 지문(형식: `  1) <40자리 hex> "이름"`)을 뽑는다. 순수 문자열 파싱만
     /// 골라내 별도 함수로 두어 단위 테스트 대상으로 삼는다.
     private func localIdentityHash() -> String? {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/security")
-        process.arguments = ["find-identity", "-v", "-p", "codesigning"]
-        let outPipe = Pipe()
-        process.standardOutput = outPipe
-        process.standardError = Pipe()
-        guard (try? process.run()) != nil else { return nil }
-        let data = outPipe.fileHandleForReading.readDataToEndOfFile()
-        process.waitUntilExit()
-        guard process.terminationStatus == 0 else { return nil }
-        return Self.parseHash(fromFindIdentityOutput: String(decoding: data, as: UTF8.self),
-                               identityName: Self.identityName)
+        guard let result = UpdateInstaller.runCapturingOutput(
+            "/usr/bin/security", ["find-identity", "-v", "-p", "codesigning"]) else { return nil }
+        guard result.exitCode == 0 else { return nil }
+        return Self.parseHash(fromFindIdentityOutput: result.stdout, identityName: Self.identityName)
     }
 
     /// `security find-identity -v -p codesigning`의 사람이 읽는 출력에서, 이름이
