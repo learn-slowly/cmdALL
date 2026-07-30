@@ -59,6 +59,22 @@ final class UpdateInstallerTests: XCTestCase {
         }
     }
 
+    /// 테스트 기본값 — 이 컴퓨터의 실제 로그인 키체인 상태(로컬 고정 인증서 유무)에
+    /// 좌우되면 안 되므로 항상 아무것도 안 하는 가짜를 명시적으로 주입한다.
+    private struct NoOpSigner: BundleSigning {
+        func resignWithLocalIdentityIfAvailable(bundleAt url: URL) throws {}
+    }
+
+    /// 재서명 훅이 실제로 파이프라인에 배선돼 있는지(호출 여부)만 확인하는 기록용 가짜.
+    private final class RecordingSigner: BundleSigning, @unchecked Sendable {
+        private let lock = NSLock()
+        private var _calledWith: URL?
+        var calledWith: URL? { lock.lock(); defer { lock.unlock() }; return _calledWith }
+        func resignWithLocalIdentityIfAvailable(bundleAt url: URL) throws {
+            lock.lock(); _calledWith = url; lock.unlock()
+        }
+    }
+
     private func makeTarget(marker: String) -> URL {
         let target = root.appendingPathComponent("cmdALL.app")
         let contents = target.appendingPathComponent("Contents")
@@ -75,9 +91,11 @@ final class UpdateInstallerTests: XCTestCase {
     func testInstallsWhenChecksumMatches() async throws {
         let (zip, hash) = try makeZippedApp(marker: "new")
         let target = makeTarget(marker: "old")
+        let signer = RecordingSigner()
         let installer = UpdateInstaller(
             fetcher: FakeFetcher(zip: zip, sums: "\(hash)  cmdALL-macos.zip"),
-            verifier: PassingVerifier()
+            verifier: PassingVerifier(),
+            signer: signer
         )
 
         let collector = ProgressCollector()
@@ -88,6 +106,7 @@ final class UpdateInstallerTests: XCTestCase {
         let seen = collector.values
         XCTAssertTrue(seen.contains(.verifying), "검증 단계를 보고해야 한다: \(seen)")
         XCTAssertTrue(seen.contains(.installing), "설치 단계를 보고해야 한다: \(seen)")
+        XCTAssertNotNil(signer.calledWith, "교체 전에 로컬 인증서 재서명 훅이 호출돼야 한다(§CDHash 안정성)")
     }
 
     func testRejectsChecksumMismatchWithoutTouchingTarget() async throws {
@@ -95,7 +114,8 @@ final class UpdateInstallerTests: XCTestCase {
         let target = makeTarget(marker: "old")
         let installer = UpdateInstaller(
             fetcher: FakeFetcher(zip: zip, sums: "deadbeef  cmdALL-macos.zip"),
-            verifier: PassingVerifier()
+            verifier: PassingVerifier(),
+            signer: NoOpSigner()
         )
 
         do {
@@ -113,7 +133,8 @@ final class UpdateInstallerTests: XCTestCase {
         let target = makeTarget(marker: "old")
         let installer = UpdateInstaller(
             fetcher: FakeFetcher(zip: zip, sums: "\(hash)  cmdALL-macos.zip"),
-            verifier: FailingVerifier()
+            verifier: FailingVerifier(),
+            signer: NoOpSigner()
         )
 
         do {
@@ -132,7 +153,8 @@ final class UpdateInstallerTests: XCTestCase {
         let target = makeTarget(marker: "old")
         let installer = UpdateInstaller(
             fetcher: FakeFetcher(zip: zip, sums: "abc  something-else.zip"),
-            verifier: PassingVerifier()
+            verifier: PassingVerifier(),
+            signer: NoOpSigner()
         )
         do {
             try await installer.install(tag: "v9.9.9", expectedVersion: "9.9.9",
@@ -150,7 +172,8 @@ final class UpdateInstallerTests: XCTestCase {
         let target = makeTarget(marker: "old")
         let installer = UpdateInstaller(
             fetcher: FakeFetcher(zip: zip, sums: "\(hash)  cmdALL-macos.zip"),
-            verifier: PassingVerifier()
+            verifier: PassingVerifier(),
+            signer: NoOpSigner()
         )
         try await installer.install(tag: "v9.9.9", expectedVersion: "9.9.9",
                                     targetBundle: target) { _ in }

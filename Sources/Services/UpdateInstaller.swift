@@ -13,16 +13,29 @@ protocol BundleVerifying: Sendable {
     func verify(bundleAt url: URL, expectedVersion: String) throws
 }
 
+/// 이 컴퓨터 전용 고정 인증서("cmdALL Local Dev")가 로그인 키체인에 있으면 그걸로
+/// 재서명하는 경계 — 테스트에서 가짜로 갈아끼운다. `scripts/package_app.sh`가 로컬
+/// 빌드에 쓰는 것과 같은 인증서. GitHub Release(CI 빌드)는 ad-hoc 서명이라 빌드마다
+/// CDHash가 달라져 그대로 설치하면 "손쉬운 사용" 권한이 재발한다(2026-07-29/30 실측,
+/// §CLAUDE.md). 이 컴퓨터에 그 인증서가 없으면(배포용 다른 컴퓨터) 조용히 아무것도
+/// 안 하고 ad-hoc 그대로 둔다.
+protocol BundleSigning: Sendable {
+    func resignWithLocalIdentityIfAvailable(bundleAt url: URL) throws
+}
+
 /// 릴리스 zip을 받아 검증하고 앱 번들을 교체한다(스펙 §5.1).
 /// 화면을 모른다 — 진행 상황은 콜백으로만 알린다.
 actor UpdateInstaller {
     private let fetcher: UpdateFetching
     private let verifier: BundleVerifying
+    private let signer: BundleSigning
 
     init(fetcher: UpdateFetching = URLSessionFetcher(),
-         verifier: BundleVerifying = CodesignVerifier()) {
+         verifier: BundleVerifying = CodesignVerifier(),
+         signer: BundleSigning = LocalIdentityResigner()) {
         self.fetcher = fetcher
         self.verifier = verifier
+        self.signer = signer
     }
 
     func install(
@@ -81,6 +94,10 @@ actor UpdateInstaller {
 
         // 5) 번들 검증(서명·버전)
         try verifier.verify(bundleAt: staged, expectedVersion: expectedVersion)
+
+        // 5.5) 이 컴퓨터 전용 고정 인증서가 있으면 재서명(§BundleSigning 참고) —
+        // ad-hoc 그대로 설치하면 CDHash가 바뀌어 "손쉬운 사용" 권한이 재발한다.
+        try signer.resignWithLocalIdentityIfAvailable(bundleAt: staged)
 
         // 6) 교체
         onProgress(.installing)
@@ -234,5 +251,34 @@ struct CodesignVerifier: BundleVerifying {
         }
         try UpdateInstaller.run("/usr/bin/codesign", ["--verify", "--deep", "--strict", url.path],
                                 failure: { UpdateInstallError.bundleVerificationFailed($0) })
+    }
+}
+/// `security find-identity`·`codesign`을 직접 호출해 이 컴퓨터에 로컬 고정 인증서가
+/// 있는지 확인하고, 있으면 그걸로 재서명한다. `scripts/package_app.sh`(로컬 빌드 경로)의
+/// 같은 로직·같은 인증서 이름을 쓴다 — 둘 다 갱신되면 CDHash가 안정된다.
+struct LocalIdentityResigner: BundleSigning {
+    static let identityName = "cmdALL Local Dev"
+
+    func resignWithLocalIdentityIfAvailable(bundleAt url: URL) throws {
+        guard hasLocalIdentity() else { return }
+        try UpdateInstaller.run(
+            "/usr/bin/codesign",
+            ["--force", "--deep", "--sign", Self.identityName, url.path],
+            failure: { UpdateInstallError.bundleVerificationFailed("로컬 인증서 재서명 실패: \($0)") }
+        )
+    }
+
+    private func hasLocalIdentity() -> Bool {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/security")
+        process.arguments = ["find-identity", "-v", "-p", "codesigning"]
+        let outPipe = Pipe()
+        process.standardOutput = outPipe
+        process.standardError = Pipe()
+        guard (try? process.run()) != nil else { return false }
+        let data = outPipe.fileHandleForReading.readDataToEndOfFile()
+        process.waitUntilExit()
+        guard process.terminationStatus == 0 else { return false }
+        return String(decoding: data, as: UTF8.self).contains(Self.identityName)
     }
 }
