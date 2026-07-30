@@ -86,11 +86,24 @@ struct PaneReaderView: View {
         }
     }
 
+    /// 오피스·미디어 등 요약 화면 — 위쪽에 붙어야 한다(사용자 지적, 2026-07-30):
+    /// `ContentUnavailableView`는 주어진 공간 전체를 차지하며 내용을 세로 가운데 정렬해
+    /// 칸이 길면 툴바 바로 아래 큰 빈 공간이 생긴다. 직접 조립해 `alignment: .top`으로 고정한다.
     private var summaryPlaceholder: some View {
-        ContentUnavailableView {
-            Label(url.lastPathComponent, systemImage: "doc")
-        } description: {
+        VStack(spacing: 12) {
+            Image(systemName: "doc")
+                .font(.system(size: 40))
+                .foregroundStyle(.secondary)
+            Text(url.lastPathComponent)
+                .font(.title3.weight(.semibold))
+                .multilineTextAlignment(.center)
             Text("이 칸에서는 훑어보기를 지원하지 않는 형식입니다. 위 \"이 창에서 제대로 열기\"로 여세요.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
         }
+        .padding(.top, 48)
+        .padding(.horizontal, 24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 }
