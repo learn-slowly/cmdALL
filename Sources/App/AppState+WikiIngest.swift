@@ -124,7 +124,7 @@ extension AppState {
                 wikiIngestError = "대상 페이지를 다시 읽지 못했습니다 — 파일이 이동/삭제됐을 수 있습니다."
                 return nil
             }
-            _ = try await wikiBackupStore.recordApply(
+            let logEntry = try await wikiBackupStore.recordApply(
                 pageURL: dest,
                 oldBody: proposal.isNewPage ? nil : currentBody,
                 sourceName: proposal.sourceURL.lastPathComponent)
@@ -132,6 +132,9 @@ extension AppState {
                 at: dest.deletingLastPathComponent(),
                 withIntermediateDirectories: true)
             try proposal.newBody.write(to: dest, atomically: true, encoding: .utf8)
+            // 결과 스냅샷 — 실패해도 병합 자체는 이미 성공했으니 사용자 흐름을 막지 않는다
+            // (그 항목만 이력 화면에서 legacy로 표시된다).
+            try? await wikiBackupStore.recordResult(entryID: logEntry.id, newBody: proposal.newBody)
             if dest.standardizedFileURL.path != proposal.pageURL.standardizedFileURL.path {
                 // 재uniquify로 비켜 갔으면 diff 승인 화면의 경로와 다르다 — 실제 파일명 안내.
                 showToast("위키 페이지에 병합했습니다 — \(dest.lastPathComponent)(이름이 바뀌었습니다)")

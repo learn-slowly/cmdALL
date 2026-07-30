@@ -178,6 +178,10 @@ struct WikiIngestView: View {
 
     private var historySection: some View {
         DisclosureGroup("인제스트 기록") {
+            Button("전체 기록 보기") {
+                appState.requestWikiHistory()
+            }
+            .font(.caption)
             if entries.isEmpty {
                 Text("기록 없음").foregroundStyle(.secondary).font(.callout)
             } else {
