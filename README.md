@@ -68,6 +68,7 @@ read connects onward: content search, ask-your-corpus (RAG), PARA routing, file 
 - **이미지 리더** — png/jpg/heic/webp/gif 탭 보기(줌·팬·맞춤, GIF 재생).
 - **PDF 리더** — PDFKit 기반(페이지·썸네일·문서 내 검색·회전·선택/복사).
 - **한글·오피스 읽기** — HWP·HWPX·HWPML·DOC·DOCX·XLS·XLSX를 [kordoc](https://www.npmjs.com/package/kordoc)으로 마크다운 변환해 읽기전용 표시(원본 보존).
+- **원본 그대로 보기(HWPX/HWP)** — 마크다운 변환 없이 원본 조판 그대로 표시(hwpx는 kordoc `render` SVG, hwp는 hwp-convert HTML). MS 오피스는 macOS 내장 QuickLook으로 원본 표시.
 - **서식 보존 편집·저장(HWP/HWPX)** — 변환 마크다운을 편집모드로 고치고 `kordoc patch`로 **원본 서식을 보존한 채 새 파일로 저장**(원본은 절대 덮어쓰지 않음, 저장 전 경로 확인).
 - **양식 채우기(HWP/HWPX)** — `kordoc fill`로 서식의 빈칸 필드를 감지해 입력 폼으로 보여주고, 값을 채운 **새 `(채움).hwpx`로 저장**(원본 불변, 저장 전 경로 확인).
 - **종류를 가로지르는 폴더 검색** — 파일명 + 본문(마크다운·PDF·HWP/오피스)까지 검색, 결과에서 페이지·줄로 점프.
@@ -137,7 +138,7 @@ cd cmdALL
 
 swift build                         # debug build
 swift run                           # run it
-swift test                          # 573 tests (XCTest 555 + Swift Testing 18, 정식 Xcode 필요)
+swift test                          # 990 tests (XCTest 972 + Swift Testing 18, 정식 Xcode 필요)
 
 swift build -c release              # release binary
 bash scripts/package_app.sh         # → dist/cmdALL.app + dist/cmdALL-macos.zip

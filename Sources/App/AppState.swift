@@ -247,10 +247,10 @@ final class AppState {
     /// 양식 채우기(dry-run·fill) 진행 중인 탭. 스피너·중복 실행 방지.
     var officeFillInProgress: Set<UUID> = []
     /// "원본 보기" 켜진 탭(격차 5번) — MS 오피스(doc/docx/xls/xlsx)는 macOS 내장 QuickLook,
-    /// hwpx는 kordoc render, hwp(구형)는 hwp.js가 각각 원본 조판을 그린다. hwpml은 아직 없어
+    /// hwpx는 kordoc render, hwp(구형)는 hwp-convert가 각각 원본 조판을 그린다. hwpml은 아직 없어
     /// 토글 자체가 안 뜬다.
     var officeShowingOriginal: Set<UUID> = []
-    /// 오피스 "원본 보기"(kordoc render 또는 hwp.js) 상태(키 = EditorTab.id). officeShowingOriginal이
+    /// 오피스 "원본 보기"(kordoc render 또는 hwp-convert) 상태(키 = EditorTab.id). officeShowingOriginal이
     /// 켜져 있고 확장자가 hwpx/hwp일 때만 쓰인다 — MS 오피스(QuickLook)는 이 딕셔너리를 안 씀.
     var officeOriginalRenderStates: [UUID: OfficeOriginalRenderState] = [:]
 
