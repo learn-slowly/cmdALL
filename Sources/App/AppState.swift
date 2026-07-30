@@ -372,7 +372,7 @@ final class AppState {
     private let kordocWriteService = KordocWriteService()
     private let kordocFillService = KordocFillService()
     private let kordocRenderService = KordocRenderService()
-    private let hwpJsRenderService = HwpJsRenderService()
+    private let hwpConvertRenderService = HwpConvertRenderService()
     private let moveLogStore: MoveLogStore
     /// 파일 작업(F1a) 로그 — Task 6·7·8(시트·정보뷰)이 직접 읽으므로 private 아님.
     let fileOpsLogStore: FileOpsLogStore
@@ -532,40 +532,41 @@ final class AppState {
     }
 
     /// "원본 보기" 켜고 끄기(격차 5번) — MS 오피스(doc/docx/xls/xlsx)는 QuickLook,
-    /// hwpx는 kordoc render(SVG, 2026-07-29), hwp(구형)는 hwp.js(2026-07-30)로 각각 그린다.
-    /// 호출부(뷰)가 `canShowOriginal`로 이미 걸러 보이지만, 여기서도 같은 판정으로 한 번 더
-    /// 막는다(단일 진실 원천 유지).
+    /// hwpx는 kordoc render(SVG, 2026-07-29), hwp(구형)는 hwp-convert(2026-07-30)로 각각
+    /// 그린다. 호출부(뷰)가 `canShowOriginal`로 이미 걸러 보이지만, 여기서도 같은 판정으로
+    /// 한 번 더 막는다(단일 진실 원천 유지).
     @MainActor
     func toggleOfficeOriginalView(tabID: UUID, fileURL: URL) {
         let ext = fileURL.pathExtension.lowercased()
         guard DocumentKind.nativelyRenderableOfficeExtensions.contains(ext)
             || DocumentKind.kordocRenderableExtensions.contains(ext)
-            || DocumentKind.hwpJsRenderableExtensions.contains(ext) else { return }
+            || DocumentKind.hwpConvertRenderableExtensions.contains(ext) else { return }
         if officeShowingOriginal.contains(tabID) {
             officeShowingOriginal.remove(tabID)
         } else {
             officeShowingOriginal.insert(tabID)
             let needsRender = DocumentKind.kordocRenderableExtensions.contains(ext)
-                || DocumentKind.hwpJsRenderableExtensions.contains(ext)
+                || DocumentKind.hwpConvertRenderableExtensions.contains(ext)
             if needsRender, officeOriginalRenderStates[tabID] == nil {
                 Task { await loadOfficeOriginalRender(tabID: tabID, fileURL: fileURL) }
             }
         }
     }
 
-    /// 오피스 "원본 보기" 렌더를 확장자에 맞는 엔진(hwpx=kordoc render, hwp=hwp.js)으로 받아온다.
-    /// 실패해도 크래시하지 않고 `.failed` 상태로만 남는다(뷰가 "글로 보기로 전환" 버튼을 보여줌).
-    /// hwp.js는 실제 렌더가 WKWebView 안 JS에서 일어나 Swift가 성공 여부를 미리 알 수 없으므로,
-    /// 여기서 `.failed`로 가는 건 파일을 아예 못 읽거나 번들 자산이 없을 때뿐이다
-    /// (hwp.js 자체의 렌더 실패는 `HwpJsRenderService.wrapViewer`가 페이지 안에서 안내로 바꾼다).
+    /// 오피스 "원본 보기" 렌더를 확장자에 맞는 엔진(hwpx=kordoc render, hwp=hwp-convert)으로
+    /// 받아온다. 실패해도 크래시하지 않고 `.failed` 상태로만 남는다(뷰가 "글로 보기로 전환"
+    /// 버튼을 보여줌). hwp-convert는 실제 변환·추출이 WKWebView 안 JS에서 일어나 Swift가
+    /// 성공 여부를 미리 알 수 없으므로, 여기서 `.failed`로 가는 건 파일을 아예 못 읽거나
+    /// 번들 자산이 없을 때뿐이다(hwp-convert 자체의 실패는
+    /// `HwpConvertRenderService.wrapExtractor`가 페이지 안에서 안내로 바꾼다).
     @MainActor
     func loadOfficeOriginalRender(tabID: UUID, fileURL: URL) async {
         officeOriginalRenderStates[tabID] = .loading
         let ext = fileURL.pathExtension.lowercased()
         do {
             let html: String
-            if DocumentKind.hwpJsRenderableExtensions.contains(ext) {
-                html = try await hwpJsRenderService.renderHTML(for: fileURL)
+            if DocumentKind.hwpConvertRenderableExtensions.contains(ext) {
+                html = try await hwpConvertRenderService.renderHTML(for: fileURL)
             } else {
                 html = try await kordocRenderService.renderHTML(for: fileURL)
             }
@@ -3452,10 +3453,10 @@ final class AppState {
         }
     }
 
-    /// 오피스 "원본 보기"(kordoc render / hwp.js) 실패 사유를 한국어로 — `renderFailed`는
+    /// 오피스 "원본 보기"(kordoc render / hwp-convert) 실패 사유를 한국어로 — `renderFailed`는
     /// kordoc이 이미 한국어 stderr를 주므로(예: "조판 캐시(linesegarray) 없음…") 그대로 보여준다.
-    /// hwp.js 쪽 실패(`HwpJsRenderError`)는 파일을 못 읽거나 번들 자산이 없는 Swift 쪽
-    /// 실패만 여기로 온다 — hwp.js 자체의 렌더 실패는 페이지 안에서 처리된다(항상 `.loaded`).
+    /// hwp-convert 쪽 실패(`HwpConvertRenderError`)는 파일을 못 읽거나 번들 자산이 없는 Swift
+    /// 쪽 실패만 여기로 온다 — hwp-convert 자체의 실패는 페이지 안에서 처리된다(항상 `.loaded`).
     static func officeOriginalRenderErrorMessage(_ error: Error) -> String {
         switch error {
         case KordocRenderError.toolNotFound:
@@ -3464,9 +3465,9 @@ final class AppState {
             return "원본 그리기 시간이 초과됐습니다. 다시 시도해 주세요."
         case KordocRenderError.renderFailed(let m):
             return m.isEmpty ? "원본을 그리지 못했습니다. 글로 보기를 이용해 주세요." : "\(m)\n글로 보기를 이용해 주세요."
-        case HwpJsRenderError.assetMissing:
+        case HwpConvertRenderError.assetMissing:
             return "원본 보기에 필요한 구성요소를 찾을 수 없습니다. 앱을 다시 설치해 주세요."
-        case HwpJsRenderError.readFailed(let m):
+        case HwpConvertRenderError.readFailed(let m):
             return "파일을 읽지 못했습니다: \(m)"
         default:
             return "원본을 그리지 못했습니다: \(error.localizedDescription)"

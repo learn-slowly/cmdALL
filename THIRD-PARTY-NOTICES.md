@@ -44,15 +44,19 @@ cmd-docu는 [CmdMD](https://github.com/johnfkoo951/CmdMD)(MIT, 구요한/CMDSPAC
   vendored 후 dv-shim(`Sources/Resources/web/dataview/dv-shim.js`, cmd-docu 자체 작성)과 함께
   `LocalWebAssets`가 JSContext에 로드한다. §4 MIT 전문 공통 본문 참조.
 
-### hwp.js 0.0.3
-- 저장소: https://github.com/hahnlee/hwp.js
-- 라이선스: Apache License 2.0
-- Copyright Han Lee <hanlee.dev@gmail.com> and other contributors
-- 비고: 구형 `.hwp`(바이너리) 원본 조판 렌더. cmd-docu가 esbuild로 브라우저용 단일 파일로
-  묶어(`fs` Node 전용 모듈은 stub 처리, `scripts/vendor_hwpjs.sh`) `Sources/Resources/web/hwpjs/
-  hwpjs.bundle.js`로 vendored 후 `HwpJsRenderService`가 WKWebView 안에서 직접 실행한다(Node
-  프로세스 호출 없음 — kordoc과 별개 경로). Apache License v2.0 전문은
-  https://www.apache.org/licenses/LICENSE-2.0 참조.
+### hwp-convert 1.11.0
+- 저장소: https://github.com/shyang1012/hwp-convert
+- 라이선스: MIT License
+- Copyright (c) 2026 shyang (hwp-convert)
+- Copyright (c) 2025 ssabro — 원본 [hwpxjs](https://github.com/ssabro/hwpxjs)(MIT), HWPX(OWPML)
+  읽기/쓰기·HWP→HWPX 변환·Markdown/HTML 양방향 변환의 골격 제공
+- Copyright (c) 2025-2026 Edward Kim — [rhwp](https://github.com/edwardkim/rhwp)(Rust, MIT)의
+  HWP 5.0(CFB/OLE2) 바이너리 파서 구조를 TypeScript로 포팅
+- 비고: 구형 `.hwp`(바이너리) 원본을 서식 있는 HTML(표·굵게·색·정렬 보존)로 그린다. cmd-docu가
+  공식 브라우저 ESM 빌드(`dist/browser/hwp-convert.browser.mjs`)를 esbuild로 다시 IIFE로 묶어
+  (`scripts/vendor_hwpconvert.sh`) `Sources/Resources/web/hwpconvert/hwpconvert.bundle.js`로
+  vendored 후 `HwpConvertRenderService`가 WKWebView 안에서 직접 실행한다(Node 프로세스 호출
+  없음 — kordoc과 별개 경로). §4 MIT 전문 공통 본문 참조.
 
 ### Highlightr 2.3.0
 - 저장소: https://github.com/raspu/Highlightr

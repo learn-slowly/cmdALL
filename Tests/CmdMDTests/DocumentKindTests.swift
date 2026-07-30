@@ -80,11 +80,11 @@ final class DocumentKindTests: XCTestCase {
         }
     }
 
-    func testHwpJsRenderableExtensionsIsHWPOnly() {
-        XCTAssertTrue(DocumentKind.hwpJsRenderableExtensions.contains("hwp"))
+    func testHwpConvertRenderableExtensionsIsHWPOnly() {
+        XCTAssertTrue(DocumentKind.hwpConvertRenderableExtensions.contains("hwp"))
         for ext in ["hwpx", "hwpml", "doc", "docx", "xls", "xlsx"] {
-            XCTAssertFalse(DocumentKind.hwpJsRenderableExtensions.contains(ext),
-                            "hwp.js 원본 보기는 구형 hwp 전용이어야 한다(\(ext) 제외)")
+            XCTAssertFalse(DocumentKind.hwpConvertRenderableExtensions.contains(ext),
+                            "hwp-convert 원본 보기는 구형 hwp 전용이어야 한다(\(ext) 제외)")
         }
     }
 }

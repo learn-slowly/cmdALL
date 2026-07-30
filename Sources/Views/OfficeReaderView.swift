@@ -9,13 +9,13 @@ struct OfficeReaderView: View {
     let fileURL: URL
 
     /// Docufinder 격차 5번 — MS 오피스(doc/docx/xls/xlsx)는 macOS 내장 QuickLook, hwpx는
-    /// kordoc render(SVG, 2026-07-29), hwp(구형)는 hwp.js(2026-07-30)로 각각 원본 조판을
+    /// kordoc render(SVG, 2026-07-29), hwp(구형)는 hwp-convert(2026-07-30)로 각각 원본을
     /// 그린다. hwpml만 이 토글 자체가 안 뜬다(§DocumentKind — 어느 엔진도 hwpml 렌더를 못함).
     private var canShowOriginal: Bool {
         let ext = fileURL.pathExtension.lowercased()
         return DocumentKind.nativelyRenderableOfficeExtensions.contains(ext)
             || DocumentKind.kordocRenderableExtensions.contains(ext)
-            || DocumentKind.hwpJsRenderableExtensions.contains(ext)
+            || DocumentKind.hwpConvertRenderableExtensions.contains(ext)
     }
 
     var body: some View {

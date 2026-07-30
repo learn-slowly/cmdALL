@@ -73,7 +73,7 @@ final class AppOfficeTabTests: XCTestCase {
         appState.toggleOfficeOriginalView(tabID: tabID, fileURL: hwp)
 
         XCTAssertTrue(appState.officeShowingOriginal.contains(tabID),
-                       "hwp는 hwp.js(2026-07-30)로 원본 보기를 지원한다")
+                       "hwp는 hwp-convert(2026-07-30)로 원본 보기를 지원한다")
     }
 
     @MainActor

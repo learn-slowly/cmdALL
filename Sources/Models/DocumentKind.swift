@@ -38,11 +38,11 @@ extension DocumentKind {
     /// 놓쳤었다(`kordoc@latest` 고정으로 해소, `KordocService.packageSpec`).
     static let kordocRenderableExtensions: Set<String> = ["hwpx"]
 
-    /// hwp.js(Apache-2.0, 로컬 vendored, `Sources/Resources/web/hwpjs/`)로 원본 조판을
-    /// 그릴 수 있는 확장자. **hwp(구버전 바이너리) 전용** — hwpml은 hwp.js도 못 읽는다
-    /// (실측 확인, 2026-07-30). kordoc render(hwpx)와는 별개 엔진·별개 경로지만 화면·상태
+    /// hwp-convert(MIT, 로컬 vendored, `Sources/Resources/web/hwpconvert/`)로 원본을 서식 있는
+    /// HTML로 그릴 수 있는 확장자. **hwp(구버전 바이너리) 전용** — hwpml은 hwp-convert도 못
+    /// 읽는다(실측 확인, 2026-07-30). kordoc render(hwpx)와는 별개 엔진·별개 경로지만 화면·상태
     /// 모양은 공유한다(`OfficeOriginalRenderState`/`OfficeOriginalRenderPreview`).
-    static let hwpJsRenderableExtensions: Set<String> = ["hwp"]
+    static let hwpConvertRenderableExtensions: Set<String> = ["hwp"]
 
     /// kordoc patch가 서식 보존 라운드트립을 지원하는 확장자(소문자). HWP/HWPX 전용.
     static let patchableExtensions: Set<String> = ["hwp", "hwpx"]

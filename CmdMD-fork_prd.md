@@ -521,31 +521,36 @@ UpdateInstallError: 쓰기권한없음 | 다운로드실패 | 체크섬불일치
      — 레고님 실제 다운로드 폴더의 한컴 저장 hwpx 파일(`후보_권현우_선거_평가서_및_경남도당_제안_20260614.hwpx`)로
      `kordoc render` 직접 실행해 확인. 조판 캐시 기반 렌더가 실제로 됨(표·페이지·글꼴 정상).
      **후속(2026-07-30) — hwp(구버전 바이너리)까지 확대 완료.** codex(gpt-5.6-sol) 자문으로
-     대안 조사 — `hwp.js`(Apache-2.0, github.com/hahnlee/hwp.js, hwplib 참고 구현)가 실제로
-     레고님 다운로드 폴더의 진짜 정치·행정 문서 4건을 파싱했고, 그중 3건은 표·여러 페이지·
-     한글까지 실제 화면으로 그려지는 걸 스크린샷으로 직접 확인(playwright+Chromium 헤드리스
-     테스트, 실제 문서 기준). kordoc과 달리 이 엔진은 **파싱·그리기가 WKWebView 안 JS에서
-     직접 일어난다**(Node 프로세스 호출 없음). 실사용 API 함정 발견·해결: `Viewer`에
-     base64 문자열이나 `Uint8Array`를 그대로 넘기면 CFB 헤더 시그니처를 잘못 읽는다 —
-     `atob()`로 얻은 "바이너리 문자열"만 정상 동작(`HwpJsRenderService.wrapViewer` 주석 참고).
-     구현: `scripts/vendor_hwpjs.sh`(esbuild로 `fs` stub 후 브라우저 IIFE 번들, `Sources/
-     Resources/web/hwpjs/hwpjs.bundle.js`, 272KB) + 신규 `HwpJsRenderService`(actor, 프로세스
-     없이 파일 읽기+base64+HTML 조립, mtime 캐시) + `DocumentKind.hwpJsRenderableExtensions`
-     (hwp 전용). 기존 hwpx 전용 타입을 공유 타입으로 일반화 — `HwpxRenderState`→
-     `OfficeOriginalRenderState`, `HwpxRenderPreview`→`OfficeOriginalRenderPreview`,
-     `AppState.hwpxRenderStates`→`officeOriginalRenderStates`, `loadHwpxRender`→
-     `loadOfficeOriginalRender`(확장자로 kordoc render/hwp.js 분기). hwp.js의 실제 렌더
-     성공 여부는 Swift가 미리 알 수 없어(웹뷰 JS 안에서 일어남) 실패 안전장치를 페이지 안
-     `try/catch`로 넣었다(hwp.js 자체 렌더 실패 시 안내 문구로 바꿔치기, 크래시 없음).
-     Swift `.failed`는 파일을 못 읽거나 번들 자산이 없는 진짜 Swift 쪽 실패만 쓴다.
-     **hwpml은 여전히 안 된다** — hwp.js도 hwpml은 못 읽는다(실측 확인). ⚠️ hwp.js는
-     2022년 이후 업데이트가 없고 버전도 0.0.3(초기 단계) — 활발히 관리되는 도구가 아니라
-     특이한 hwp 파일에서 못 그리는 사례가 나오면 우리가 직접 고쳐야 할 수도 있다(hwp.js
-     Apache-2.0이라 포크·수정 가능). 신규 테스트 9개(`HwpJsRenderServiceTests` 5·
+     1차 대안 조사에서 `hwp.js`(Apache-2.0, hahnlee/hwp.js)를 찾아 구현했으나, 레고님이 직접
+     "rhwp나 hwp-convert 같은 도구는 안 되냐"고 재질문해 다시 조사한 결과 **`hwp-convert`
+     (MIT, shyang1012/hwp-convert)로 교체**했다. `hwp-convert`는 `rhwp`(Rust, MIT, Edward Kim의
+     HWP 5.0 CFB 바이너리 파서 구조를 TS로 포팅)와 `hwpxjs`(MIT, ssabro)를 잇는 프로젝트로,
+     처음 찾은 `hwp.js`보다 세 가지가 더 낫다: (1) 2026-06-29 최신 업데이트(hwp.js는 2022년
+     이후 방치) (2) MIT 라이선스 (3) **HWP→HWPX 변환 후 실제 서식 있는 HTML(표·굵게·색·정렬
+     보존)로 추출** — hwp.js처럼 캔버스에 글자를 하나씩 직접 그리는 방식이 아니라 진짜
+     HTML+CSS라서 시스템 폰트로 자연스럽게 대체되고 글자 겹침이 없다. 레고님 실제 정치·행정
+     문서 4건(질의응답표·기자회견문·법률계약서 등, 표·색깔 라벨·서명란 포함)으로 브라우저
+     엔드투엔드 테스트(playwright+Chromium 헤드리스, 공식 브라우저 ESM 빌드를 esbuild IIFE로
+     재포장) — 전부 표·문단·색·정렬까지 깨끗하게 재현됨(hwp.js도 3/4건은 됐지만 폰트 대체
+     시 글자가 겹치는 경우가 있어 이쪽이 더 안정적). kordoc처럼 별도 프로세스를 부르지 않고
+     **변환·추출이 WKWebView 안 JS에서 직접** 일어난다(`hwpToHwpx` → `HwpxReader.extractHtml`).
+     구현: `scripts/vendor_hwpconvert.sh`(공식 브라우저 ESM 빌드를 esbuild로 IIFE 재포장,
+     `Sources/Resources/web/hwpconvert/hwpconvert.bundle.js`, 700KB) + 신규
+     `HwpConvertRenderService`(actor, 프로세스 없이 파일 읽기+base64+HTML 조립, mtime 캐시) +
+     `DocumentKind.hwpConvertRenderableExtensions`(hwp 전용). 기존 hwpx 전용 타입을 공유
+     타입으로 일반화 — `HwpxRenderState`→`OfficeOriginalRenderState`,
+     `HwpxRenderPreview`→`OfficeOriginalRenderPreview`, `AppState.hwpxRenderStates`→
+     `officeOriginalRenderStates`, `loadHwpxRender`→`loadOfficeOriginalRender`(확장자로
+     kordoc render/hwp-convert 분기). hwp-convert의 실제 변환·추출 성공 여부는 Swift가
+     미리 알 수 없어(웹뷰 JS 안에서 일어남) 실패 안전장치를 페이지 안 `try/catch`로 넣었다
+     (실패 시 안내 문구로 바꿔치기, 크래시 없음). Swift `.failed`는 파일을 못 읽거나 번들
+     자산이 없는 진짜 Swift 쪽 실패만 쓴다. **hwpml은 여전히 안 된다** — hwp-convert도
+     hwpml은 못 읽는다(실측 확인). 신규 테스트 9개(`HwpConvertRenderServiceTests` 5·
      `DocumentKindTests` 1·`AppOfficeTabTests` 갱신 1), `swift test` 전체 972개 통과.
-     THIRD-PARTY-NOTICES.md에 hwp.js Apache-2.0 고지 추가. **실제 앱(WKWebView) 안에서
-     실제 hwp 파일로 원본 보기 버튼 눌러보는 수동 스모크는 아직 대기**(헤드리스 Chromium
-     검증까지만 완료 — WKWebView는 별개 엔진이라 레고님이 실제 앱에서 한 번 확인 필요).
+     THIRD-PARTY-NOTICES.md에 hwp-convert MIT 고지(원본 hwpxjs·rhwp 저작권 포함) 추가.
+     **실제 앱(WKWebView) 안에서 실제 hwp 파일로 원본 보기 버튼 눌러보는 수동 스모크는 아직
+     대기**(헤드리스 Chromium 검증까지만 완료 — WKWebView는 별개 엔진이라 레고님이 실제
+     앱에서 한 번 확인 필요).
   6. **완료(2026-07-27)** — 사용자가 "토글 스위치 만들자"로 확정. 스캔 PDF(글자 레이어 없는
      이미지 PDF)에서 macOS 내장 `Vision`(`VNRecognizeTextRequest`, 한국어 지원)으로 OCR해
      검색 대상에 포함. 새 `OCRService`(순수 함수, 새 패키지 의존성 0) + 설정 토글
