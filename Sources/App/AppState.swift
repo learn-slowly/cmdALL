@@ -140,7 +140,7 @@ final class AppState {
         panes[index].clearPeek()
     }
 
-    /// "이 창에서 제대로 열기" — 두 칸 모드를 끄고 기존 한 칸 탭 시스템으로 정식으로 연다
+    /// "큰 화면에서 보기" — 두 칸 모드를 끄고 기존 한 칸 탭 시스템으로 정식으로 연다
     /// (수정·저장·되돌리기 전부 지금과 동일하게 동작, 설계 §3.2).
     func promotePeekFileToTab(_ url: URL) {
         dualPaneEnabled = false
