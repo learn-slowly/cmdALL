@@ -345,7 +345,19 @@ struct CmdMDApp: App {
         }
 
         // Menu bar quick capture — 설정에서 껐다 켤 수 있다(isInserted, 기본 ON).
-        MenuBarExtra("cmdALL", systemImage: "book.fill", isInserted: $appState.settings.menuBarIconEnabled) {
+        // 2026-07-30: SwiftUI의 MenuBarExtra가 isInserted 바인딩을 내부 KVO로 되읽어 쓰는데,
+        // 같은 값을 다시 쓸 때도 @Observable의 withMutation은 무조건 변경 통지를 낸다(값이
+        // 같은지 확인 안 함) — 그래서 "같은 값 재기록 → 뷰 그래프 갱신 → MenuBarExtra 재설정 →
+        // 같은 값 재기록" 무한 루프가 생겨 메인 스레드가 꽉 차 앱 전체가 응답없음처럼 보였다
+        // (레고님 실사용 신고, spindump·sample로 확인). 값이 실제로 달라질 때만 쓰도록 막아
+        // 되먹임을 끊는다.
+        MenuBarExtra("cmdALL", systemImage: "book.fill", isInserted: Binding(
+            get: { appState.settings.menuBarIconEnabled },
+            set: { newValue in
+                guard appState.settings.menuBarIconEnabled != newValue else { return }
+                appState.settings.menuBarIconEnabled = newValue
+            }
+        )) {
             MenuBarView()
                 .environment(appState)
                 .tint(.cmdsAccent)
