@@ -1,18 +1,19 @@
 import SwiftUI
 import WebKit
 
-/// hwpx "원본 보기" — kordoc render(SVG)를 감싼 HTML을 표시한다. 상태별 화면:
-/// 로딩 스피너 / 렌더된 SVG(WKWebView) / 실패(안내 + "글로 보기로 전환" 버튼).
+/// 오피스 "원본 보기" — kordoc render(hwpx, SVG) 또는 hwp.js(hwp, DOM)로 만든 HTML을 표시한다.
+/// 어느 엔진이 만들었든 결과는 "WKWebView에 바로 로드할 HTML 문자열"이라 화면은 하나로 공유.
+/// 상태별 화면: 로딩 스피너 / 렌더된 HTML(WKWebView) / 실패(안내 + "글로 보기로 전환" 버튼).
 /// 실패 화면은 기존 `OfficeReaderView`의 `case .failed`와 같은 모양·톤을 맞췄다.
-struct HwpxRenderPreview: View {
+struct OfficeOriginalRenderPreview: View {
     @Environment(AppState.self) private var appState
     let tabID: UUID
     let fileURL: URL
 
     var body: some View {
-        switch appState.hwpxRenderStates[tabID] {
+        switch appState.officeOriginalRenderStates[tabID] {
         case .loaded(let html):
-            HwpxSVGWebView(html: html)
+            OriginalRenderWebView(html: html)
         case .failed(let message):
             VStack(spacing: 12) {
                 Image(systemName: "exclamationmark.triangle")
@@ -41,10 +42,10 @@ struct HwpxRenderPreview: View {
     }
 }
 
-/// SVG를 담은 HTML을 보여주는 얇은 WKWebView 래퍼. 스크롤·트랙패드 확대면 충분해
+/// 렌더된 HTML(SVG 또는 hwp.js DOM)을 보여주는 얇은 WKWebView 래퍼. 스크롤·트랙패드 확대면 충분해
 /// `MarkdownPreviewView` 같은 스크롤 싱크·메시지 브릿지는 두지 않는다. `DropThroughWebView`를
 /// 써서(기존 프리뷰와 동일 이유) 파일 드래그를 삼키지 않고 창 레벨로 흘려보낸다.
-private struct HwpxSVGWebView: NSViewRepresentable {
+private struct OriginalRenderWebView: NSViewRepresentable {
     let html: String
 
     func makeCoordinator() -> Coordinator { Coordinator() }

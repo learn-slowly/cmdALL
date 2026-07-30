@@ -79,4 +79,12 @@ final class DocumentKindTests: XCTestCase {
                             "\(ext)은 macOS QuickLook이 못 읽어 원본 보기 대상이 아니어야 한다")
         }
     }
+
+    func testHwpJsRenderableExtensionsIsHWPOnly() {
+        XCTAssertTrue(DocumentKind.hwpJsRenderableExtensions.contains("hwp"))
+        for ext in ["hwpx", "hwpml", "doc", "docx", "xls", "xlsx"] {
+            XCTAssertFalse(DocumentKind.hwpJsRenderableExtensions.contains(ext),
+                            "hwp.js 원본 보기는 구형 hwp 전용이어야 한다(\(ext) 제외)")
+        }
+    }
 }

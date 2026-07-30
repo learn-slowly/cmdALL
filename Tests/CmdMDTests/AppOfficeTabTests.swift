@@ -53,15 +53,27 @@ final class AppOfficeTabTests: XCTestCase {
     }
 
     @MainActor
-    func testToggleOfficeOriginalViewIgnoredForHWPFamily() {
+    func testToggleOfficeOriginalViewIgnoredForHWPML() {
+        let appState = AppState(dataDirectory: tempDir)
+        let tabID = UUID()
+        let hwpml = URL(fileURLWithPath: "/tmp/보고서.hwpml")
+
+        appState.toggleOfficeOriginalView(tabID: tabID, fileURL: hwpml)
+
+        XCTAssertFalse(appState.officeShowingOriginal.contains(tabID),
+                        "hwpml은 어느 엔진도 원본 조판을 못 그려 원본 보기가 켜지면 안 된다")
+    }
+
+    @MainActor
+    func testToggleOfficeOriginalViewAllowedForHWP() {
         let appState = AppState(dataDirectory: tempDir)
         let tabID = UUID()
         let hwp = URL(fileURLWithPath: "/tmp/보고서.hwp")
 
         appState.toggleOfficeOriginalView(tabID: tabID, fileURL: hwp)
 
-        XCTAssertFalse(appState.officeShowingOriginal.contains(tabID),
-                        "HWP는 macOS QuickLook이 못 읽어 원본 보기가 켜지면 안 된다")
+        XCTAssertTrue(appState.officeShowingOriginal.contains(tabID),
+                       "hwp는 hwp.js(2026-07-30)로 원본 보기를 지원한다")
     }
 
     @MainActor

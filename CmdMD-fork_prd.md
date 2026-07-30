@@ -517,10 +517,35 @@ UpdateInstallError: 쓰기권한없음 | 다운로드실패 | 체크섬불일치
      — kordoc `render` 명령 자체가 hwpx 전용임을 실측 확인(`kordoc render --help` 설명이
      "HWPX의 조판 캐시"라고 명시). 조판 캐시 없는 파일(kordoc 자체 생성/편집본)은 렌더
      실패 → "글로 보기로 전환" 버튼(크래시 없음, `--reflow` 자동 폴백은 이번 범위 밖).
-     953 테스트 통과(기존 950 + 신규 3, `wrapSVG` 순수 함수). **수동 스모크 대기** — 실제
-     한컴에서 저장한 진짜 hwpx 파일로 조판 캐시 기반 렌더가 되는지가 핵심 미확인 지점
-     (이 컴퓨터엔 그런 샘플이 없어 개발 중엔 kordoc generate로 만든 캐시 없는 파일로만
-     기술 가능성을 확인했다).
+     953 테스트 통과(기존 950 + 신규 3, `wrapSVG` 순수 함수). **수동 스모크 완료(2026-07-30)**
+     — 레고님 실제 다운로드 폴더의 한컴 저장 hwpx 파일(`후보_권현우_선거_평가서_및_경남도당_제안_20260614.hwpx`)로
+     `kordoc render` 직접 실행해 확인. 조판 캐시 기반 렌더가 실제로 됨(표·페이지·글꼴 정상).
+     **후속(2026-07-30) — hwp(구버전 바이너리)까지 확대 완료.** codex(gpt-5.6-sol) 자문으로
+     대안 조사 — `hwp.js`(Apache-2.0, github.com/hahnlee/hwp.js, hwplib 참고 구현)가 실제로
+     레고님 다운로드 폴더의 진짜 정치·행정 문서 4건을 파싱했고, 그중 3건은 표·여러 페이지·
+     한글까지 실제 화면으로 그려지는 걸 스크린샷으로 직접 확인(playwright+Chromium 헤드리스
+     테스트, 실제 문서 기준). kordoc과 달리 이 엔진은 **파싱·그리기가 WKWebView 안 JS에서
+     직접 일어난다**(Node 프로세스 호출 없음). 실사용 API 함정 발견·해결: `Viewer`에
+     base64 문자열이나 `Uint8Array`를 그대로 넘기면 CFB 헤더 시그니처를 잘못 읽는다 —
+     `atob()`로 얻은 "바이너리 문자열"만 정상 동작(`HwpJsRenderService.wrapViewer` 주석 참고).
+     구현: `scripts/vendor_hwpjs.sh`(esbuild로 `fs` stub 후 브라우저 IIFE 번들, `Sources/
+     Resources/web/hwpjs/hwpjs.bundle.js`, 272KB) + 신규 `HwpJsRenderService`(actor, 프로세스
+     없이 파일 읽기+base64+HTML 조립, mtime 캐시) + `DocumentKind.hwpJsRenderableExtensions`
+     (hwp 전용). 기존 hwpx 전용 타입을 공유 타입으로 일반화 — `HwpxRenderState`→
+     `OfficeOriginalRenderState`, `HwpxRenderPreview`→`OfficeOriginalRenderPreview`,
+     `AppState.hwpxRenderStates`→`officeOriginalRenderStates`, `loadHwpxRender`→
+     `loadOfficeOriginalRender`(확장자로 kordoc render/hwp.js 분기). hwp.js의 실제 렌더
+     성공 여부는 Swift가 미리 알 수 없어(웹뷰 JS 안에서 일어남) 실패 안전장치를 페이지 안
+     `try/catch`로 넣었다(hwp.js 자체 렌더 실패 시 안내 문구로 바꿔치기, 크래시 없음).
+     Swift `.failed`는 파일을 못 읽거나 번들 자산이 없는 진짜 Swift 쪽 실패만 쓴다.
+     **hwpml은 여전히 안 된다** — hwp.js도 hwpml은 못 읽는다(실측 확인). ⚠️ hwp.js는
+     2022년 이후 업데이트가 없고 버전도 0.0.3(초기 단계) — 활발히 관리되는 도구가 아니라
+     특이한 hwp 파일에서 못 그리는 사례가 나오면 우리가 직접 고쳐야 할 수도 있다(hwp.js
+     Apache-2.0이라 포크·수정 가능). 신규 테스트 9개(`HwpJsRenderServiceTests` 5·
+     `DocumentKindTests` 1·`AppOfficeTabTests` 갱신 1), `swift test` 전체 972개 통과.
+     THIRD-PARTY-NOTICES.md에 hwp.js Apache-2.0 고지 추가. **실제 앱(WKWebView) 안에서
+     실제 hwp 파일로 원본 보기 버튼 눌러보는 수동 스모크는 아직 대기**(헤드리스 Chromium
+     검증까지만 완료 — WKWebView는 별개 엔진이라 레고님이 실제 앱에서 한 번 확인 필요).
   6. **완료(2026-07-27)** — 사용자가 "토글 스위치 만들자"로 확정. 스캔 PDF(글자 레이어 없는
      이미지 PDF)에서 macOS 내장 `Vision`(`VNRecognizeTextRequest`, 한국어 지원)으로 OCR해
      검색 대상에 포함. 새 `OCRService`(순수 함수, 새 패키지 의존성 0) + 설정 토글

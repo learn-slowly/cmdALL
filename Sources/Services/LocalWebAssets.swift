@@ -99,6 +99,11 @@ enum LocalWebAssets {
 
     /// dataviewjs용 luxon(로컬 동봉) — 스펙 §5.
     static let luxonJS: String? = readWebResource("luxon/luxon.min.js")
+    /// hwpjs.bundle.js — hwp.js(Apache-2.0)를 esbuild로 브라우저용 IIFE 단일 파일로 묶은 것
+    /// (`scripts/vendor_hwpjs.sh`). `window.HWPJS = { parse, Viewer }`를 노출한다.
+    /// 번들 없으면 nil(`HwpJsRenderService`가 `.assetMissing`으로 처리, CDN 폴백 없음 — 이건
+    /// 로컬 전용 자산이라 애초에 온라인 대안이 없다).
+    static let hwpJsJS: String? = readWebResource("hwpjs/hwpjs.bundle.js")
 
     /// dv API 서브셋 shim — 스펙 §3 범위, JSContext 전용.
     static let dvShimJS: String? = readWebResource("dataview/dv-shim.js")
