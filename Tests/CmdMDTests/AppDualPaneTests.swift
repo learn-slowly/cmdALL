@@ -120,4 +120,21 @@ final class AppDualPaneTests: XCTestCase {
         appState.openFolderInFocusedPane(root)
         XCTAssertEqual(appState.panes[0].selectedFolder, appState.panes[1].selectedFolder)
     }
+    func testOpenInPane은꺼져있으면자동으로켜고파일은그칸에서미리보기로연다() {
+        XCTAssertFalse(appState.dualPaneEnabled)
+        let file = root.appendingPathComponent("파일.md")
+        appState.openInPane(file, isDirectory: false, index: 1)
+        XCTAssertTrue(appState.dualPaneEnabled, "칸이 없으면 사이드바 우클릭이 자동으로 켜야 한다")
+        XCTAssertEqual(appState.panes[1].peekFile, file)
+        XCTAssertEqual(appState.focusedPaneIndex, 1)
+    }
+
+    func testOpenInPane은이미켜져있으면끄지않고폴더는그칸으로드릴인한다() {
+        appState.toggleDualPane()
+        let sub = root.appendingPathComponent("sub")
+        appState.openInPane(sub, isDirectory: true, index: 0)
+        XCTAssertTrue(appState.dualPaneEnabled, "이미 켜져 있으면 꺼지면 안 된다")
+        XCTAssertEqual(appState.panes[0].selectedFolder, sub)
+        XCTAssertNil(appState.panes[0].peekFile, "폴더는 미리보기가 아니라 목록 이동이어야 한다")
+    }
 }

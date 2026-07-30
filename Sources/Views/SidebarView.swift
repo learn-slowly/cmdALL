@@ -566,6 +566,16 @@ struct FileTreeContextMenu: View {
         } label: {
             Label("빠른 이동…", systemImage: "bolt.badge.a")
         }
+        Button {
+            appState.openInPane(item.url, isDirectory: item.isDirectory, index: 0)
+        } label: {
+            Label("왼쪽 칸에서 열기", systemImage: "rectangle.lefthalf.filled")
+        }
+        Button {
+            appState.openInPane(item.url, isDirectory: item.isDirectory, index: 1)
+        } label: {
+            Label("오른쪽 칸에서 열기", systemImage: "rectangle.righthalf.filled")
+        }
         if !item.isDirectory {
             Button {
                 appState.requestWikiIngest(source: item.url)

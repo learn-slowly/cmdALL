@@ -147,6 +147,20 @@ final class AppState {
         openDocument(at: url, inNewTab: true)
     }
 
+    /// 사이드바 트리 우클릭 "왼쪽/오른쪽 칸에서 열기" — 두 칸 모드가 꺼져 있으면 이 호출로 자동으로 켠다
+    /// (칸이 화면에 있어야 넣을 곳이 생기니까). 폴더면 그 칸이 드릴인한 것처럼 보여주고,
+    /// 파일이면 그 칸에서 읽기 전용 미리보기(§3.2)로 연다.
+    func openInPane(_ url: URL, isDirectory: Bool, index: Int) {
+        if !dualPaneEnabled {
+            toggleDualPane()
+        }
+        if isDirectory {
+            openFolder(inPane: index, url: url)
+        } else {
+            openPeekFile(url, in: index)
+        }
+    }
+
     /// 칸이 가리키던 폴더가 rename/trash로 사라졌으면 가장 가까운 존재 조상으로 재조준
     /// (retargetStaleSelectedFolder 동형 패턴, 계획 Task 6). 히스토리 기록 없음.
     func retargetStalePanes() {
