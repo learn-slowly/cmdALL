@@ -404,3 +404,13 @@
 - 끊어진 참조 정정 2건: `scripts/package_app.sh` 주석, PRD 머리말 병합 기록.
 
 **gitignore** — `.gjc/`·`.omc/`·`.claude/settings.local.json` 추가. 실수로 커밋돼 있던 `.gjc/state/sdk/*.json` 6개는 `git rm -r --cached`로 추적 해제(디스크 파일은 그대로). untracked **75개 → 3개**로 줄어 진짜 변경사항이 가려지지 않게 됨. `swift build` 정상 확인.
+
+
+---
+
+## 2026-07-31 — todolist 3·4·5 해결(심볼릭 링크·즉석 검색 범위 안내·자동 재색인 진행 표시)
+
+- **3. 심볼릭 링크 파일이 내용 색인에서 빠지는 문제 수정.** `SearchIndexer.indexFolder`가 파일 여부를 `isRegularFile`로만 판정해 심볼릭 링크(바로가기)는 "진짜 파일도 폴더도 아님"으로 통째로 빠졌다. 링크가 폴더가 아니라 진짜 파일을 가리키면 색인 대상에 포함하도록 수정 — `resourceValues(.canonicalPathKey)`는 링크 자기 자신에 대해 링크를 안 따라간다는 걸 실측으로 확인해(기존 폴더-밖-탈출 방지 로직과 다른 함정) `FileManager.fileExists(atPath:isDirectory:)`(stat 기반, 링크를 따라감)로 판정. 깨진 링크는 그대로 제외. 테스트 1건 추가.
+- **4. 사이드바 즉석 검색 범위 안내.** 코드 확인 결과 todolist에 적힌 "md·txt만 본다"는 이미 사실과 달랐다(2026-06-29에 pdf·오피스 본문까지 이미 넓어져 있었음) — 진짜 남은 차이는 "사진 속 글자 읽기(OCR)" 결과뿐(전역 검색·자료에 묻기는 보지만 이 즉석 검색은 실시간 추출이라 안 봄). 큰 리팩터(FTS5로 전환) 대신 화면에 작은 안내 문구("사진 속 글자(OCR)는 이 검색에 포함되지 않아요") 추가로 범위 차이를 알리는 쪽 선택 — 레고 승인.
+- **5. 앱 켤 때 자동으로 도는 1회성 재색인에 진행 표시 연결.** `AppState.reindexAfterSchemaMigration`(스키마·추출판 변경 시 자동 실행)이 `progress: nil`로 호출돼 수동 재인덱싱 버튼에만 있던 진행률 바가 자동 경로엔 없었다. 기존 `indexInProgress`/`indexProgress` 상태와 `indexFolder`의 진행 콜백을 그대로 재사용해 연결. 테스트 1건 추가(자동 재색인 도중 `indexInProgress`가 실제로 true였다가 완료 후 정리되는지 폴링으로 확인).
+- 셋 다 작은 수정 3파일(`SearchIndexer.swift`·`AppState+ContentSearch.swift`·`SidebarView.swift`) + 테스트 2건. `swift test` 1,070개(기존 1,068 + 신규 2) 전부 통과.
