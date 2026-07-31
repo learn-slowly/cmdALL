@@ -23,6 +23,13 @@ struct WikiGraphView: View {
     @State private var draggingNodeID: String?
     /// 드래그 제스처 하나당 "점을 잡았는지 캔버스를 미는지"를 한 번만 판정하기 위한 플래그.
     @State private var dragTargetResolved = false
+    /// 끌기 시작 시점의 잡은 점 자리 — 바로 이웃 점들이 "얼마나 따라올지"를 매 프레임
+    /// 시작점 기준으로 다시 계산해 밀림이 누적되지 않게 한다(레고님 요청: 옆 점도 살짝 딸려오게).
+    @State private var dragOriginPosition: CGPoint?
+    @State private var neighborOriginPositions: [String: CGPoint] = [:]
+    /// 잡은 점이 움직인 만큼의 이 비율만큼만 이웃이 딸려온다 — 1.0이면 통째로 따라와
+    /// 그래프가 깨지므로 "살짝"에 맞춰 낮게 잡는다.
+    private static let neighborPullFactor: CGFloat = 0.18
     @State private var detailSheet: DetailSheet?
     private static let minScale: CGFloat = 0.2
     private static let maxScale: CGFloat = 3.0
@@ -328,12 +335,29 @@ struct WikiGraphView: View {
                     if !dragTargetResolved {
                         dragTargetResolved = true
                         draggingNodeID = nearestNode(to: value.startLocation, in: nodes, positions: positions)
+                        if let id = draggingNodeID {
+                            dragOriginPosition = positions[id]
+                            let neighborIDs = snapshot.graph.egoNodes(around: id).subtracting([id])
+                            neighborOriginPositions = neighborIDs.reduce(into: [:]) { acc, neighborID in
+                                acc[neighborID] = positions[neighborID]
+                            }
+                        }
                     }
                     if let id = draggingNodeID {
                         // 점 끌기 — 커서를 모델 좌표로 되돌려서 그 점의 새 자리로 삼는다.
-                        nodePositionOverrides[id] = CGPoint(
-                            x: (value.location.x - panOffset.width) / scale,
-                            y: (value.location.y - panOffset.height) / scale)
+                        let newPos = CGPoint(x: (value.location.x - panOffset.width) / scale,
+                                             y: (value.location.y - panOffset.height) / scale)
+                        nodePositionOverrides[id] = newPos
+                        // 바로 이웃 점들도 살짝 딸려온다(레고님 요청, 옵시디언 그래프 참고) —
+                        // 시작점 기준 이동량의 일부만 더해서 통째로 따라오지 않게 한다.
+                        if let origin = dragOriginPosition {
+                            let delta = CGSize(width: newPos.x - origin.x, height: newPos.y - origin.y)
+                            for (neighborID, neighborOrigin) in neighborOriginPositions {
+                                nodePositionOverrides[neighborID] = CGPoint(
+                                    x: neighborOrigin.x + delta.width * Self.neighborPullFactor,
+                                    y: neighborOrigin.y + delta.height * Self.neighborPullFactor)
+                            }
+                        }
                     } else {
                         panOffset = CGSize(width: dragStartOffset.width + value.translation.width,
                                            height: dragStartOffset.height + value.translation.height)
@@ -341,6 +365,8 @@ struct WikiGraphView: View {
                 }
                 .onEnded { _ in
                     dragTargetResolved = false
+                    dragOriginPosition = nil
+                    neighborOriginPositions = [:]
                     if draggingNodeID != nil {
                         draggingNodeID = nil
                     } else {
