@@ -180,6 +180,14 @@ final class RendererFeatureTests: XCTestCase {
         XCTAssertFalse(html.contains("data-line"))
         XCTAssertTrue(html.contains("disabled"))
     }
+    func testSelectionBridgeScriptAlwaysEmitted() {
+        // 2026-07-31: 오피스(kordoc 변환) 프리뷰에서 드래그 선택을 Claude 컨텍스트로 쓰려면
+        // interactiveTasks 옵션과 무관하게 selectionchange 다리가 항상 있어야 한다.
+        let withTasks = render("본문", configure: { $0.interactiveTasks = true })
+        let withoutTasks = render("본문", configure: { $0.interactiveTasks = false })
+        XCTAssertTrue(withTasks.contains("selectionChanged"))
+        XCTAssertTrue(withoutTasks.contains("selectionChanged"))
+    }
 
     func testTaskScanSkipsFencesAndCallouts() {
         let markdown = """

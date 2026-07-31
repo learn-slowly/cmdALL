@@ -88,9 +88,16 @@ final class AppClaudeTests: XCTestCase {
         XCTAssertEqual(AppState.claudeSelection(forKind: .pdf, selection: "선택"), "선택")
     }
 
-    func testSelectionIgnoredForOfficeAndImageKinds() {
-        XCTAssertEqual(AppState.claudeSelection(forKind: .office, selection: "선택"), "")
+    func testSelectionUsedForOfficeKind() {
+        // 2026-07-31: 오피스(한글·워드·엑셀 등, kordoc 변환 프리뷰)도 드래그 선택을 컨텍스트로
+        // 쓴다(MarkdownPreviewView의 selectionchange 다리). 안 그러면 긴 문서를 매번 통째로
+        // 보내다 PDF와 같은 타임아웃 위험을 그대로 물려받는다.
+        XCTAssertEqual(AppState.claudeSelection(forKind: .office, selection: "선택"), "선택")
+    }
+
+    func testSelectionIgnoredForImageAndMediaKinds() {
         XCTAssertEqual(AppState.claudeSelection(forKind: .image, selection: "선택"), "")
+        XCTAssertEqual(AppState.claudeSelection(forKind: .media, selection: "선택"), "")
     }
 
     func testContextUsesMediaNoteWhenOthersEmpty() {

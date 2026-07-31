@@ -31,6 +31,11 @@ struct MarkdownPreviewView: NSViewRepresentable {
     let baseURL: URL?
     let options: MarkdownRenderOptions
     let scrollSyncEnabled: Bool
+    /// 프리뷰(웹뷰) 안에서 드래그로 고른 텍스트(없으면 ""). 오피스(kordoc 변환) 문서 등
+    /// 편집기가 없는 읽기 화면에서 Claude 질의 컨텍스트 우선순위 1로 쓰인다(2026-07-31 —
+    /// PDFReaderView.onSelectedTextChange와 같은 목적). 기본값이라 다른 프리뷰(일반 마크다운
+    /// 프리뷰·듀얼 페인 등)는 배선 안 해도 무해.
+    var onSelectedTextChange: (String) -> Void = { _ in }
 
     func makeNSView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
@@ -42,6 +47,7 @@ struct MarkdownPreviewView: NSViewRepresentable {
         webView.navigationDelegate = context.coordinator
         context.coordinator.webView = webView
         context.coordinator.scrollSyncEnabled = scrollSyncEnabled
+        context.coordinator.onSelectedTextChange = onSelectedTextChange
 
         let prepared = context.coordinator.prepareDataview(markdown, baseURL: baseURL)
         let html = context.coordinator.renderer.renderToHTML(markdown: prepared, baseURL: baseURL, options: options)
@@ -56,6 +62,7 @@ struct MarkdownPreviewView: NSViewRepresentable {
 
     func updateNSView(_ webView: WKWebView, context: Context) {
         context.coordinator.scrollSyncEnabled = scrollSyncEnabled
+        context.coordinator.onSelectedTextChange = onSelectedTextChange
 
         // Tab switch: render the new document at once (no debounce) and start at
         // the top, rather than carrying the previous document's scroll offset.
@@ -63,6 +70,8 @@ struct MarkdownPreviewView: NSViewRepresentable {
             context.coordinator.currentDocumentID = documentID
             // 문서 전환 — 클릭-투-런 승인은 이전 문서에 한정하므로 리셋.
             context.coordinator.dataviewApproved = false
+            // 이전 문서의 선택영역이 새 문서로 새지 않게 즉시 비운다(PDF와 같은 정책, 2026-07-31).
+            context.coordinator.onSelectedTextChange("")
             context.coordinator.renderImmediately(markdown: markdown, baseURL: baseURL, options: options)
             return
         }
@@ -92,6 +101,7 @@ struct MarkdownPreviewView: NSViewRepresentable {
         var lastBaseURL: URL?
         var scrollSyncEnabled: Bool = true
         var currentDocumentID: UUID?
+        var onSelectedTextChange: (String) -> Void = { _ in }
 
         // MARK: dataviewjs (스펙 §5·§7)
         var dataviewBlocks: [DataviewBlock] = []
@@ -226,6 +236,10 @@ struct MarkdownPreviewView: NSViewRepresentable {
                 // 클릭-투-런 승인 — 이 탭·이 문서가 열려 있는 동안 유지(스펙 §7), 재렌더로 실행.
                 dataviewApproved = true
                 rerenderCurrentMarkdown()
+            }
+
+            if type == "selectionChanged" {
+                onSelectedTextChange(body["text"] as? String ?? "")
             }
         }
 

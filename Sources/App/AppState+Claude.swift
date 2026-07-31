@@ -4,11 +4,11 @@ extension AppState {
 
     // MARK: - Claude 연동
 
-    /// 선택영역은 마크다운·PDF 탭에서만 컨텍스트로 쓴다(2026-07-31 PDF 추가 — PDFView의
-    /// 드래그 선택을 onSelectedTextChange로 받아온다). 다른 종류 탭에선 이전 선택이 새지
-    /// 않도록 빈 문자열로 친다.
+    /// 선택영역은 마크다운·PDF·오피스 탭에서만 컨텍스트로 쓴다(2026-07-31 PDF 추가 — PDFView
+    /// 드래그 선택, 오피스는 kordoc 변환 프리뷰의 웹뷰 selectionchange 다리로 받아온다). 다른
+    /// 종류 탭(이미지·미디어 등)에선 이전 선택이 새지 않도록 빈 문자열로 친다.
     static func claudeSelection(forKind kind: DocumentKind, selection: String) -> String {
-        (kind == .markdown || kind == .pdf) ? selection : ""
+        (kind == .markdown || kind == .pdf || kind == .office) ? selection : ""
     }
 
     /// 질의 컨텍스트를 고른다(순수 함수). 선택영역 > 마크다운 본문 > 오피스 변환 마크다운 > PDF 추출 본문 > 미디어 짝꿍 노트 > 빈 문자열.

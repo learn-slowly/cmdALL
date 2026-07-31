@@ -596,6 +596,27 @@ class MarkdownRenderer {
             </script>
             """ : ""
 
+        // 오피스(kordoc 변환) 문서 등에서 드래그 선택한 텍스트를 Claude 질의 컨텍스트로 쓰기
+        // 위한 다리(2026-07-31, PDF의 onSelectedTextChange와 같은 목적). 항상 켠다(옵션 무관) —
+        // interactiveTasks와 달리 체크박스가 없는 문서에도 필요하다. selectionchange는 타이핑 중에도
+        // 계속 발화하므로 120ms 디바운스로 postMessage 폭주를 막는다.
+        let selectionScript = """
+            <script>
+                (function() {
+                    var timer = null;
+                    document.addEventListener('selectionchange', function() {
+                        if (timer) clearTimeout(timer);
+                        timer = setTimeout(function() {
+                            if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.cmdmd) {
+                                var text = (window.getSelection() || {}).toString() || '';
+                                window.webkit.messageHandlers.cmdmd.postMessage({ type: 'selectionChanged', text: text });
+                            }
+                        }, 120);
+                    });
+                })();
+            </script>
+            """
+
         return """
         <!DOCTYPE html>
         <html>
@@ -612,6 +633,7 @@ class MarkdownRenderer {
             \(katexIncludes)
             \(mermaidScript)
             \(taskScript)
+            \(selectionScript)
         </head>
         <body class="markdown-body">
             \(body)

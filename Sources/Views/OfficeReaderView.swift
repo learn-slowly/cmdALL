@@ -83,7 +83,10 @@ struct OfficeReaderView: View {
                         // — 전엔 항상 원본 폴더를 기준 삼아 사진이 안 보였다).
                         baseURL: result.assetDirectory ?? fileURL.deletingLastPathComponent(),
                         options: appState.renderOptions(),
-                        scrollSyncEnabled: false
+                        scrollSyncEnabled: false,
+                        onSelectedTextChange: { selected in
+                            appState.currentSelectionText = selected
+                        }
                     )
                 }
             }
@@ -145,7 +148,10 @@ private struct OfficeEditorPane: View {
             tabSize: settings.tabSize,
             insertSpacesForTab: settings.insertSpacesInsteadOfTabs,
             enableCompletion: false,
-            scrollSyncEnabled: false
+            scrollSyncEnabled: false,
+            onSelectedTextChange: { selected in
+                appState.currentSelectionText = selected
+            }
         )
     }
 }
