@@ -108,12 +108,18 @@ extension AppState {
         // 넓어진 규칙이 반영 안 된다 → 비우고 처음부터 다시 채운다(스키마 재구성
         // 경로는 이미 비어 있어 무해한 재확인일 뿐).
         await searchIndex.clear()
+        indexInProgress = true
+        indexProgress = (0, 0)
         // reindexFolder(fire-and-forget)가 아니라 searchIndexer를 직접 기다린다 —
         // 판 번호를 실제 완주 전에 적으면, 중간에 종료됐을 때 다음 실행이 "이미
         // 끝났다"고 오판해 다시 훑지 않는다(판 번호 도입 취지 자체가 무력화됨).
         for folder in settings.indexedFolders {
-            await searchIndexer.indexFolder(URL(fileURLWithPath: folder), ocrScannedPDFs: settings.ocrScannedPDFsEnabled, ocrImages: settings.ocrImagesEnabled, progress: nil)
+            await searchIndexer.indexFolder(URL(fileURLWithPath: folder), ocrScannedPDFs: settings.ocrScannedPDFsEnabled, ocrImages: settings.ocrImagesEnabled) { done, total in
+                Task { @MainActor in self.indexProgress = (done, total) }
+            }
         }
+        indexInProgress = false
+        indexProgress = nil
         await searchIndex.setExtractorVersion(SearchIndex.currentExtractorVersion)
     }
 
