@@ -1,8 +1,8 @@
 # Third-Party Notices
 
-cmd-docu는 [CmdMD](https://github.com/johnfkoo951/CmdMD)(MIT, 구요한/CMDSPACE)의 포크이며,
+cmdALL는 [CmdMD](https://github.com/johnfkoo951/CmdMD)(MIT, 구요한/CMDSPACE)의 포크이며,
 아래 오픈소스 구성요소를 사용합니다. 각 구성요소의 저작권 및 라이선스 고지를 보존합니다.
-원본 CmdMD와 cmd-docu 자체의 라이선스는 저장소 루트의 `LICENSE`를 참고하세요.
+원본 CmdMD와 cmdALL 자체의 라이선스는 저장소 루트의 `LICENSE`를 참고하세요.
 
 버전은 `Package.resolved` 기준이며, 라이선스 원문은 각 저장소의 LICENSE 파일에서 확인했습니다.
 
@@ -17,7 +17,7 @@ cmd-docu는 [CmdMD](https://github.com/johnfkoo951/CmdMD)(MIT, 구요한/CMDSPAC
 - 라이선스: BSD-3-Clause License
 - Copyright (c) 2006-2025 Josh Goebel <hello@joshgoebel.com> and other contributors
 - 라이선스 원문 헤더(highlight.min.js 상단): `License: BSD-3-Clause`
-- 비고: Highlightr Swift 패키지가 내부적으로 번들하는 JavaScript 라이브러리. cmd-docu의
+- 비고: Highlightr Swift 패키지가 내부적으로 번들하는 JavaScript 라이브러리. cmdALL의
   미리보기 렌더러(`LocalWebAssets`)도 동일 번들 파일을 인라인 주입하므로 별도 항목으로 기재.
   §4 BSD-3-Clause 전문은 아래 별도 항목 참조.
 
@@ -25,7 +25,7 @@ cmd-docu는 [CmdMD](https://github.com/johnfkoo951/CmdMD)(MIT, 구요한/CMDSPAC
 - 저장소: https://github.com/KaTeX/KaTeX
 - 라이선스: MIT License
 - Copyright (c) 2013-2020 Khan Academy and other contributors
-- 비고: 수식 렌더링. cmd-docu가 `Sources/Resources/web/katex/`에 vendored(katex.min.js·mhchem.min.js·auto-render.min.js) 후
+- 비고: 수식 렌더링. cmdALL가 `Sources/Resources/web/katex/`에 vendored(katex.min.js·mhchem.min.js·auto-render.min.js) 후
   미리보기 렌더러(`LocalWebAssets`)가 인라인 주입한다. CSS는 폰트(woff2)를 base64 data URI로 인라인한 전처리판
   (`katex.inline.min.css`, `scripts/inline_katex_fonts.py` 산출물)을 사용한다. §4 MIT 전문 공통 본문 참조.
 
@@ -33,15 +33,15 @@ cmd-docu는 [CmdMD](https://github.com/johnfkoo951/CmdMD)(MIT, 구요한/CMDSPAC
 - 저장소: https://github.com/mermaid-js/mermaid
 - 라이선스: MIT License
 - Copyright (c) 2014-2022 Knut Sveidqvist
-- 비고: 다이어그램 렌더링. cmd-docu가 `Sources/Resources/web/mermaid/mermaid.min.js`(UMD)로 vendored 후
+- 비고: 다이어그램 렌더링. cmdALL가 `Sources/Resources/web/mermaid/mermaid.min.js`(UMD)로 vendored 후
   `LocalWebAssets`가 인라인 주입한다. §4 MIT 전문 공통 본문 참조.
 
 ### luxon 3.5.0
 - 저장소: https://github.com/moment/luxon
 - 라이선스: MIT License
 - Copyright (c) 2019 JS Foundation and other contributors
-- 비고: dataviewjs 프리뷰 렌더용 날짜 라이브러리. cmd-docu가 `Sources/Resources/web/luxon/luxon.min.js`로
-  vendored 후 dv-shim(`Sources/Resources/web/dataview/dv-shim.js`, cmd-docu 자체 작성)과 함께
+- 비고: dataviewjs 프리뷰 렌더용 날짜 라이브러리. cmdALL가 `Sources/Resources/web/luxon/luxon.min.js`로
+  vendored 후 dv-shim(`Sources/Resources/web/dataview/dv-shim.js`, cmdALL 자체 작성)과 함께
   `LocalWebAssets`가 JSContext에 로드한다. §4 MIT 전문 공통 본문 참조.
 
 ### hwp-convert 1.11.0
@@ -52,7 +52,7 @@ cmd-docu는 [CmdMD](https://github.com/johnfkoo951/CmdMD)(MIT, 구요한/CMDSPAC
   읽기/쓰기·HWP→HWPX 변환·Markdown/HTML 양방향 변환의 골격 제공
 - Copyright (c) 2025-2026 Edward Kim — [rhwp](https://github.com/edwardkim/rhwp)(Rust, MIT)의
   HWP 5.0(CFB/OLE2) 바이너리 파서 구조를 TypeScript로 포팅
-- 비고: 구형 `.hwp`(바이너리) 원본을 서식 있는 HTML(표·굵게·색·정렬 보존)로 그린다. cmd-docu가
+- 비고: 구형 `.hwp`(바이너리) 원본을 서식 있는 HTML(표·굵게·색·정렬 보존)로 그린다. cmdALL가
   공식 브라우저 ESM 빌드(`dist/browser/hwp-convert.browser.mjs`)를 esbuild로 다시 IIFE로 묶어
   (`scripts/vendor_hwpconvert.sh`) `Sources/Resources/web/hwpconvert/hwpconvert.bundle.js`로
   vendored 후 `HwpConvertRenderService`가 WKWebView 안에서 직접 실행한다(Node 프로세스 호출

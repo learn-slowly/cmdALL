@@ -3,7 +3,7 @@
 # Sources/Resources/web/hwpconvert/에 반영한다(버전 갱신 시 재실행).
 #
 # hwp-convert는 이미 공식 브라우저 ESM 번들(dist/browser/hwp-convert.browser.mjs)을 낸다 —
-# hwp.js 때처럼 Node 전용 모듈을 stub할 필요가 없다. 다만 cmd-docu의 다른 로컬 자산
+# hwp.js 때처럼 Node 전용 모듈을 stub할 필요가 없다. 다만 cmdALL의 다른 로컬 자산
 # (katex/mermaid/luxon 등)과 로딩 방식을 맞추려고 ESM(import/export)이 아니라 평범한
 # <script> 인라인 주입이 가능한 IIFE(전역 window.HWPCONVERT)로 한 번 더 묶는다.
 set -euo pipefail

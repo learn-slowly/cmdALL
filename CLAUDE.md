@@ -1,4 +1,4 @@
-# cmd-docu — Claude Code 개발 지시서
+# cmdALL — Claude Code 개발 지시서
 
 > 이 파일은 저장소 루트의 규칙 문서다. 앱을 만들 때 항상 이 규칙을 따른다.
 > 어느 문서를 어떤 순서로 보는지는 `AGENTS.md`(문서 지도) 참조.

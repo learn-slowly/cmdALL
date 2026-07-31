@@ -1,5 +1,5 @@
 #!/usr/bin/env swift
-// cmd-docu(cmdALL) 앱 아이콘 생성기.
+// cmdALL(cmdALL) 앱 아이콘 생성기.
 // 콘셉: 짙은 청회색 배경 + ⌘(커맨드 키) 기호(90% 크기) + 오른쪽 아래 구석에 작은 별표(＊) 포인트.
 // ⌘=명령, ＊=컴퓨터에서 익숙한 "전체/와일드카드" 기호 — 두 기호로 cmdALL을 은유.
 // 이 파일의 색·비율 상수는 Sources/Models/Brand.swift의 DocBrand와 값을 공유한다
