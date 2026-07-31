@@ -266,6 +266,13 @@ struct FolderSearchView: View {
             .background(Color(nsColor: .controlBackgroundColor))
             
             Divider()
+            // 이 즉석 검색은 pdf·한글/오피스 문서 내용까지는 보지만, "사진 속 글자
+            // 읽기(OCR)" 결과는 안 본다(전역 검색·자료에 묻기는 봄) — 범위 차이를 알림.
+            Text("사진 속 글자(OCR)는 이 검색에 포함되지 않아요")
+                .font(.caption2)
+                .foregroundColor(.secondary)
+                .padding(.horizontal, 8)
+                .padding(.top, 4)
             
             if appState.isSearching {
                 VStack {
