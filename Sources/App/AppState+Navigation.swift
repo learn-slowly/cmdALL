@@ -208,6 +208,17 @@ extension AppState {
         return settings.librarySorts[Self.folderMemoryKey(for: url)] ?? .default
     }
 
+    /// 특정 폴더의 정렬을 직접 기억한다 — 사이드바 트리 "정렬 기준" 메뉴가 호출(스펙: 폴더별 정렬).
+    /// 그 폴더가 지금 라이브러리에 표시 중이면(folderMemoryTarget과 동일) librarySort도 함께 갱신해
+    /// 툴바 정렬 메뉴·리스트가 즉시 같은 값을 보이게 한다.
+    func setSort(_ sort: LibrarySort, for url: URL) {
+        settings.librarySorts[Self.folderMemoryKey(for: url)] = sort
+        saveUserData()
+        if let target = folderMemoryTarget, Self.folderMemoryKey(for: target) == Self.folderMemoryKey(for: url) {
+            librarySort = sort
+        }
+    }
+
     func openInternalURL(_ url: URL) {
         guard url.scheme == "cmdmd" else { return }
 

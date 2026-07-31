@@ -358,6 +358,8 @@ final class AppState {
     var showFileOpsHistory: Bool = false
     /// 이름 변경 시트 요청(.sheet(item:)).
     var renameRequest: RenameRequest? = nil
+    /// 사이드바 트리 인라인 이름 변경 대상 — 팝업 시트(renameRequest)와 별개(스펙: 트리는 그 자리 편집).
+    var inlineRenameURL: URL? = nil
     /// 정보 보기 시트 요청(.sheet(item:)).
     var fileInfoRequest: FileInfoRequest? = nil
     /// 두 파일 비교 시트 요청(.sheet(item:)) — Docufinder 격차 3번.

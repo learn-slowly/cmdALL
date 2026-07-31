@@ -155,6 +155,10 @@ struct FileTreeView: View {
                     SidebarHeader(
                         title: appState.currentFolder?.lastPathComponent ?? "Files"
                     ) {
+                        if let currentFolder = appState.currentFolder {
+                            FolderSortMenu(folder: currentFolder)
+                        }
+
                         Button { showSearch = true } label: {
                             Image(systemName: "magnifyingglass")
                         }
@@ -172,14 +176,17 @@ struct FileTreeView: View {
                         // 평탄화: 모든 노드가 각자의 List 행 — 자식을 부모 행 안에
                         // 중첩하면 macOS가 우클릭을 행 단위로 해석해 최상위 폴더
                         // contextMenu가 자식 행을 가로챈다(2026-07-05 실기 실증).
-                        ForEach(FileTreeFlattener.flatten(items: appState.fileTree,
-                                                          expanded: appState.expandedFolders,
-                                                          root: appState.currentFolder,
-                                                          parent: appState.currentFolder,
-                                                          sortFor: appState.sortForFolder)) { row in
+                        let rows = FileTreeFlattener.flatten(items: appState.fileTree,
+                                                              expanded: appState.expandedFolders,
+                                                              root: appState.currentFolder,
+                                                              parent: appState.currentFolder,
+                                                              sortFor: appState.sortForFolder)
+                        // Shift 범위 선택의 기준 순서 — 화면에 보이는 행 순서 그대로.
+                        let orderedURLs = rows.map { $0.item.url }
+                        ForEach(rows) { row in
                             // 들여쓰기는 행 내부(depth)에서 적용 — 밖에서 패딩하면
                             // 거터가 행 히트영역(우클릭·드롭) 밖으로 빠진다(리뷰 지적).
-                            FileTreeItemRow(item: row.item, depth: row.depth)
+                            FileTreeItemRow(item: row.item, depth: row.depth, ordered: orderedURLs)
                         }
                     }
                     .listStyle(.sidebar)
@@ -371,6 +378,8 @@ struct FileTreeItemRow: View {
     /// 평탄화 깊이(들여쓰기 단계). 패딩은 히트영역 체인(contentShape·contextMenu·onDrop)
     /// 앞에 행 내부에서 적용해 거터까지 행이 소유한다.
     var depth: Int = 0
+    /// Shift 범위 선택의 기준 순서(화면에 보이는 행 순서) — FileTreeView가 주입.
+    var ordered: [URL] = []
 
     private var isFavorited: Bool {
         appState.favorites.contains(where: { $0.url == item.url })
@@ -385,8 +394,42 @@ struct FileTreeItemRow: View {
     @State private var isDropTargeted = false
     @State private var springLoadTask: Task<Void, Never>?
 
+    /// 사이드바 트리 인라인 이름 변경(파인더식 그 자리 편집) — 팝업 시트 대신 이 행 안에서 처리.
+    @State private var renameText: String = ""
+    @FocusState private var renameFieldFocused: Bool
+
+    private var isRenaming: Bool {
+        appState.inlineRenameURL == item.url
+    }
+
     var body: some View {
         rowContent
+            .onChange(of: appState.inlineRenameURL) { _, newValue in
+                guard newValue == item.url else { return }
+                renameText = item.url.lastPathComponent
+                renameFieldFocused = true
+            }
+    }
+
+    /// 클릭 한 번 처리(트리 공용) — ⌘=선택 토글, ⇧=범위 선택, 그 외=선택 해제 후 열기/드릴인.
+    private func handleTap() {
+        let flags = NSEvent.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        if flags.contains(.command) {
+            appState.toggleFileSelection(item.url)
+        } else if flags.contains(.shift) {
+            appState.handleFileClick(item.url, modifier: .shift, ordered: ordered)
+        } else {
+            appState.clearFileSelection()
+            if item.isDirectory {
+                if appState.dualPaneEnabled {
+                    appState.openFolderInFocusedPane(item.url)
+                } else {
+                    appState.selectFolderForLibrary(item.url)
+                }
+            } else {
+                appState.openDocument(at: item.url, inNewTab: true)
+            }
+        }
     }
 
     @ViewBuilder
@@ -413,19 +456,7 @@ struct FileTreeItemRow: View {
                 labelRow
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .contentShape(Rectangle())
-                    .onTapGesture {
-                        // ⌘클릭 = 선택 토글만(모드 전환 없음, F1b 스펙 §3.2)
-                        if NSEvent.modifierFlags.intersection(.deviceIndependentFlagsMask).contains(.command) {
-                            appState.toggleFileSelection(item.url)
-                        } else {
-                            appState.clearFileSelection()
-                            if appState.dualPaneEnabled {
-                                appState.openFolderInFocusedPane(item.url)
-                            } else {
-                                appState.selectFolderForLibrary(item.url)
-                            }
-                        }
-                    }
+                    .onTapGesture { handleTap() }
             }
             .padding(.leading, CGFloat(depth) * 12)
             // 행 전체 우클릭 히트영역 확보(들여쓰기 거터 포함 — 패딩 뒤에 셰이프).
@@ -449,14 +480,7 @@ struct FileTreeItemRow: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.leading, CGFloat(depth) * 12)
                 .contentShape(Rectangle())
-                .onTapGesture {
-                    if NSEvent.modifierFlags.intersection(.deviceIndependentFlagsMask).contains(.command) {
-                        appState.toggleFileSelection(item.url)
-                    } else {
-                        appState.clearFileSelection()
-                        appState.openDocument(at: item.url, inNewTab: true)
-                    }
-                }
+                .onTapGesture { handleTap() }
                 .contextMenu {
                     FileTreeContextMenu(item: item)
                 }
@@ -468,21 +492,23 @@ struct FileTreeItemRow: View {
         }
     }
 
-    /// 이 행 자신의 라벨(아이콘+이름+즐겨찾기 별).
+    /// 이 행 자신의 라벨(아이콘+이름+즐겨찾기 별). 인라인 이름 변경 중엔 이름 자리가 입력칸으로 바뀐다.
     /// archive면 이 라벨에만 dim을 적용하고 DisclosureGroup 자식에는 상속되지 않는다.
     private var labelRow: some View {
         HStack(spacing: 4) {
             rowLabel
-            if isFavorited {
-                Image(systemName: "star.fill")
-                    .font(.caption2)
-                    .foregroundColor(.yellow)
-            }
-            if item.hasCompanionNote {
-                Image(systemName: "note.text")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .help("짝꿍 노트 있음")
+            if !isRenaming {
+                if isFavorited {
+                    Image(systemName: "star.fill")
+                        .font(.caption2)
+                        .foregroundColor(.yellow)
+                }
+                if item.hasCompanionNote {
+                    Image(systemName: "note.text")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .help("짝꿍 노트 있음")
+                }
             }
         }
         .opacity(paraCategory == .archive ? 0.45 : 1.0)
@@ -507,10 +533,21 @@ struct FileTreeItemRow: View {
         }
     }
 
-    /// PARA 분류에 따라 스타일을 적용한 Label을 반환한다.
+    /// PARA 분류에 따라 스타일을 적용한 Label을 반환한다. 인라인 이름 변경 중엔 텍스트 필드로 대체.
     @ViewBuilder
     private var rowLabel: some View {
-        if paraCategory == .projects && item.isDirectory {
+        if isRenaming {
+            HStack(spacing: 4) {
+                Image(systemName: item.icon)
+                    .foregroundStyle(paraCategory == .projects && item.isDirectory
+                                      ? Color.cmdsAccent : Color.secondary)
+                TextField("이름", text: $renameText)
+                    .textFieldStyle(.plain)
+                    .focused($renameFieldFocused)
+                    .onSubmit { confirmRename() }
+                    .onExitCommand { cancelRename() }
+            }
+        } else if paraCategory == .projects && item.isDirectory {
             Label {
                 Text(item.name)
                     .fontWeight(.medium)
@@ -523,6 +560,92 @@ struct FileTreeItemRow: View {
             Label(item.name, systemImage: item.icon)
                 .lineLimit(1)
         }
+    }
+
+    /// Return 확정 — 이름 그대로면(트리밍 후 동일) 조용히 편집만 닫는다. 실패 시 토스트로 알림.
+    private func confirmRename() {
+        let trimmed = renameText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, trimmed != item.url.lastPathComponent else {
+            appState.inlineRenameURL = nil
+            return
+        }
+        let url = item.url
+        Task { @MainActor in
+            do {
+                try await appState.performRename(at: url, to: trimmed)
+            } catch {
+                appState.showToast((error as? FileOperationError)?.errorDescription
+                                    ?? error.localizedDescription)
+            }
+            appState.inlineRenameURL = nil
+        }
+    }
+
+    /// Esc 취소 — 파일은 그대로 두고 편집만 닫는다.
+    private func cancelRename() {
+        appState.inlineRenameURL = nil
+    }
+}
+
+/// 정렬 메뉴 내용(키 선택 + 방향) — 사이드바 헤더의 아이콘 메뉴와 트리 우클릭 서브메뉴가 함께 쓴다.
+private struct FolderSortMenuItems: View {
+    @Environment(AppState.self) private var appState
+    let folder: URL
+
+    private var current: LibrarySort { appState.sortForFolder(folder) }
+
+    var body: some View {
+        ForEach(LibrarySortKey.allCases, id: \.self) { key in
+            Button {
+                appState.setSort(current.selecting(key), for: folder)
+            } label: {
+                if current.key == key {
+                    Label(key.title, systemImage: "checkmark")
+                } else {
+                    Text(key.title)
+                }
+            }
+        }
+        Divider()
+        Button {
+            var sort = current
+            sort.ascending = true
+            appState.setSort(sort, for: folder)
+        } label: {
+            if current.key != .para && current.ascending {
+                Label("오름차순", systemImage: "checkmark")
+            } else {
+                Text("오름차순")
+            }
+        }
+        .disabled(current.key == .para)
+        Button {
+            var sort = current
+            sort.ascending = false
+            appState.setSort(sort, for: folder)
+        } label: {
+            if current.key != .para && !current.ascending {
+                Label("내림차순", systemImage: "checkmark")
+            } else {
+                Text("내림차순")
+            }
+        }
+        .disabled(current.key == .para)
+    }
+}
+
+/// 사이드바 헤더의 정렬 버튼(현재 열려 있는 최상위 폴더 기준) — 툴바 LibrarySortMenu와 같은 저장소를 쓴다.
+struct FolderSortMenu: View {
+    let folder: URL
+
+    var body: some View {
+        Menu {
+            FolderSortMenuItems(folder: folder)
+        } label: {
+            Image(systemName: "arrow.up.arrow.down")
+        }
+        .fixedSize()
+        .help("정렬 기준")
     }
 }
 
@@ -549,7 +672,7 @@ struct FileTreeContextMenu: View {
     @ViewBuilder
     private var singleItemMenu: some View {
         Button {
-            appState.renameRequest = RenameRequest(url: item.url)
+            appState.inlineRenameURL = item.url
         } label: {
             Label("이름 변경…", systemImage: "pencil")
         }
@@ -607,6 +730,10 @@ struct FileTreeContextMenu: View {
                 createNewFolder(in: item.url)
             } label: {
                 Label("New Folder", systemImage: "folder.badge.plus")
+            }
+
+            Menu("정렬 기준") {
+                FolderSortMenuItems(folder: item.url)
             }
 
             if !FilePasteboard.readFileURLs().isEmpty {
