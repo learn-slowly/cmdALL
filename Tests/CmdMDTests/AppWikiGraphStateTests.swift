@@ -122,4 +122,44 @@ final class AppWikiGraphStateTests: XCTestCase {
         }
         XCTAssertEqual(app.activeTab?.fileURL, wikiDir.appendingPathComponent("a.md"))
     }
+
+    // MARK: - 왼쪽 리본 "위키" 버튼(openWikiHome)
+
+    func testOpenWikiHomePrefersIndexMdWhenPresent() async throws {
+        writePage("index.md", body: "홈")
+        writePage("README.md", body: "안 씀 — index.md가 우선")
+        app.openWikiHome()
+        var tries = 0
+        while app.activeTab == nil && tries < 200 {
+            try await Task.sleep(nanoseconds: 10_000_000)
+            tries += 1
+        }
+        XCTAssertEqual(app.activeTab?.fileURL, wikiDir.appendingPathComponent("index.md"))
+    }
+
+    func testOpenWikiHomeFallsBackToReadmeWhenNoIndex() async throws {
+        writePage("README.md", body: "홈 대신")
+        app.openWikiHome()
+        var tries = 0
+        while app.activeTab == nil && tries < 200 {
+            try await Task.sleep(nanoseconds: 10_000_000)
+            tries += 1
+        }
+        XCTAssertEqual(app.activeTab?.fileURL, wikiDir.appendingPathComponent("README.md"))
+    }
+
+    /// 후보 파일이 하나도 없으면 빈 화면 대신 최소한 위키 폴더라도 열어야 한다.
+    func testOpenWikiHomeOpensFolderWhenNoCandidateExists() {
+        writePage("아무거나.md", body: "")
+        app.openWikiHome()
+        XCTAssertEqual(app.currentFolder?.standardizedFileURL.path, wikiDir.standardizedFileURL.path)
+        XCTAssertNotNil(app.toastMessage)
+    }
+
+    func testOpenWikiHomeTogglesToastWhenWikiFolderUnset() {
+        app.settings.wikiFolder = nil
+        app.openWikiHome()
+        XCTAssertNotNil(app.toastMessage)
+        XCTAssertNil(app.currentFolder)
+    }
 }

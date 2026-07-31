@@ -52,6 +52,10 @@ struct SidebarRibbon: View {
 
             Spacer(minLength: 8)
 
+            RibbonButton(icon: "text.book.closed", help: "위키 홈 열기") {
+                appState.openWikiHome()
+            }
+
             RibbonButton(icon: "folder.badge.plus", help: "Open Folder (⌥⌘O)") {
                 appState.openFolder()
             }

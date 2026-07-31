@@ -9,6 +9,27 @@ extension AppState {
         showWikiGraph = true
         Task { await loadWikiGraph() }
     }
+    /// 왼쪽 리본 "위키" 버튼 — 위키 루트에서 흔히 쓰는 첫 페이지 이름을 순서대로 찾아 탭으로
+    /// 연다(레고님 요청: "누르면 index.md라던지 뭔가 메인화면을 보여주게"). 못 찾으면 최소한
+    /// 위키 폴더라도 열어 훑어볼 수 있게 한다 — 빈 화면으로 끝나지 않는다.
+    static let wikiHomeCandidates = ["index.md", "0_index.md", "README.md", "Home.md", "home.md"]
+
+    func openWikiHome() {
+        guard let folderPath = settings.wikiFolder else {
+            showToast("위키 폴더가 설정되지 않았습니다 — 설정 > Wiki 탭에서 먼저 지정하세요")
+            return
+        }
+        let root = URL(fileURLWithPath: folderPath)
+        let fm = FileManager.default
+        if let home = Self.wikiHomeCandidates
+            .map({ root.appendingPathComponent($0) })
+            .first(where: { fm.fileExists(atPath: $0.path) }) {
+            openDocument(at: home, inNewTab: true)
+        } else {
+            openFolder(at: root)
+            showToast("위키 폴더에 index.md 같은 첫 페이지가 없어서 폴더를 열었습니다")
+        }
+    }
 
     /// 폴더 확인 → 로드 → 시작 포커스 결정을 한 번에 수행. 중복 로드는 무시(가드).
     @MainActor
