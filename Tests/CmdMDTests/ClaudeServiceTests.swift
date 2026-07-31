@@ -30,6 +30,17 @@ final class ClaudeServiceTests: XCTestCase {
         XCTAssertEqual(stdin, "")
     }
 
+    func testMakeInputPrependsModelFlagWhenSet() {
+        // 2026-07-31: 설정 화면에서 고른 모델을 --model로 앞에 붙인다.
+        let (args, _) = ClaudeService.makeInput(prompt: "안녕", context: "", model: "opus")
+        XCTAssertEqual(args, ["--model", "opus", "-p", "안녕"])
+    }
+
+    func testMakeInputOmitsModelFlagWhenEmpty() {
+        let (args, _) = ClaudeService.makeInput(prompt: "안녕", context: "", model: "")
+        XCTAssertEqual(args, ["-p", "안녕"])
+    }
+
     // MARK: - stream-json 파서 (실측 fixture 기반)
 
     func testTextDeltaParsesRealStreamEventLine() {
@@ -73,5 +84,24 @@ final class ClaudeServiceTests: XCTestCase {
         XCTAssertTrue(args.contains("stream-json"))
         XCTAssertTrue(args.contains("--verbose"))
         XCTAssertTrue(args.contains("--include-partial-messages"))
+    }
+
+    func testMakeStreamArgumentsPrependsModelFlagWhenSet() {
+        let args = ClaudeService.makeStreamArguments(prompt: "q", model: "sonnet")
+        XCTAssertEqual(Array(args.prefix(4)), ["--model", "sonnet", "-p", "q"])
+    }
+
+    func testMakeStreamArgumentsOmitsModelFlagWhenEmpty() {
+        let args = ClaudeService.makeStreamArguments(prompt: "q", model: "")
+        XCTAssertEqual(Array(args.prefix(2)), ["-p", "q"])
+        XCTAssertFalse(args.contains("--model"))
+    }
+
+    func testSetModelTrimsWhitespace() async {
+        // 2026-07-31: 설정 화면 입력값에 실수로 들어간 앞뒤 공백이 --model 인자로 새지 않게.
+        let service = ClaudeService()
+        await service.setModel("  opus  ")
+        let stored = await service.model
+        XCTAssertEqual(stored, "opus")
     }
 }

@@ -601,9 +601,12 @@ final class AppState {
         AppState.shared = self
 
         loadUserData()
-        // 설정에 저장된 provider를 라우터에 동기화 — 위에서 만든 aiRouter는 임시 .claude였다.
+        // 설정에 저장된 provider·모델을 서비스에 동기화 — 위에서 만든 aiRouter/claudeService는
+        // 임시(.claude·모델 미지정)였다.
         let savedProvider = settings.aiProvider
         Task { await self.aiRouter.setProvider(savedProvider) }
+        let savedClaudeModel = settings.claudeModel
+        Task { await self.claudeService.setModel(savedClaudeModel) }
         // 검색 인덱스 스키마가 바뀌어 재구성됐으면 등록 폴더를 자동 재인덱싱(1회).
         Task { @MainActor in await self.reindexAfterSchemaMigration() }
         // 등록 폴더 파일 감시 시작(앱 시작 시 1회).

@@ -52,6 +52,15 @@ extension ClaudeAsking {
 actor ClaudeService: ClaudeAsking {
     // ask()/askStream()의 기본 Process 타임아웃. 출력이 긴 호출은 ask(…timeout:)으로 상향.
     private let timeout: TimeInterval = 120
+    /// 설정 화면에서 고른 세션 모델(별칭·전체이름, 예: "opus"). 빈 문자열이면 `--model`
+    /// 플래그를 넘기지 않고 claude 자체 기본값을 그대로 쓴다(2026-07-31, AppState가
+    /// settings.claudeModel 변경 시 setModel로 동기화).
+    private(set) var model: String = ""
+
+    /// AppState가 설정 변경 시 호출 — 다음 ask/askStream부터 반영된다.
+    func setModel(_ model: String) {
+        self.model = model.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
 
     /// claude CLI 종료코드/stderr를 사용자 분기 에러로 분류한다(순수 함수).
     static func classify(exitCode: Int32, stderr: String) -> ClaudeError {
@@ -69,9 +78,12 @@ actor ClaudeService: ClaudeAsking {
     }
 
     /// claude 호출 인자/stdin을 만든다(순수 함수). 프롬프트=`-p` 인자, 컨텍스트=stdin.
-    static func makeInput(prompt: String, context: String) -> (arguments: [String], stdin: String) {
+    /// model이 비어있지 않으면 `--model <model>`을 앞에 붙인다(2026-07-31, 설정 화면 모델 선택).
+    static func makeInput(prompt: String, context: String, model: String = "") -> (arguments: [String], stdin: String) {
         let trimmed = context.trimmingCharacters(in: .whitespacesAndNewlines)
-        return (["-p", prompt], trimmed)
+        var arguments = ["-p", prompt]
+        if !model.isEmpty { arguments = ["--model", model] + arguments }
+        return (arguments, trimmed)
     }
 
     /// 열린 문서 컨텍스트와 프롬프트를 claude -p로 보내고 stdout 응답을 반환한다.
@@ -83,7 +95,7 @@ actor ClaudeService: ClaudeAsking {
     /// 호출이 기본 120s 대신 자기 한도를 지정한다. 그 외 동작은 ask와 동일.
     func ask(prompt: String, context: String, timeout: TimeInterval) async throws -> String {
         guard let claudePath = Self.resolveClaudePath() else { throw ClaudeError.toolNotFound }
-        let (arguments, stdin) = Self.makeInput(prompt: prompt, context: context)
+        let (arguments, stdin) = Self.makeInput(prompt: prompt, context: context, model: model)
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: claudePath)
@@ -149,12 +161,15 @@ actor ClaudeService: ClaudeAsking {
     // MARK: - 스트리밍 (askStream)
 
     /// stream-json 스트리밍용 인자(순수 함수). 프롬프트=`-p` 인자, 컨텍스트=stdin(ask와 동일).
-    /// `--verbose`는 stream-json에 필수(줄단위 이벤트를 내보내려면 필요).
-    static func makeStreamArguments(prompt: String) -> [String] {
-        ["-p", prompt,
-         "--output-format", "stream-json",
-         "--verbose",
-         "--include-partial-messages"]
+    /// `--verbose`는 stream-json에 필수(줄단위 이벤트를 내보내려면 필요). model이 비어있지
+    /// 않으면 `--model <model>`을 앞에 붙인다(2026-07-31).
+    static func makeStreamArguments(prompt: String, model: String = "") -> [String] {
+        var arguments = ["-p", prompt,
+                          "--output-format", "stream-json",
+                          "--verbose",
+                          "--include-partial-messages"]
+        if !model.isEmpty { arguments = ["--model", model] + arguments }
+        return arguments
     }
 
     /// stream-json 한 줄에서 텍스트 델타를 뽑는다(순수 함수).
@@ -183,16 +198,17 @@ actor ClaudeService: ClaudeAsking {
     /// ask와 동일한 골격(경로 탐지→Process 3파이프→stdin detached write→120s 협조 타임아웃) 위에
     /// stdout을 줄 단위로 증분 파싱해 text_delta를 yield한다. 기존 `ask`는 그대로 둔다(RAG·라우팅 의존).
     func askStream(prompt: String, context: String) -> AsyncThrowingStream<String, Error> {
-        AsyncThrowingStream { continuation in
+        let currentModel = model
+        return AsyncThrowingStream { continuation in
             // process는 work·onTermination 양쪽에서 참조(소비자 취소 시 즉시 terminate).
             let process = Process()
-            let work = Task.detached { [timeout] in
+            let work = Task.detached { [timeout, currentModel] in
                 guard let claudePath = Self.resolveClaudePath() else {
                     continuation.finish(throwing: ClaudeError.toolNotFound)
                     return
                 }
                 process.executableURL = URL(fileURLWithPath: claudePath)
-                process.arguments = Self.makeStreamArguments(prompt: prompt)
+                process.arguments = Self.makeStreamArguments(prompt: prompt, model: currentModel)
                 process.environment = SubprocessEnvironment.environment(forTool: claudePath)
 
                 let stdinPipe = Pipe()

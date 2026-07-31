@@ -103,6 +103,9 @@ struct AppSettings: Codable, Equatable {
 
     // MARK: AI 로그인
     var aiProvider: AIProvider = .claude   // 폴더 정리·질의·위키 정리에 쓸 활성 AI
+    /// 클로드 세션 모델 지정(claude CLI `--model` 별칭·전체이름, 예: "opus"·"sonnet").
+    /// 빈 문자열이면 플래그를 넘기지 않고 claude 자체 기본값을 그대로 쓴다(2026-07-31).
+    var claudeModel: String = ""
 
     // MARK: PARA 스마트 라우팅
     var paraVaultId: UUID? = nil           // 지정 PARA 볼트
@@ -199,6 +202,7 @@ struct AppSettings: Codable, Equatable {
         conflictResolution = try c.decodeIfPresent(FileConflictResolution.self, forKey: .conflictResolution) ?? d.conflictResolution
         injectFrontmatterByDefault = try c.decodeIfPresent(Bool.self, forKey: .injectFrontmatterByDefault) ?? d.injectFrontmatterByDefault
         aiProvider = try c.decodeIfPresent(AIProvider.self, forKey: .aiProvider) ?? d.aiProvider
+        claudeModel = try c.decodeIfPresent(String.self, forKey: .claudeModel) ?? d.claudeModel
         paraVaultId = try c.decodeIfPresent(UUID.self, forKey: .paraVaultId) ?? d.paraVaultId
         paraFolders = try c.decodeIfPresent([ParaFolder].self, forKey: .paraFolders) ?? d.paraFolders
         claudeRoutingEnabled = try c.decodeIfPresent(Bool.self, forKey: .claudeRoutingEnabled) ?? d.claudeRoutingEnabled

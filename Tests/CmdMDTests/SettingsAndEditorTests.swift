@@ -27,12 +27,21 @@ final class SettingsAndEditorTests: XCTestCase {
         settings.enableKaTeX = true
         settings.ocrImagesEnabled = true
         settings.menuBarIconEnabled = false
+        settings.claudeModel = "opus"
 
         let data = try JSONEncoder().encode(settings)
         let decoded = try JSONDecoder().decode(AppSettings.self, from: data)
         XCTAssertEqual(decoded, settings)
         XCTAssertTrue(decoded.ocrImagesEnabled, "ocrImagesEnabled이 라운드트립에서 유지돼야 한다")
         XCTAssertFalse(decoded.menuBarIconEnabled, "menuBarIconEnabled이 라운드트립에서 유지돼야 한다(꺼도 재시작 후 꺼진 채로 있어야 함)")
+        XCTAssertEqual(decoded.claudeModel, "opus", "claudeModel이 라운드트립에서 유지돼야 한다(2026-07-31)")
+    }
+
+    func testClaudeModelDefaultsToEmptyForOldSettingsFile() throws {
+        // 2026-07-31 이전 settings.json(claudeModel 키 없음)도 깨지지 않고 빈 문자열(=자동)로.
+        let old = Data(#"{"fontSize":14}"#.utf8)
+        let decoded = try JSONDecoder().decode(AppSettings.self, from: old)
+        XCTAssertEqual(decoded.claudeModel, "")
     }
 
     // MARK: Session state
