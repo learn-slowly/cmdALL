@@ -12,7 +12,14 @@ struct WikiGraphView: View {
     @State private var scale: CGFloat = 1
     @State private var panOffset: CGSize = .zero
     @State private var dragStartOffset: CGSize = .zero
+    /// 핀치 제스처 하나가 시작될 때의 배율 — 이게 없으면 제스처가 끝났다 다시 시작할 때마다
+    /// SwiftUI가 주는 상대 배율(1부터 다시 시작)로 스케일을 덮어써 방금 확대한 게 도로 풀렸다.
+    @State private var magnifyBaseScale: CGFloat = 1
+    /// 화면 중앙 기준 확대/축소를 계산하려면 캔버스의 실제 픽셀 크기가 필요하다.
+    @State private var canvasSize: CGSize = .zero
     @State private var detailSheet: DetailSheet?
+    private static let minScale: CGFloat = 0.2
+    private static let maxScale: CGFloat = 3.0
 
     private enum DetailSheet: Identifiable {
         case unresolved, ambiguous
@@ -91,6 +98,8 @@ struct WikiGraphView: View {
             .pickerStyle(.segmented)
             .frame(maxWidth: 260)
             Spacer()
+            zoomControls
+            Spacer()
             Button {
                 Task { await appState.loadWikiGraph() }
             } label: {
@@ -99,6 +108,72 @@ struct WikiGraphView: View {
             .disabled(appState.wikiGraphBusy)
         }
         .padding(10)
+    }
+
+    // MARK: - 확대/축소(레고님 피드백 "정신없다" — 화면 중앙 기준 줌 + 버튼/단축키/트랙패드 모두 지원)
+
+    private var zoomControls: some View {
+        HStack(spacing: 6) {
+            Button {
+                zoom(to: Self.clampScale(scale / ImageZoomMath.factor))
+            } label: {
+                Image(systemName: "minus.magnifyingglass")
+            }
+            .keyboardShortcut("-", modifiers: .command)
+            .help("축소")
+
+            Text(ImageZoomMath.percentLabel(scale))
+                .font(.caption).monospacedDigit()
+                .frame(minWidth: 42)
+                .contentShape(Rectangle())
+                .onTapGesture { resetView() }
+                .help("눌러서 원래 크기로")
+
+            Button {
+                zoom(to: Self.clampScale(scale * ImageZoomMath.factor))
+            } label: {
+                Image(systemName: "plus.magnifyingglass")
+            }
+            .keyboardShortcut("+", modifiers: .command)
+            .help("확대")
+
+            Button {
+                resetView()
+            } label: {
+                Image(systemName: "arrow.up.left.and.down.right.magnifyingglass")
+            }
+            .keyboardShortcut("0", modifiers: .command)
+            .help("맞춤(원래 크기·가운데로)")
+        }
+        .buttonStyle(.plain)
+    }
+
+    private static func clampScale(_ value: CGFloat) -> CGFloat {
+        ImageZoomMath.clamp(value, min: minScale, max: maxScale)
+    }
+
+    /// 화면 중앙을 기준으로 확대/축소 — 어느 방향으로 줌해도 보던 자리가 화면 가운데 그대로
+    /// 있게 유지한다(예전엔 캔버스 왼쪽위 기준이라 확대할 때마다 그림이 오른쪽아래로 튀어나가
+    /// 사용자가 "정신없다"고 느꼈다).
+    private func zoom(to newScaleRaw: CGFloat) {
+        let newScale = Self.clampScale(newScaleRaw)
+        guard canvasSize.width > 0, canvasSize.height > 0, newScale != scale else {
+            scale = newScale
+            return
+        }
+        let center = CGPoint(x: canvasSize.width / 2, y: canvasSize.height / 2)
+        let ratio = newScale / scale
+        panOffset = CGSize(width: center.x - ratio * (center.x - panOffset.width),
+                           height: center.y - ratio * (center.y - panOffset.height))
+        dragStartOffset = panOffset
+        scale = newScale
+    }
+
+    private func resetView() {
+        scale = 1
+        panOffset = .zero
+        dragStartOffset = .zero
+        magnifyBaseScale = 1
     }
 
     // MARK: - 캔버스
@@ -114,6 +189,7 @@ struct WikiGraphView: View {
         } else if let error = appState.wikiGraphError {
             Text(error).foregroundStyle(.red).frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if let snapshot, !snapshot.graph.nodes.isEmpty {
+            GeometryReader { geo in
             ZStack(alignment: .topLeading) {
                 graphCanvas(snapshot)
                 if let notice = appState.wikiGraphFocusNotice {
@@ -150,6 +226,9 @@ struct WikiGraphView: View {
                             .padding(.bottom, 40)
                     }
                 }
+            }
+            .onAppear { canvasSize = geo.size }
+            .onChange(of: geo.size) { _, newValue in canvasSize = newValue }
             }
         } else if let snapshot, snapshot.graph.nodes.isEmpty {
             Text("위키 폴더에서 글(.md)을 찾지 못했습니다")
@@ -225,7 +304,8 @@ struct WikiGraphView: View {
         )
         .gesture(
             MagnificationGesture()
-                .onChanged { value in scale = max(0.2, min(3.0, value)) }
+                .onChanged { value in zoom(to: magnifyBaseScale * value) }
+                .onEnded { _ in magnifyBaseScale = scale }
         )
         .onTapGesture { location in
             guard let hit = nearestNode(to: location, in: nodes, positions: snapshot.positions) else { return }
