@@ -120,6 +120,30 @@ final class SearchIndexerTests: XCTestCase {
         XCTAssertEqual(count, 1, "지름길이 가리키는 폴더 밖 내용은 빼고 진짜 노트 1개만 색인돼야 한다")
     }
 
+
+    /// 심볼릭 링크(바로가기)가 폴더 안의 진짜 파일을 가리키면 색인 대상에 포함돼야
+    /// 한다(2026-07-31 실사용 발견: 링크 파일은 "진짜 파일도 폴더도 아님"으로 취급돼
+    /// 통째로 빠지고 있었다). 깨진 링크(대상 없음)는 여전히 제외.
+    func test심볼릭링크파일도내용색인에포함된다() async throws {
+        let dir = tempDir()
+        let real = dir.appendingPathComponent("진짜.md")
+        try "진짜 내용".write(to: real, atomically: true, encoding: .utf8)
+        try FileManager.default.createSymbolicLink(
+            at: dir.appendingPathComponent("바로가기.md"), withDestinationURL: real)
+        try FileManager.default.createSymbolicLink(
+            at: dir.appendingPathComponent("깨진링크.md"),
+            withDestinationURL: dir.appendingPathComponent("없는파일.md"))
+
+        let index = SearchIndex(dbURL: tempDBURL())
+        let indexer = SearchIndexer(index: index, kordoc: KordocService())
+        await indexer.indexFolder(dir, progress: nil)
+
+        let count = await index.count()
+        XCTAssertEqual(count, 2, "진짜 파일 + 그걸 가리키는 링크 파일까지 2개가 색인돼야 한다(깨진 링크는 제외)")
+        let hits = await index.search(query: "진짜 내용")
+        XCTAssertEqual(hits.count, 2, "링크로 읽어도 원본과 같은 내용이 검색돼야 한다")
+    }
+
     // MARK: 사진 속 글자 검색(이미지 OCR)
 
     private func writePNGWithText(_ text: String, to url: URL) throws {

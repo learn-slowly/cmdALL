@@ -74,6 +74,19 @@ actor SearchIndexer {
             }
             if values?.isRegularFile == true, !name.hasPrefix(".") {
                 urls.append(url)
+                continue
+            }
+            // 심볼릭 링크(바로가기) 파일 — 가리키는 대상이 폴더가 아니라 진짜 파일이면
+            // 검색 대상에 포함한다(깨진 링크·폴더를 가리키는 링크는 제외).
+            // resourceValues(.canonicalPathKey)는 심볼릭 링크 자기 자신에 대해서는
+            // 링크를 안 따라가고 그대로 돌려주므로(실측 확인) 못 쓴다 — fileExists(atPath:)는
+            // stat() 기반이라 링크를 따라가 실제 대상 존재 여부·종류를 알려준다.
+            if let rv = try? url.resourceValues(forKeys: [.isSymbolicLinkKey]), rv.isSymbolicLink == true,
+               !name.hasPrefix(".") {
+                var isDir: ObjCBool = false
+                if fm.fileExists(atPath: url.path, isDirectory: &isDir), !isDir.boolValue {
+                    urls.append(url)
+                }
             }
         }
         urls = urls.filter { AppState.isListableInFileTree($0) }
