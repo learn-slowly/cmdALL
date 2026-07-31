@@ -16,7 +16,7 @@ jobs:
       HAS_SIGNING: ${{ secrets.MACOS_CERTIFICATE != '' && secrets.MACOS_NOTARY_APPLE_ID != '' }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # Guard against version drift: the DMG name + bundle version come from
       # package_app.sh, not the tag. Fail loudly if they disagree.
@@ -58,7 +58,7 @@ jobs:
           cat SHA256SUMS.txt
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: |
             dist/cmdALL-macos.zip
