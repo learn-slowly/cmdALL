@@ -55,7 +55,7 @@ done
 # (absent on user machines) — it never checks Contents/Resources. So the app still traps
 # on the first code-block highlight (editor render). Repoint the baked fallback path to
 # the shipped Contents/Resources bundle, before codesign re-seals the binary.
-# See FIX_FOR_CLAUDE_CODE.md. Long-term fix: build via an Xcode/xcodebuild app target.
+# See docs/archive/2026-07-highlightr-bundle-crash-fix.md. Long-term fix: build via an Xcode/xcodebuild app target.
 if command -v python3 >/dev/null 2>&1; then
   python3 "$(dirname "$0")/fix-highlightr-bundle.py" "$EXECUTABLE" \
     || echo "Warning: Highlightr bundle-path patch failed; editor view may still crash." >&2

@@ -48,5 +48,10 @@ landing/.env.local
 # Tooling scratch
 .omo/
 
+# 코딩 에이전트 작업 스크래치 (세션 로그·상태·계획 — 저장소에 남길 것 없음)
+.gjc/
+.omc/
+.claude/settings.local.json
+
 # Subagent-driven 개발 스크래치(원장·리포트·diff·brief)
 .superpowers/
