@@ -238,4 +238,13 @@ extension Color {
             opacity: Double(a) / 255
         )
     }
+
+    /// `init(hex:)`의 역변환 — 위키 관계도에서 사용자가 고른 색을 저장할 때 쓴다(알파는 버림).
+    func toHex() -> String {
+        let ns = NSColor(self).usingColorSpace(.deviceRGB) ?? NSColor(self)
+        let r = Int((ns.redComponent * 255).rounded())
+        let g = Int((ns.greenComponent * 255).rounded())
+        let b = Int((ns.blueComponent * 255).rounded())
+        return String(format: "%02X%02X%02X", r, g, b)
+    }
 }

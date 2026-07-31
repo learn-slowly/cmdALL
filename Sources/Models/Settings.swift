@@ -130,6 +130,9 @@ struct AppSettings: Codable, Equatable {
     var wikiFolder: String? = nil          // LLM-Wiki 인제스트 대상 폴더(절대 경로)
     var wikiRulesSummary: String? = nil      // 위키 규칙 요약(파악 결과·사용자 편집 가능)
     var wikiRulesCapturedAt: Date? = nil     // 규칙 파악 일시(표시용)
+    /// 관계도 화면에서 레고님이 직접 고른 폴더별 색(폴더 경로 → RRGGBB hex). 지정 안 한
+    /// 폴더는 이름 기반 자동 색(WikiGraphView.folderColor)을 그대로 쓴다.
+    var wikiGraphFolderColors: [String: String] = [:]
 
     // MARK: RAG 설정
     /// 자료에 묻기(RAG) 질의 확장 토글(동의어 recall 보완). 기본 ON.
@@ -206,6 +209,7 @@ struct AppSettings: Codable, Equatable {
         wikiFolder = try c.decodeIfPresent(String.self, forKey: .wikiFolder) ?? d.wikiFolder
         wikiRulesSummary = try c.decodeIfPresent(String.self, forKey: .wikiRulesSummary) ?? d.wikiRulesSummary
         wikiRulesCapturedAt = try c.decodeIfPresent(Date.self, forKey: .wikiRulesCapturedAt) ?? d.wikiRulesCapturedAt
+        wikiGraphFolderColors = try c.decodeIfPresent([String: String].self, forKey: .wikiGraphFolderColors) ?? d.wikiGraphFolderColors
         ragExpandQuery = try c.decodeIfPresent(Bool.self, forKey: .ragExpandQuery) ?? d.ragExpandQuery
         libraryLayouts = try c.decodeIfPresent([String: LibraryLayout].self, forKey: .libraryLayouts) ?? d.libraryLayouts
         librarySorts = try c.decodeIfPresent([String: LibrarySort].self, forKey: .librarySorts) ?? d.librarySorts

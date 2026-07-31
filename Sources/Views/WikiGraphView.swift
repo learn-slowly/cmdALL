@@ -31,6 +31,9 @@ struct WikiGraphView: View {
     /// 그래프가 깨지므로 "살짝"에 맞춰 낮게 잡는다.
     private static let neighborPullFactor: CGFloat = 0.18
     @State private var detailSheet: DetailSheet?
+    /// 폴더별 보이기/숨기기 필터(레고님 요청 "필터 기능도"). 화면 세션 동안만 기억 —
+    /// 검색어(searchQuery)와 같은 관례, 다시 열면 전체 보임으로 시작.
+    @State private var hiddenFolders: Set<String> = []
     private static let minScale: CGFloat = 0.2
     private static let maxScale: CGFloat = 3.0
 
@@ -49,9 +52,22 @@ struct WikiGraphView: View {
 
     private var filteredNodes: [WikiGraphNode] {
         guard let nodes = snapshot?.graph.nodes else { return [] }
-        guard !searchQuery.isEmpty else { return nodes }
+        let base = nodes.filter { !hiddenFolders.contains(folder(for: $0.id)) }
+        guard !searchQuery.isEmpty else { return base }
         let lowered = searchQuery.lowercased()
-        return nodes.filter { $0.displayName.lowercased().contains(lowered) }
+        return base.filter { $0.displayName.lowercased().contains(lowered) }
+    }
+
+    /// 관계도 색·필터의 분류 단위 = 파일이 든 폴더(문서 id의 상위 경로). 점 색(folderColor)과
+    /// 같은 기준을 재사용한다.
+    private func folder(for nodeID: String) -> String {
+        (nodeID as NSString).deletingLastPathComponent
+    }
+
+    /// 지금 그래프에 실제로 등장하는 폴더 목록(정렬) — 사이드바 색·필터 목록에 쓴다.
+    private var allFolders: [String] {
+        guard let nodes = snapshot?.graph.nodes else { return [] }
+        return Set(nodes.map { folder(for: $0.id) }).sorted()
     }
 
     var body: some View {
@@ -92,7 +108,50 @@ struct WikiGraphView: View {
             .onChange(of: selectedNodeID) { _, newValue in
                 if let newValue { appState.wikiGraphFocusedNodeID = newValue }
             }
+            if !allFolders.isEmpty {
+                Divider()
+                categorySection
+            }
         }
+    }
+
+    // MARK: - 카테고리 색·필터(레고님 요청: 색 커스텀 + 필터 기능)
+
+    private var categorySection: some View {
+        DisclosureGroup("카테고리 색·필터") {
+            VStack(alignment: .leading, spacing: 6) {
+                ForEach(allFolders, id: \.self) { folder in
+                    WikiGraphFolderRow(
+                        label: folder.isEmpty ? "(최상위)" : folder,
+                        color: Binding(
+                            get: { folderColor(folder) },
+                            set: { newColor in
+                                appState.settings.wikiGraphFolderColors[folder] = newColor.toHex()
+                                appState.saveUserData()
+                            }
+                        ),
+                        isHidden: Binding(
+                            get: { hiddenFolders.contains(folder) },
+                            set: { hide in
+                                if hide { hiddenFolders.insert(folder) } else { hiddenFolders.remove(folder) }
+                            }
+                        )
+                    )
+                }
+                if !appState.settings.wikiGraphFolderColors.isEmpty {
+                    Button("고른 색 초기화") {
+                        appState.settings.wikiGraphFolderColors.removeAll()
+                        appState.saveUserData()
+                    }
+                    .buttonStyle(.plain)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                }
+            }
+            .padding(.top, 4)
+        }
+        .padding(10)
+        .font(.caption)
     }
 
     // MARK: - 툴바(전체/주변만 스위치)
@@ -255,9 +314,12 @@ struct WikiGraphView: View {
 
     private func graphCanvas(_ snapshot: WikiGraphSnapshot) -> some View {
         let visible = visibleNodeIDs
-        let nodes = snapshot.graph.nodes.filter { visible == nil || visible!.contains($0.id) }
+        let nodes = snapshot.graph.nodes.filter {
+            (visible == nil || visible!.contains($0.id)) && !hiddenFolders.contains(folder(for: $0.id))
+        }
         let edges = snapshot.graph.edges.filter {
-            visible == nil || (visible!.contains($0.from) && visible!.contains($0.to))
+            (visible == nil || (visible!.contains($0.from) && visible!.contains($0.to)))
+                && !hiddenFolders.contains(folder(for: $0.from)) && !hiddenFolders.contains(folder(for: $0.to))
         }
         // 끌어서 옮긴 점은 계산된 자리 대신 이 자리를 쓴다(모델 좌표계, scale·pan 적용 전).
         var positions = snapshot.positions
@@ -404,6 +466,8 @@ struct WikiGraphView: View {
     }
 
     private func folderColor(_ folder: String) -> Color {
+        // 레고님이 직접 고른 색(설정에 저장)이 있으면 그걸 먼저 쓴다.
+        if let hex = appState.settings.wikiGraphFolderColors[folder] { return Color(hex: hex) }
         guard !folder.isEmpty else { return .accentColor }
         var hash: UInt64 = 5381
         for byte in folder.utf8 { hash = (hash &* 33) &+ UInt64(byte) }
@@ -464,5 +528,33 @@ struct WikiGraphView: View {
             }
         }
         .frame(minWidth: 420, minHeight: 360)
+    }
+}
+
+/// 카테고리(폴더) 한 줄 — 색 고르기 + 보이기/숨기기(레고님 요청: 색 커스텀 + 필터).
+struct WikiGraphFolderRow: View {
+    let label: String
+    @Binding var color: Color
+    @Binding var isHidden: Bool
+
+    var body: some View {
+        HStack(spacing: 6) {
+            ColorPicker("", selection: $color, supportsOpacity: false)
+                .labelsHidden()
+                .frame(width: 18, height: 18)
+            Text(label)
+                .lineLimit(1)
+                .truncationMode(.middle)
+                .foregroundStyle(isHidden ? .secondary : .primary)
+            Spacer(minLength: 4)
+            Button {
+                isHidden.toggle()
+            } label: {
+                Image(systemName: isHidden ? "eye.slash" : "eye")
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(isHidden ? .secondary : .primary)
+            .help(isHidden ? "다시 보이기" : "숨기기")
+        }
     }
 }
