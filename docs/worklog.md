@@ -414,3 +414,15 @@
 - **4. 사이드바 즉석 검색 범위 안내.** 코드 확인 결과 todolist에 적힌 "md·txt만 본다"는 이미 사실과 달랐다(2026-06-29에 pdf·오피스 본문까지 이미 넓어져 있었음) — 진짜 남은 차이는 "사진 속 글자 읽기(OCR)" 결과뿐(전역 검색·자료에 묻기는 보지만 이 즉석 검색은 실시간 추출이라 안 봄). 큰 리팩터(FTS5로 전환) 대신 화면에 작은 안내 문구("사진 속 글자(OCR)는 이 검색에 포함되지 않아요") 추가로 범위 차이를 알리는 쪽 선택 — 레고 승인.
 - **5. 앱 켤 때 자동으로 도는 1회성 재색인에 진행 표시 연결.** `AppState.reindexAfterSchemaMigration`(스키마·추출판 변경 시 자동 실행)이 `progress: nil`로 호출돼 수동 재인덱싱 버튼에만 있던 진행률 바가 자동 경로엔 없었다. 기존 `indexInProgress`/`indexProgress` 상태와 `indexFolder`의 진행 콜백을 그대로 재사용해 연결. 테스트 1건 추가(자동 재색인 도중 `indexInProgress`가 실제로 true였다가 완료 후 정리되는지 폴링으로 확인).
 - 셋 다 작은 수정 3파일(`SearchIndexer.swift`·`AppState+ContentSearch.swift`·`SidebarView.swift`) + 테스트 2건. `swift test` 1,070개(기존 1,068 + 신규 2) 전부 통과.
+
+---
+
+## 2026-07-31 — 학습도우미(Study Helper) S0: AI 패널 프리셋 버튼 2개
+
+ralplan 최종 계획(레고 실행 승인, S0만) 실행. 게이트 순서(S0 필수 → S1 → S3 → S2) 중 **S0만** 진행 — 레고의 "실사용 3회 + 쓸 만하다" 판정 전까지 S1 이후는 착수하지 않는다.
+
+- 기존 Claude 패널(`ClaudePanelView`)에 "정리 카드 만들기"·"문제 뽑기" 버튼 2개 추가. 클릭하면 `AppState.fillStudyCardPrompt()`/`fillStudyQuizPrompt()`(신규, `AppState+Claude.swift`)가 `claudePrompt`를 카드/문제 형식 프리셋 문구로 채우기만 하고, 전송은 기존 "질문 (⌘↩)" 버튼을 사용자가 직접 눌러야 한다 — `summarizeFile()`이 쓰던 "프롬프트만 채우기" 패턴 재사용. 새 파이프라인·파서·서비스 파일은 만들지 않았다(계획 제약대로).
+- 신규 테스트 3건(`AppClaudeTests`): 프롬프트 채움 확인·busy 상태 불변·기존 프롬프트 덮어쓰기. 기존 패널 동작(질문·삽입·저장·복사)은 손대지 않아 회귀 없음.
+- `docs/superpowers/specs/2026-07-31-study-helper-design.md`(설계)·`docs/superpowers/plans/2026-07-31-study-helper.md`(구현 계획) 신설 — ralplan 최종 계획 내용을 레포 관행대로 정식 문서로 옮김(설계=배경·데이터모델·계약, 계획=게이트·태스크·수용기준·검증계획). S1~S3는 아직 미착수 상태로 명시.
+- `docs/todolist.md`에 "3. 학습도우미 S0 프리셋 버튼" 항목 추가(레고 실기 확인 대기 — 실사용 3회 판정 필요).
+- `swift test` 1,073개(기존 1,070 + 신규 3) 전량 통과. 빌드 경고 없음(신규 코드 관련). 최초 1회 실행에서 무관한 `AppIndexSearchTests` 1건이 실패했으나 재실행·단독 실행 모두 통과 — 기존 타이밍성 플레이키로 판단, 이번 변경과 무관.

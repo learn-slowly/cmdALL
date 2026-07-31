@@ -111,6 +111,27 @@ struct ClaudePanelView: View {
             Divider()
 
             VStack(spacing: 8) {
+                // 학습도우미 S0(2026-07-31) 프리셋 — 프롬프트 입력창을 채우기만 하고
+                // 전송은 하지 않는다(기존 "질문" 버튼으로 사용자가 직접 보낸다).
+                HStack(spacing: 8) {
+                    Button("정리 카드 만들기") {
+                        appState.fillStudyCardPrompt()
+                        promptFocused = true
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .disabled(appState.claudeBusy)
+
+                    Button("문제 뽑기") {
+                        appState.fillStudyQuizPrompt()
+                        promptFocused = true
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .disabled(appState.claudeBusy)
+
+                    Spacer()
+                }
                 TextEditor(text: $state.claudePrompt)
                     .font(.body)
                     .frame(height: 72)
