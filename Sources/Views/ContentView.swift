@@ -59,6 +59,7 @@ struct ContentView: View {
             }
 
             ToolbarItemGroup(placement: .primaryAction) {
+                WikiGraphButton()
                 SendToVaultButton()
 
                 // The right-sidebar (inspector) toggle, pinned to the trailing edge.
@@ -308,6 +309,22 @@ struct LibrarySortMenu: View {
         }
         .fixedSize()
         .help("정렬")
+    }
+}
+
+/// 위키 관계도 화면 진입점 — 왼쪽 리본 "위키" 버튼으로 위키 홈을 연 다음에도 그 자리(툴바)에서
+/// 바로 관계도로 넘어갈 수 있게(레고님 요청). 명령 팔레트·View 메뉴와 같은 동작 재사용.
+struct WikiGraphButton: View {
+    @Environment(AppState.self) private var appState
+
+    var body: some View {
+        Button {
+            appState.requestWikiGraph()
+        } label: {
+            Image(systemName: "point.3.connected.trianglepath.dotted")
+        }
+        .disabled(appState.settings.wikiFolder == nil)
+        .help("위키 관계도 보기")
     }
 }
 
