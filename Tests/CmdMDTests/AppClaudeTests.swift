@@ -82,12 +82,15 @@ final class AppClaudeTests: XCTestCase {
         XCTAssertEqual(AppState.claudeSelection(forKind: .markdown, selection: "선택"), "선택")
     }
 
-    func testSelectionIgnoredForOfficeKind() {
-        XCTAssertEqual(AppState.claudeSelection(forKind: .office, selection: "선택"), "")
+    func testSelectionUsedForPdfKind() {
+        // 2026-07-31: PDF도 마크다운처럼 드래그 선택을 컨텍스트로 쓴다(PDFReaderView
+        // onSelectedTextChange 배선). 안 그러면 500페이지 교재를 매번 통째로 보내게 된다.
+        XCTAssertEqual(AppState.claudeSelection(forKind: .pdf, selection: "선택"), "선택")
     }
 
-    func testSelectionIgnoredForPdfKind() {
-        XCTAssertEqual(AppState.claudeSelection(forKind: .pdf, selection: "선택"), "")
+    func testSelectionIgnoredForOfficeAndImageKinds() {
+        XCTAssertEqual(AppState.claudeSelection(forKind: .office, selection: "선택"), "")
+        XCTAssertEqual(AppState.claudeSelection(forKind: .image, selection: "선택"), "")
     }
 
     func testContextUsesMediaNoteWhenOthersEmpty() {

@@ -4,10 +4,11 @@ extension AppState {
 
     // MARK: - Claude 연동
 
-    /// 선택영역은 마크다운 탭에서만 컨텍스트로 쓴다. 다른 종류 탭에선 이전 마크다운
-    /// 선택이 새지 않도록 빈 문자열로 친다.
+    /// 선택영역은 마크다운·PDF 탭에서만 컨텍스트로 쓴다(2026-07-31 PDF 추가 — PDFView의
+    /// 드래그 선택을 onSelectedTextChange로 받아온다). 다른 종류 탭에선 이전 선택이 새지
+    /// 않도록 빈 문자열로 친다.
     static func claudeSelection(forKind kind: DocumentKind, selection: String) -> String {
-        kind == .markdown ? selection : ""
+        (kind == .markdown || kind == .pdf) ? selection : ""
     }
 
     /// 질의 컨텍스트를 고른다(순수 함수). 선택영역 > 마크다운 본문 > 오피스 변환 마크다운 > PDF 추출 본문 > 미디어 짝꿍 노트 > 빈 문자열.
@@ -147,7 +148,11 @@ extension AppState {
         // PDF 탭은 MarkdownDocument·officeStates 어디에도 본문이 없어(2026-07-31 발견:
         // "Ask Claude"가 PDF에서 컨텍스트 없이 지시문만 보내던 기존 결함), ContentExtractor로
         // 그 자리에서 텍스트를 뽑는다(검색 색인·RAG와 같은 경로 재사용, 스캔 PDF는 설정에 따라 OCR).
-        let pdfFileURL: URL? = (currentTabKind == .pdf) ? currentTabFileURL : nil
+        // 선택영역이 있으면(위 claudeSelection이 PDF도 통과시킴, 2026-07-31) 그게 우선이라
+        // 전체 문서 추출은 건너뛴다 — 안 그러면 몇 페이지만 골라도 500페이지를 매번 다 훑는다.
+        let needsPdfBody = currentTabKind == .pdf
+            && selection.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let pdfFileURL: URL? = needsPdfBody ? currentTabFileURL : nil
         let ocrScannedPDFs = settings.ocrScannedPDFsEnabled
         claudeBusy = true
         claudeError = nil

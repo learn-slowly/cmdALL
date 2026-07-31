@@ -18,17 +18,24 @@ import PDFKit
 /// 이후 유효 URL로 바뀌면 재로딩이 정상 동작).
 struct PDFReaderView: NSViewRepresentable {
     let url: URL
+    /// 사용자가 PDF 안에서 드래그로 고른 텍스트(없으면 ""). Claude 질의 컨텍스트 우선순위 1로
+    /// 쓰인다(2026-07-31 — 마크다운 에디터의 onSelectedTextChange와 같은 패턴). 다른 화면(듀얼
+    /// 페인 미리보기 등)은 기본값을 그대로 둬 배선하지 않아도 된다.
+    var onSelectedTextChange: (String) -> Void = { _ in }
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
     func makeNSView(context: Context) -> NSView {
         let container = NSView()
         context.coordinator.container = container
+        context.coordinator.onSelectedTextChange = onSelectedTextChange
         context.coordinator.load(url: url)
         return container
     }
 
     func updateNSView(_ nsView: NSView, context: Context) {
+        // 클로저는 SwiftUI가 렌더마다 새로 만들어 주므로 항상 최신으로 갱신(캡처된 appState 최신값 유지).
+        context.coordinator.onSelectedTextChange = onSelectedTextChange
         // 탭 재사용으로 url이 바뀌면 재로딩(성공·실패 모두 load가 currentURL을 갱신해 재시도 폭주 방지).
         guard context.coordinator.currentURL != url else { return }
         context.coordinator.load(url: url)
@@ -42,6 +49,7 @@ struct PDFReaderView: NSViewRepresentable {
         var matches: [PDFSelection] = []
         var matchIndex: Int = 0
         var lastQuery: String = ""
+        var onSelectedTextChange: (String) -> Void = { _ in }
 
         private var observers: [NSObjectProtocol] = []
 
@@ -60,6 +68,13 @@ struct PDFReaderView: NSViewRepresentable {
                       let page = document.page(at: jump.page - 1) else { return }
                 pdfView.go(to: page)
             })
+            observers.append(center.addObserver(
+                forName: .PDFViewSelectionChanged, object: nil, queue: .main
+            ) { [weak self] note in
+                guard let self, let pdfView = self.pdfView,
+                      (note.object as? PDFView) === pdfView else { return }
+                self.onSelectedTextChange(pdfView.currentSelection?.string ?? "")
+            })
         }
 
         deinit {
@@ -74,13 +89,15 @@ struct PDFReaderView: NSViewRepresentable {
             // 1) currentURL을 무조건 먼저 갱신(실패해도 같은 나쁜 URL을 매번 재로딩하지 않게).
             currentURL = url
 
-            // 2) 기존 뷰·검색 상태 초기화.
+            // 2) 기존 뷰·검색 상태 초기화. 이전 문서의 선택영역이 새 문서로 새지 않게
+            // onSelectedTextChange("")로 즉시 비운다(2026-07-31).
             container.subviews.forEach { $0.removeFromSuperview() }
             pdfView = nil
             searchField = nil
             matches = []
             matchIndex = 0
             lastQuery = ""
+            onSelectedTextChange("")
 
             // 3) 로드 실패 시 플레이스홀더 라벨만 붙이고 종료.
             guard let document = PDFDocument(url: url) else {

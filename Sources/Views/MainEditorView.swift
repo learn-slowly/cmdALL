@@ -26,7 +26,9 @@ struct MainEditorView: View {
             if appState.currentTabKind == .image, let url = appState.currentTabFileURL {
                 ImageReaderView(url: url)
             } else if appState.currentTabKind == .pdf, let url = appState.currentTabFileURL {
-                PDFReaderView(url: url)
+                PDFReaderView(url: url, onSelectedTextChange: { selected in
+                    appState.currentSelectionText = selected
+                })
             } else if appState.currentTabKind == .office,
                       let url = appState.currentTabFileURL,
                       let tabID = appState.activeTabId {
