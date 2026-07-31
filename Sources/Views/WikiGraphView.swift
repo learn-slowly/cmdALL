@@ -536,12 +536,30 @@ struct WikiGraphFolderRow: View {
     let label: String
     @Binding var color: Color
     @Binding var isHidden: Bool
+    /// 시스템 ColorPicker(NSColorPanel)는 화면 어딘가 자기가 마지막에 있던 자리에 별도
+    /// 창으로 뜨는 macOS 고유 동작이라, 눌러도 이 줄과 멀리 떨어져 뜬다는 지적을 받았다
+    /// (레고님 피드백). 대신 이 줄 바로 옆에 붙는 팝오버로 12색 팔레트를 먼저 보여준다.
+    @State private var showColorPopover = false
+
+    /// 자동 색과 같은 채도·명도(saturation 0.55, brightness 0.75)로 맞춘 12색 팔레트 —
+    /// 팔레트에서 고른 색이 자동 색과 톤이 어긋나 보이지 않게 한다.
+    private static let palette: [Color] = (0..<12).map { i in
+        Color(hue: Double(i) / 12, saturation: 0.55, brightness: 0.75)
+    }
 
     var body: some View {
         HStack(spacing: 6) {
-            ColorPicker("", selection: $color, supportsOpacity: false)
-                .labelsHidden()
-                .frame(width: 18, height: 18)
+            Button {
+                showColorPopover = true
+            } label: {
+                Circle()
+                    .fill(color)
+                    .frame(width: 14, height: 14)
+                    .overlay(Circle().strokeBorder(.secondary.opacity(0.4), lineWidth: 0.5))
+            }
+            .buttonStyle(.plain)
+            .help("색 고르기")
+            .popover(isPresented: $showColorPopover, arrowEdge: .trailing) { colorPopover }
             Text(label)
                 .lineLimit(1)
                 .truncationMode(.middle)
@@ -556,5 +574,35 @@ struct WikiGraphFolderRow: View {
             .foregroundStyle(isHidden ? .secondary : .primary)
             .help(isHidden ? "다시 보이기" : "숨기기")
         }
+    }
+
+    private var colorPopover: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            LazyVGrid(columns: Array(repeating: GridItem(.fixed(22), spacing: 6), count: 6), spacing: 6) {
+                ForEach(Array(Self.palette.enumerated()), id: \.offset) { _, swatch in
+                    Button {
+                        color = swatch
+                        showColorPopover = false
+                    } label: {
+                        Circle()
+                            .fill(swatch)
+                            .frame(width: 20, height: 20)
+                            .overlay {
+                                if swatch.toHex() == color.toHex() {
+                                    Circle().strokeBorder(.primary, lineWidth: 2)
+                                }
+                            }
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            Divider()
+            // 12색 팔레트에 없는 색을 꼭 원하면 여기서만 시스템 패널을 연다(그래서 멀리 떠도
+            // "직접 고르기"를 누른 사람만 겪는, 예상 가능한 결과가 된다).
+            ColorPicker("직접 고르기", selection: $color, supportsOpacity: false)
+                .font(.caption)
+        }
+        .padding(12)
+        .frame(width: 170)
     }
 }
