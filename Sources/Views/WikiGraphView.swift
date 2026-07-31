@@ -17,6 +17,12 @@ struct WikiGraphView: View {
     @State private var magnifyBaseScale: CGFloat = 1
     /// 화면 중앙 기준 확대/축소를 계산하려면 캔버스의 실제 픽셀 크기가 필요하다.
     @State private var canvasSize: CGSize = .zero
+    /// 점 끌기(레고님 요청, 옵시디언 그래프 참고) — 끌어서 옮긴 점은 원래 계산 자리 대신
+    /// 이 자리에 그린다. 다시 불러오면 비운다.
+    @State private var nodePositionOverrides: [String: CGPoint] = [:]
+    @State private var draggingNodeID: String?
+    /// 드래그 제스처 하나당 "점을 잡았는지 캔버스를 미는지"를 한 번만 판정하기 위한 플래그.
+    @State private var dragTargetResolved = false
     @State private var detailSheet: DetailSheet?
     private static let minScale: CGFloat = 0.2
     private static let maxScale: CGFloat = 3.0
@@ -101,6 +107,7 @@ struct WikiGraphView: View {
             zoomControls
             Spacer()
             Button {
+                nodePositionOverrides = [:]
                 Task { await appState.loadWikiGraph() }
             } label: {
                 Image(systemName: "arrow.clockwise")
@@ -245,17 +252,31 @@ struct WikiGraphView: View {
         let edges = snapshot.graph.edges.filter {
             visible == nil || (visible!.contains($0.from) && visible!.contains($0.to))
         }
+        // 끌어서 옮긴 점은 계산된 자리 대신 이 자리를 쓴다(모델 좌표계, scale·pan 적용 전).
+        var positions = snapshot.positions
+        for (id, overridden) in nodePositionOverrides where positions[id] != nil {
+            positions[id] = overridden
+        }
+
         return Canvas { context, size in
-            context.translateBy(x: panOffset.width, y: panOffset.height)
-            context.scaleBy(x: scale, y: scale)
+            // 좌표를 우리가 직접 scale·pan으로 계산해서 그린다(예전엔 context.scaleBy로 캔버스
+            // 전체를 늘렸는데, Canvas가 Text를 고정 크기로 한 번 래스터화한 뒤 그 비트맵을
+            // 늘려 그리는 특성 때문에 확대할수록 글자가 흐려졌다 — 레고님 피드백 "줌인했을 때
+            // 해상도가 떨어진다"). 글자는 매번 실제 배율에 맞는 폰트 크기로 다시 그리게 해서
+            // 항상 또렷하다(옵시디언 그래프 방식 참고).
+            func screenPoint(_ p: CGPoint) -> CGPoint {
+                CGPoint(x: p.x * scale + panOffset.width, y: p.y * scale + panOffset.height)
+            }
 
             for edge in edges {
-                guard let from = snapshot.positions[edge.from], let to = snapshot.positions[edge.to] else { continue }
+                guard let fromModel = positions[edge.from], let toModel = positions[edge.to] else { continue }
+                let from = screenPoint(fromModel)
+                let to = screenPoint(toModel)
                 let dx = to.x - from.x
                 let dy = to.y - from.y
                 let length = max((dx * dx + dy * dy).squareRoot(), 0.01)
                 let ux = dx / length, uy = dy / length
-                let nodeRadius: CGFloat = 5
+                let nodeRadius: CGFloat = 5 * scale
                 // 도착점 원 가장자리에서 멈춰 화살촉이 노드에 가리지 않게 한다.
                 let lineEnd = CGPoint(x: to.x - ux * nodeRadius, y: to.y - uy * nodeRadius)
                 var path = Path()
@@ -281,26 +302,51 @@ struct WikiGraphView: View {
                 context.stroke(arrowPath, with: .color(.secondary.opacity(0.7)), lineWidth: 1.2)
             }
             for node in nodes {
-                guard let point = snapshot.positions[node.id] else { continue }
+                guard let model = positions[node.id] else { continue }
+                let point = screenPoint(model)
                 let folder = (node.id as NSString).deletingLastPathComponent
                 let color = folderColor(folder)
                 let isFocused = node.id == appState.wikiGraphFocusedNodeID
-                let radius: CGFloat = isFocused ? 7 : 5
+                let radius: CGFloat = (isFocused ? 7 : 5) * scale
                 let rect = CGRect(x: point.x - radius, y: point.y - radius, width: radius * 2, height: radius * 2)
                 context.fill(Path(ellipseIn: rect), with: .color(color))
+                if node.id == draggingNodeID {
+                    context.stroke(Path(ellipseIn: rect.insetBy(dx: -2, dy: -2)),
+                                   with: .color(.primary), lineWidth: 1.5)
+                }
                 if scale > 0.6 {
-                    context.draw(Text(node.displayName).font(.system(size: 10)),
-                                at: CGPoint(x: point.x + radius + 3, y: point.y))
+                    // 라벨을 점 오른쪽에 왼쪽정렬로 붙인다 — 예전엔 라벨 "중심"을 점 옆자리에
+                    // 둬서 이름이 짧으면 점에 걸쳐 보였다(레고님 피드백 "점이 파일명을 가린다").
+                    context.draw(Text(node.displayName).font(.system(size: 10 * scale)),
+                                at: CGPoint(x: point.x + radius + 3, y: point.y), anchor: .leading)
                 }
             }
         }
         .gesture(
-            DragGesture()
+            DragGesture(minimumDistance: 3)
                 .onChanged { value in
-                    panOffset = CGSize(width: dragStartOffset.width + value.translation.width,
-                                       height: dragStartOffset.height + value.translation.height)
+                    if !dragTargetResolved {
+                        dragTargetResolved = true
+                        draggingNodeID = nearestNode(to: value.startLocation, in: nodes, positions: positions)
+                    }
+                    if let id = draggingNodeID {
+                        // 점 끌기 — 커서를 모델 좌표로 되돌려서 그 점의 새 자리로 삼는다.
+                        nodePositionOverrides[id] = CGPoint(
+                            x: (value.location.x - panOffset.width) / scale,
+                            y: (value.location.y - panOffset.height) / scale)
+                    } else {
+                        panOffset = CGSize(width: dragStartOffset.width + value.translation.width,
+                                           height: dragStartOffset.height + value.translation.height)
+                    }
                 }
-                .onEnded { _ in dragStartOffset = panOffset }
+                .onEnded { _ in
+                    dragTargetResolved = false
+                    if draggingNodeID != nil {
+                        draggingNodeID = nil
+                    } else {
+                        dragStartOffset = panOffset
+                    }
+                }
         )
         .gesture(
             MagnificationGesture()
@@ -308,7 +354,7 @@ struct WikiGraphView: View {
                 .onEnded { _ in magnifyBaseScale = scale }
         )
         .onTapGesture { location in
-            guard let hit = nearestNode(to: location, in: nodes, positions: snapshot.positions) else { return }
+            guard let hit = nearestNode(to: location, in: nodes, positions: positions) else { return }
             appState.openWikiGraphNode(hit)
         }
         .background(Color(nsColor: .textBackgroundColor))
