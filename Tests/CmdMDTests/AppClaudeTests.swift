@@ -36,6 +36,21 @@ final class AppClaudeTests: XCTestCase {
         XCTAssertEqual(r, "")
     }
 
+    func testContextUsesPdfBodyWhenNothingElseAvailable() {
+        let r = AppState.claudeContext(selection: "", markdown: nil, officeMarkdown: nil, pdfBody: "PDF에서 뽑은 본문")
+        XCTAssertEqual(r, "PDF에서 뽑은 본문")
+    }
+
+    func testContextPrefersOfficeMarkdownOverPdfBody() {
+        let r = AppState.claudeContext(selection: "", markdown: nil, officeMarkdown: "오피스 본문", pdfBody: "PDF 본문")
+        XCTAssertEqual(r, "오피스 본문")
+    }
+
+    func testContextPrefersPdfBodyOverMediaNote() {
+        let r = AppState.claudeContext(selection: "", markdown: nil, officeMarkdown: nil, pdfBody: "PDF 본문", mediaNote: "미디어 노트")
+        XCTAssertEqual(r, "PDF 본문")
+    }
+
     func testErrorMessageMapsToolNotFound() {
         let m = AppState.claudeErrorMessage(ClaudeError.toolNotFound)
         XCTAssertTrue(m.contains("claude"))

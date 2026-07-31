@@ -10,12 +10,13 @@ extension AppState {
         kind == .markdown ? selection : ""
     }
 
-    /// 질의 컨텍스트를 고른다(순수 함수). 선택영역 > 마크다운 본문 > 오피스 변환 마크다운 > 빈 문자열.
-    static func claudeContext(selection: String, markdown: String?, officeMarkdown: String?, mediaNote: String? = nil) -> String {
+    /// 질의 컨텍스트를 고른다(순수 함수). 선택영역 > 마크다운 본문 > 오피스 변환 마크다운 > PDF 추출 본문 > 미디어 짝꿍 노트 > 빈 문자열.
+    static func claudeContext(selection: String, markdown: String?, officeMarkdown: String?, pdfBody: String? = nil, mediaNote: String? = nil) -> String {
         let sel = selection.trimmingCharacters(in: .whitespacesAndNewlines)
         if !sel.isEmpty { return sel }
         if let md = markdown, !md.isEmpty { return md }
         if let om = officeMarkdown, !om.isEmpty { return om }
+        if let pb = pdfBody, !pb.isEmpty { return pb }
         if let mn = mediaNote, !mn.isEmpty { return mn }
         return ""
     }
@@ -143,16 +144,30 @@ extension AppState {
             guard currentTabKind == .media, let url = currentTabFileURL else { return nil }
             return try? String(contentsOf: CompanionNote.noteURL(for: url), encoding: .utf8)
         }()
-        let context = Self.claudeContext(selection: selection,
-                                         markdown: currentDocument?.content,
-                                         officeMarkdown: officeMarkdown,
-                                         mediaNote: mediaNote)
-
+        // PDF 탭은 MarkdownDocument·officeStates 어디에도 본문이 없어(2026-07-31 발견:
+        // "Ask Claude"가 PDF에서 컨텍스트 없이 지시문만 보내던 기존 결함), ContentExtractor로
+        // 그 자리에서 텍스트를 뽑는다(검색 색인·RAG와 같은 경로 재사용, 스캔 PDF는 설정에 따라 OCR).
+        let pdfFileURL: URL? = (currentTabKind == .pdf) ? currentTabFileURL : nil
+        let ocrScannedPDFs = settings.ocrScannedPDFsEnabled
         claudeBusy = true
         claudeError = nil
         claudeResponse = nil
 
         Task { @MainActor in
+            var pdfBody: String? = nil
+            if let url = pdfFileURL {
+                pdfBody = await ContentExtractor.body(for: url, kordoc: kordocService, ocrScannedPDFs: ocrScannedPDFs)
+            }
+            let context = Self.claudeContext(selection: selection,
+                                             markdown: currentDocument?.content,
+                                             officeMarkdown: officeMarkdown,
+                                             pdfBody: pdfBody,
+                                             mediaNote: mediaNote)
+            guard !context.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                claudeBusy = false
+                claudeError = "이 문서에서 읽을 수 있는 글자를 찾지 못했습니다(빈 문서·스캔 PDF는 설정에서 OCR을 켜보세요·지원하지 않는 형식일 수 있습니다)."
+                return
+            }
             do {
                 var acc = ""
                 let stream = await aiRouter.askStream(prompt: prompt, context: context)
