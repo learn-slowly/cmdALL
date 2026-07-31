@@ -264,6 +264,45 @@ final class AppClaudeTests: XCTestCase {
         XCTAssertEqual(app.claudePrompt, priorPrompt)
     }
 
+    // MARK: - 학습도우미 S0(2026-07-31) 프리셋 버튼
+
+    @MainActor
+    func testFillStudyCardPromptFillsPromptOnly() {
+        let app = AppState(dataDirectory: tempDir)
+        app.claudePrompt = ""
+        app.claudeResponse = "이전 응답"
+        app.claudeBusy = false
+
+        app.fillStudyCardPrompt()
+
+        XCTAssertTrue(app.claudePrompt.contains("정리 카드"))
+        XCTAssertTrue(app.claudePrompt.contains("### [카드]"))
+        XCTAssertFalse(app.claudeBusy, "프롬프트만 채우고 전송하지 않는다")
+        XCTAssertEqual(app.claudeResponse, "이전 응답", "채우기만 하고 기존 응답 상태를 건드리지 않는다")
+    }
+
+    @MainActor
+    func testFillStudyQuizPromptFillsPromptOnly() {
+        let app = AppState(dataDirectory: tempDir)
+        app.claudePrompt = ""
+        app.claudeBusy = false
+
+        app.fillStudyQuizPrompt()
+
+        XCTAssertTrue(app.claudePrompt.contains("문제"))
+        XCTAssertTrue(app.claudePrompt.contains("### [문제 1]"))
+        XCTAssertFalse(app.claudeBusy, "프롬프트만 채우고 전송하지 않는다")
+    }
+
+    @MainActor
+    func testFillStudyCardPromptOverwritesExistingPrompt() {
+        let app = AppState(dataDirectory: tempDir)
+        app.claudePrompt = "이전에 쓰던 프롬프트"
+
+        app.fillStudyCardPrompt()
+
+        XCTAssertNotEqual(app.claudePrompt, "이전에 쓰던 프롬프트")
+    }
     // MARK: - "두 파일 비교…" (Docufinder 격차 3번)
 
     func testComparablePairAcceptsTwoTextFiles() throws {

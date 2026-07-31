@@ -26,6 +26,12 @@
 - **볼 것**: 설정 > "사진 속 글자도 읽기 (OCR)" 켜기 → 글자 있는 사진이 든 폴더 색인 → 그 글자로 검색해서 사진이 잡히는지.
 - **어디**: `AppSettings.ocrImagesEnabled` · `ContentExtractor` 이미지 분기 · `OCRService.loadCGImage(from:)`.
 
+### 3. 학습도우미 S0 프리셋 버튼 (정리 카드·문제 뽑기)
+
+- **왜**: 2026-07-31 구현. AI 패널에 프리셋 버튼만 붙인 실험 단계 — **레고가 실제 교재로 3번 써보고 "쓸 만하다" 판정을 내려야만 다음 단계(S1: 카드/퀴즈 실제 생성)에 착수한다.** 이 판정 없이는 S1 코드 착수 금지(필수 게이트, 우회 없음).
+- **볼 것**: Claude 패널 열기 → "정리 카드 만들기"/"문제 뽑기" 버튼 클릭 → 프롬프트 입력창이 채워지는지 → "질문" 버튼으로 실제 전송해서 결과가 쓸 만한지(교재 3종 이상으로).
+- **어디**: `Sources/Views/ClaudePanelView.swift`(버튼)·`Sources/App/AppState+Claude.swift`(`fillStudyCardPrompt`/`fillStudyQuizPrompt`). 설계 `docs/superpowers/specs/2026-07-31-study-helper-design.md`·계획 `docs/superpowers/plans/2026-07-31-study-helper.md`.
+
 ---
 
 ## 나중 (착수 전 레고 확인 — 임의로 시작하지 말 것)
