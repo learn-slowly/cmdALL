@@ -705,4 +705,4 @@ todolist.md의 "지금" 절 삭제(항목 4개 전부 제거) — 남은 건 "�
 - **`AppState+TaskList.swift`/`TaskListView`**(신규) — 세그먼트 탭 2개: **Todoist 할일**(전체 프로젝트 통틀어, 체크하면 `closeTask` 호출 — **양방향**(레고 결정), 실패 시 목록에 그대로 남아 재시도 가능·낙관적 갱신 없음) / **보낸 기록**(`SentTaskLogStore` 최신순). 진입점: File 메뉴·커맨드팔레트 "할일 목록 보기"(레고 결정 — 새 화면).
 - 신규 테스트 39건 — `TodoistServiceTests`에 `fetchTasks`(페이지네이션 디코드·토큰 없음) 2건·`closeTask`(경로·401 매핑) 2건·`createTask` 응답 디코드 갱신 2건 추가, `SentTaskLogStoreTests` 5건(왕복·최신순 정렬·인스턴스 간 영속·200건 상한·빈 저장소), `AppTaskListStateTests` 7건(진입점 로드·완료 처리 성공/실패/토큰없음·보낸 기록 로드·닫기), `AppTaskFinderStateTests`에 회귀 테스트 2건 추가(보낸 기록 연결·성공 추적 정확성). `swift test` **1,393개** 전량 통과, 회귀 0. `swift build` 경고 없음. `scripts/test_package_app.sh` 패키징 가드 통과.
 - 이번에 안 한 것(설계 문서 §이번에 하지 않은 것) — 하위작업/라벨/마감일 편집(읽기+완료만), 보낸 기록의 실시간 상태 동기화 표시, 페이지네이션(다음 커서, 첫 50개만).
-- 재패키징 완료, 재설치는 앱 실행 여부 확인 후 별도 기록.
+- **로컬 재패키징(고정 로컬 인증서)·`/Applications` 교체 설치 완료(레고 "닫음" 확인 후).** 기존 앱을 `cmdALL.app.bak-20260801-181434`로 백업하고 새 빌드로 교체, 서명 재검증·재실행 확인.
