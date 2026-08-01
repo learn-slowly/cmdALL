@@ -315,6 +315,15 @@ struct Command: Identifiable {
             ) {
                 appState.openStudyReviewSheet()
             },
+            Command(
+                title: "문서에서 할일 찾기",
+                subtitle: "지금 연 문서를 훑어 할일을 찾고 Todoist로 보내기",
+                icon: "checklist",
+                shortcut: nil,
+                keywords: ["할일", "todo", "todoist", "task", "체크박스", "찾기"]
+            ) {
+                appState.openTaskFinder()
+            },
 
             Command(
                 title: "폴더 정리 (배치)",

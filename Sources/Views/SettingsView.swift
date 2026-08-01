@@ -231,6 +231,43 @@ struct GeneralSettingsView: View {
                     .font(.caption)
             }
             Section {
+                SecureField("Todoist API 토큰", text: Binding(
+                    get: { appState.settings.todoistAPIToken ?? "" },
+                    set: { appState.settings.todoistAPIToken = $0.isEmpty ? nil : $0 }
+                ))
+                HStack {
+                    Button("연결 확인") { Task { await appState.loadTodoistProjects() } }
+                        .disabled(appState.todoistProjectsLoading)
+                    if appState.todoistProjectsLoading {
+                        ProgressView().controlSize(.small)
+                    }
+                }
+                if let error = appState.todoistProjectsError {
+                    Text(error).font(.caption).foregroundStyle(.red)
+                }
+                if !appState.todoistProjects.isEmpty {
+                    Picker("기본 프로젝트", selection: Binding(
+                        get: { appState.settings.todoistDefaultProjectId },
+                        set: { newId in
+                            let project = appState.todoistProjects.first { $0.id == newId }
+                            appState.selectTodoistDefaultProject(project)
+                        }
+                    )) {
+                        Text("Inbox(기본 받은함)").tag(String?.none)
+                        ForEach(appState.todoistProjects) { project in
+                            Text(project.name).tag(String?.some(project.id))
+                        }
+                    }
+                } else if let name = appState.settings.todoistDefaultProjectName {
+                    Text("기본 프로젝트: \(name)").font(.caption).foregroundStyle(.secondary)
+                }
+            } header: {
+                Text("문서에서 할일 찾기 → Todoist")
+            } footer: {
+                Text("Todoist 사이트(설정 → Integrations → Developer)에서 개인 API 토큰을 복사해 붙여넣으세요. 토큰은 이 컴퓨터의 설정 파일에 저장됩니다(Keychain 아님, 이 컴퓨터에 접근 가능한 사람만 볼 수 있는 정도의 보호). \"연결 확인\"을 누르면 프로젝트 목록을 불러와 기본 프로젝트를 고를 수 있습니다 — 안 고르면 Todoist 기본 받은함(Inbox)으로 들어갑니다.")
+                    .font(.caption)
+            }
+            Section {
                 LabeledContent("Version", value: AppInfo.versionLabel)
                 LabeledContent("Fork by", value: AppInfo.forkMaker)
                 LabeledContent("Original", value: AppInfo.originalMaker)

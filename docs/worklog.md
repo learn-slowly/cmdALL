@@ -670,4 +670,20 @@ todolist.md의 "지금" 절 삭제(항목 4개 전부 제거) — 남은 건 "�
 - **`StudyReviewView`**(신규 화면) — 카드/문제 종류 배지 → 제목만 먼저 보여주고 "정답/전체 보기"를 눌러야 본문·근거가 드러나는 회상 유도 구조 → 모름/애매/앎 3버튼 채점 → "노트 열기"(기존 `openDocument` 재사용). 진입점 3곳(사이드바 리본에 due 개수 빨간 배지·File 메뉴·커맨드 팔레트 "오늘 복습") 전부 배선. 설정 화면에 "학습도우미 복습" 섹션(폴더 목록 추가/삭제, 기존 `indexedFolders` UI 패턴 재사용).
 - 신규 테스트 45건 — `ReviewSchedulerTests` 11건(경계값 포함 §3.9 전 분기), `StudyNoteParserTests` 10건(카드/문제 왕복·대화 노트 0건·중복 uid·손상 줄·미지 키 보존·재확인 성공/실패), `StudyIndexTests` 11건(재빌드 범위·중복 승자 mtime/동점·노트 이동 생존·하루 상한·due 필터·손상 DB 자가복구), `AppStudyReviewStateTests` 13건(폴더 계산 기본값/설정/무볼트·재빌드·화면 열기/닫기·**실제 파일 IO로 백업 생성+본문 변경 확인**·외부 변경 시 쓰기 포기(백업도 안 생김)·노트 열기·폴더 등록/해제). `swift test` **1,334개**(기존 1,289 + 신규 45) 전량 통과, 회귀 0. `swift build` 경고 없음(신규 코드 관련).
 - 계획서(`docs/superpowers/plans/2026-07-31-study-helper.md`) 게이트 매트릭스·상태 줄 갱신 — S0·S1·S3·S2 전부 완료로 표시, S2 게이트 우회 경위 명문화.
-- 남은 것: 재패키징·`/Applications` 재설치·레고 실사용 확인·버전 릴리스는 아직 안 함(이번 조각은 코드+테스트까지).
+- 남은 것: 재패키징·`/Applications` 재설치는 레고 확인("앱 껐어") 후 같은 날 완료(기존 앱 `cmdALL.app.bak-20260801-171249`로 백업 후 교체, 서명 검증·재실행 확인). 레고 실사용 확인·버전 릴리스는 아직.
+
+---
+
+## 2026-08-01 — 문서에서 할일 찾아서 등록(신규 기능) — Todoist 연동
+
+레고님이 "문서에서 할일 찾아서 등록하는거 만들고싶어"고 요청. 범위가 넓어 `ask` 도구로 6개 질문(대상 범위·탐지 방식·목적지·확인 흐름·프로젝트·토큰 확보)을 직접 묻고 확인받은 뒤 착수(설계 문서 `docs/superpowers/specs/2026-08-01-task-finder-design.md` §결정 사항).
+
+- **cmdALL이 처음으로 다루는 "진짜 외부 인터넷 API"** — kordoc·claude는 로컬 CLI였지만 Todoist는 HTTPS로 사용자 계정에 직접 쓴다. `TodoistService`(actor)가 REST API v2(`GET /projects`·`POST /tasks`)를 `TodoistTransport` 프로토콜 뒤로 추상화해(전례: `UpdateInstaller`의 `UpdateFetching`) 테스트가 실제 인터넷 없이 가짜 응답을 주입한다. 401/403→토큰 오류, 그 외 비2xx→서버 오류, throw→네트워크 오류로 매핑 + 한국어 안내. **토큰은 `AppSettings.todoistAPIToken`에 평문 저장**(Keychain 미연동, 개인용 로컬 앱 전제의 트레이드오프 — 레고에게 명시적으로 통지).
+- **`TaskExtractor`**(순수) — 마크다운 `- [ ] 할일` 체크박스만 정규식으로 뽑는다(완료 표시 `[x]`/`[X]`는 제외, 불릿 기호 `-`/`*`/`+` 다 지원, 줄 번호 보존).
+- **`TaskPromptBuilder`/`TaskOutputParser`**(순수) — AI에게 "이미 체크박스로 찾은 건 빼고" 알려준 뒤 JSON 문자열 배열로만 답하게 하고, 응답에서 첫 `[`~`]` 구간만 추출(전례: `CleanupPlanner.extractJSONObject`의 배열판) + 길이 상한(300자)·개수 상한(30개)·중복 제거.
+- **`TaskFinderService`**(actor) — 체크박스(항상, 로컬)와 AI(본문 있을 때만) 두 경로를 합친다. 본문 0자면 AI 호출 0회, AI 실패해도 체크박스 결과는 살아남고 안내 문구만 남는다(부분 성공 원칙, `StudyService` 전례).
+- **`AppState+TaskFinder.swift`** — `openTaskFinder()`(활성 탭이 요약 가능한 종류면 시트 열고 `ContentExtractor.body(for:)`로 본문 추출 후 탐지) → 화면에서 후보 선택(**체크박스 유래는 기본 선택 ON, AI 유래는 기본 OFF** — "고른 것만 보낸다"는 확인 흐름 결정과 정합) → `sendSelectedTasksToTodoist()`(선택분만 순서대로 전송, 부분 실패 시 "N개 중 k개 보냈습니다" + 실패분은 목록에 남아 재시도 가능) → 설정 화면의 `loadTodoistProjects()`/`selectTodoistDefaultProject()`(Inbox·전용 프로젝트 둘 다 가능하게, 레고 결정 반영).
+- **`TaskFinderView`**(신규 화면) + 진입점 2곳(File 메뉴 "문서에서 할일 찾기"·커맨드팔레트, 레고 결정대로 폴더 일괄 아님 문서 하나+수동 버튼만). 설정 화면 "문서에서 할일 찾기 → Todoist" 섹션(토큰 입력·"연결 확인"·기본 프로젝트 Picker).
+- 신규 테스트 39건 — `TaskExtractorTests` 7건(체크박스 문법·완료 제외·줄 번호·불릿 종류), `TaskOutputParserTests` 8건(JSON 추출·중복/길이/개수 상한·기존 항목 제외), `TaskFinderServiceTests` 5건(빈 본문 AI 미호출·체크박스+AI 합치기·마크다운 아니면 체크박스 미파싱·AI 실패해도 체크박스 생존), `TodoistServiceTests` 9건(프로젝트 디코드·토큰 없음/401/500/네트워크 오류 매핑·요청 본문에 project_id 유무·에러 문구 4종 구분), `AppTaskFinderStateTests` 10건(진입점·기본 선택 원칙·전송 성공/부분실패/선택분만 전송·프로젝트 목록·기본 프로젝트 저장). `swift test` **1,373개**(기존 1,334 + 신규 39) 전량 통과, 회귀 0. `swift build` 경고 없음. `scripts/test_package_app.sh` 패키징 가드 통과. **로컬 재설치는 아직**(앱이 실행 중이라 강제 종료 없이 대기 — 레고가 닫으면 이어서 설치).
+- 이번에 안 한 것(설계 문서 §이번에 하지 않은 것) — 폴더/볼트 전체 훑기·자동 실행·Todoist 양방향 동기화·다른 할일 앱 연동·앱에서 새 프로젝트 자동 생성·파일 우클릭 메뉴 진입점. 전부 후속 후보로 남김.
+- 실사용 확인(토큰 발급→연결 확인→실제 전송)은 아직 안 함 — 레고 실기 확인 대기(`docs/todolist.md`).

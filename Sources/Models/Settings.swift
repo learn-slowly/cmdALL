@@ -158,6 +158,15 @@ struct AppSettings: Codable, Equatable {
     /// 기본값(코드에서 계산, `AppState.effectiveStudyFolders()`) — 설정 화면에서 직접 추가한
     /// 폴더가 있으면 그것만 쓴다.
     var studyFolders: [String] = []
+    // MARK: 문서에서 할일 찾기 → Todoist 연동
+    /// Todoist 개인 API 토큰(Todoist 설정 화면에서 복사). **평문 저장**(다른 설정값과 같은
+    /// 파일) — Keychain 연동은 아직 없다. nil/빈 문자열이면 연동 미설정.
+    var todoistAPIToken: String? = nil
+    /// 기본으로 보낼 프로젝트 id. nil이면 Todoist 기본 받은함(Inbox).
+    var todoistDefaultProjectId: String? = nil
+    /// 위 id에 대응하는 이름(설정 화면 표시용 — 매번 다시 불러오지 않기 위한 캐시일 뿐,
+    /// 실제 전송은 id로만 한다).
+    var todoistDefaultProjectName: String? = nil
 
     // MARK: RAG 설정
     /// 자료에 묻기(RAG) 질의 확장 토글(동의어 recall 보완). 기본 ON.
@@ -241,6 +250,9 @@ struct AppSettings: Codable, Equatable {
         chatContextCap = try c.decodeIfPresent(Int.self, forKey: .chatContextCap) ?? d.chatContextCap
         studyChatAISummary = try c.decodeIfPresent(Bool.self, forKey: .studyChatAISummary) ?? d.studyChatAISummary
         studyFolders = try c.decodeIfPresent([String].self, forKey: .studyFolders) ?? d.studyFolders
+        todoistAPIToken = try c.decodeIfPresent(String.self, forKey: .todoistAPIToken) ?? d.todoistAPIToken
+        todoistDefaultProjectId = try c.decodeIfPresent(String.self, forKey: .todoistDefaultProjectId) ?? d.todoistDefaultProjectId
+        todoistDefaultProjectName = try c.decodeIfPresent(String.self, forKey: .todoistDefaultProjectName) ?? d.todoistDefaultProjectName
         ragExpandQuery = try c.decodeIfPresent(Bool.self, forKey: .ragExpandQuery) ?? d.ragExpandQuery
         libraryLayouts = try c.decodeIfPresent([String: LibraryLayout].self, forKey: .libraryLayouts) ?? d.libraryLayouts
         librarySorts = try c.decodeIfPresent([String: LibrarySort].self, forKey: .librarySorts) ?? d.librarySorts

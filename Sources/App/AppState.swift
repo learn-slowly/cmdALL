@@ -419,6 +419,21 @@ final class AppState {
     var studyReviewRebuildNotice: String? = nil
     /// 사이드바 리본/메뉴 배지용 — 재빌드·채점 때마다 갱신(§3.9 "신호는 앱 내 배지만").
     var studyDueCount: Int = 0
+    // MARK: - 문서에서 할일 찾기 → Todoist
+    var showTaskFinder: Bool = false
+    var taskFinderSourceURL: URL? = nil
+    var taskFinderCandidates: [TaskCandidate] = []
+    /// 기본 선택 원칙: 체크박스 유래는 이미 사용자가 직접 쓴 것이라 기본 ON, AI 유래는
+    /// 검토를 유도하려 기본 OFF(§확인 흐름 — "고른 것만 보낸다").
+    var taskFinderSelected: Set<UUID> = []
+    var taskFinderBusy: Bool = false
+    var taskFinderError: String? = nil
+    var taskFinderAINotice: String? = nil
+    /// 전송 결과 요약("N개 보냈습니다" 등).
+    var taskFinderSentSummary: String? = nil
+    var todoistProjects: [TodoistProject] = []
+    var todoistProjectsLoading: Bool = false
+    var todoistProjectsError: String? = nil
 
     // MARK: - 파일 작업(F1a) 상태
 
@@ -500,6 +515,10 @@ final class AppState {
     var studyChatService: StudyChatService
     /// 복습 캐시(§3.8) — init에서 대입(searchIndex와 같은 패턴, appDir 하위 studyindex.sqlite).
     let studyIndex: StudyIndex
+    /// 테스트가 가짜 Claude 주입 TaskFinderService로 교체할 수 있게 internal var(클린업 전례).
+    var taskFinderService: TaskFinderService
+    /// 테스트가 가짜 전송(TodoistTransport) 주입 TodoistService로 교체할 수 있게 internal var.
+    var todoistService: TodoistService
     let moveExecutor: MoveExecutor
     let dataURL: URL
 
@@ -670,6 +689,8 @@ final class AppState {
         studyService = StudyService(claude: aiRouter, sourceLoader: studySourceLoader)
         studyChatService = StudyChatService(claude: aiRouter)
         studyIndex = StudyIndex(dbURL: appDir.appendingPathComponent("studyindex.sqlite"))
+        taskFinderService = TaskFinderService(claude: aiRouter)
+        todoistService = TodoistService()
         moveExecutor = MoveExecutor(store: moveLogStore)
 
         fileService = FileService()

@@ -208,6 +208,9 @@ struct CmdMDApp: App {
                 Button("오늘 복습") {
                     appState.openStudyReviewSheet()
                 }
+                Button("문서에서 할일 찾기") {
+                    appState.openTaskFinder()
+                }
 
                 Divider()
                 
