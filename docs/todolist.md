@@ -32,13 +32,13 @@
 - **볼 것**: 마크다운 편집 화면·마크다운 미리보기 화면(일반 노트 열기)·PDF 화면·한글/오피스 문서 화면(보기·편집 둘 다) 각각에서 글자를 드래그로 선택 → 오른쪽 버튼 → 메뉴 맨 위에 "Claude에게 물어보기"가 뜨는지 → 누르면 오른쪽 AI 패널이 열리고 선택한 글자가 컨텍스트로 잡히는지(패널에서 질문을 입력해 실제로 그 내용 기준으로 답이 오는지까지 1회). 선택 없이 우클릭했을 때는 항목이 안 뜨는지도 같이 확인.
 - **어디**: `Sources/Views/EditorTextView.swift`(`CmdMDTextView.menu(for:)`) · `Sources/Views/PDFReaderView.swift`(`CmdMDPDFView.menu(for:)`) · `Sources/Views/PreviewView.swift`(`DropThroughWebView.menu(for:)`) · 배선은 `MainEditorView.swift`·`OfficeReaderView.swift`.
 
-### 3. 학습도우미 S1 배포 완료 + S3(대화) 코드 완성(레고 실기 확인 대기)
+### 3. 학습도우미 S1·S3(대화) — v0.9.428 배포 진행 중(레고 실사용 계속 확인 중)
 
-- **왜**: S0(프리셋 버튼)·S1(코어+카드+퀴즈+저장)이 v0.9.427로 배포 완료. 이어서 2026-08-01 두 번째 세션에서 S3(대화하며 공부하기)의 코드 구현이 끝나 **`/Applications`에 로컬 설치까지 완료**됐다 — 실제 Claude와 스트리밍 대화·"노트로 남기기"까지 지금 앱에서 바로 눌러볼 수 있다. 아직 GitHub 릴리스(배포)는 안 올렸다 — 레고 실사용 확인 먼저.
-- **볼 것 — S1(계속 확인 중)**: 왼쪽 리본 학습도우미(졸업모자) 아이콘 → 교재 파일 선택 → "정리 카드"/"연습 문제" → 개수(최대 50개) → 부분 범위 선택 → 필요하면 템플릿 → 만들기 → 미리보기 → "노트로 저장" → "노트 열기".
-- **볼 것 — S3 대화(신규, 이번에 처음 확인)**: 학습도우미 화면에서 파일을 고른 뒤 "대화하며 공부하기" 버튼 → 대화창에서 교재 내용 질문 → 답이 실시간으로 채워지는지 → 답 오는 도중 "중단" 눌러서 멈추는지(멈춰도 그때까지 받은 글자는 남아있는지) → 여러 번 주고받은 뒤 앞 질문 내용을 참고해서 답하는지 → "노트로 남기기" → "노트 열기"로 내용 확인(참고한 부분 + 대화 전문이 그대로 들어있는지). 설정(General 탭 맨 위쪽)에서 "한 번에 보낼 글자 수"·"AI로 요약해서 압축" 옵션도 확인 가능. **주의**: 대화 중 앱이 꺼지면 지금은 대화가 그냥 사라진다(크래시 복구 기능은 아직 없음, 아래 "다음" 참고).
-- **어디**: 설계 `docs/superpowers/specs/2026-07-31-study-helper-design.md`·계획 `docs/superpowers/plans/2026-07-31-study-helper.md`. S1 화면 `Sources/Views/StudyHelperView.swift`·`StudyTemplateManagerView.swift`·배선 `Sources/App/AppState+Study.swift`. S3 화면 `Sources/Views/StudyChatView.swift`·배선 `Sources/App/AppState+StudyChat.swift`·엔진 `Sources/Services/StudyChatService.swift`·`ChatContextAssembler.swift`·모델 `Sources/Models/StudyChatSession.swift`.
-- **다음**: 레고가 S3 대화를 먼저 써보고 "쓸 만하다" 판정 나오면 → `StudyChatDraftStore`(크래시 대비 임시 저장, §4.7 — 아직 미구현) 착수. S1·S3 둘 다 문제가 나오면 그때그때 반영. 판정 나오면 릴리스도 함께 검토.
+- **왜**: S0(프리셋 버튼)·S1(코어+카드+퀴즈+저장)이 v0.9.427로 배포된 뒤, 같은 날 두 번째 세션에서 S3(대화하며 공부하기) 구현 + 레고 실기 확인 중 나온 피드백 3건(대화창 마크다운 렌더링·Claude 패널 마크다운 렌더링·학습도우미 마지막 교재 파일 기억)까지 전부 반영해 레고 승인으로 v0.9.428 릴리스 진행 중(`/Applications`는 이미 같은 코드로 로컬 설치됨).
+- **볼 것 — S1(계속 확인 중)**: 왼쪽 리본 학습도우미(졸업모자) 아이콘 → 교재 파일 선택(지난번 고른 파일이 자동으로 다시 선택돼 있는지도 확인) → "정리 카드"/"연습 문제" → 개수(최대 50개) → 부분 범위 선택 → 필요하면 템플릿 → 만들기 → 미리보기 → "노트로 저장" → "노트 열기".
+- **볼 것 — S3 대화(계속 확인 중)**: 학습도우미 화면에서 파일을 고른 뒤 "대화하며 공부하기" 버튼 → 대화창에서 교재 내용 질문 → 답이 실시간으로 채워지면서 마크다운(굵게·목록·제목 등)이 제대로 꾸며져 나오는지 → "중단"으로 멈추는지 → 여러 번 주고받은 뒤 앞 내용을 참고해서 답하는지 → "노트로 남기기" → "노트 열기". Claude 패널(⇧⌘A)도 같은 마크다운 렌더링이 적용됐는지 함께 확인. **주의**: 대화 중 앱이 꺼지면 지금은 대화가 사라진다(크래시 복구는 아직 없음, 아래 "다음" 참고).
+- **어디**: 설계 `docs/superpowers/specs/2026-07-31-study-helper-design.md`·계획 `docs/superpowers/plans/2026-07-31-study-helper.md`. S1 화면 `Sources/Views/StudyHelperView.swift`·`StudyTemplateManagerView.swift`·배선 `Sources/App/AppState+Study.swift`. S3 화면 `Sources/Views/StudyChatView.swift`·배선 `Sources/App/AppState+StudyChat.swift`·엔진 `Sources/Services/StudyChatService.swift`·`ChatContextAssembler.swift`·모델 `Sources/Models/StudyChatSession.swift`. 마크다운 렌더링 `Sources/Views/ChatMarkdownView.swift`(대화창·Claude 패널 공용). 마지막 파일 기억 `AppSettings.lastStudySourcePath`·`AppState.openStudyHelper()`.
+- **다음**: 레고가 실사용 계속하며 "쓸 만하다" 판정 나오면 → `StudyChatDraftStore`(크래시 대비 임시 저장, §4.7 — 아직 미구현) 착수. 문제가 나오면 그때그때 반영.
 
 ---
 
