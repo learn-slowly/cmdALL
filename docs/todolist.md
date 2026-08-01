@@ -29,9 +29,9 @@
 ### 3. 학습도우미 S1 착수 — 전용 화면 + 카드/문제 실제 생성·저장
 
 - **왜**: S0(프리셋 버튼) 실기 확인 완료 — 2026-08-01 레고 "쓸만한거 같아" 판정으로 게이트 통과. 승인된 계획(ralplan, 2026-07-31)의 다음 단계는 S1: 위키처럼 왼쪽 리본에 전용 자리를 갖는 학습 화면(`StudyHelperView`)을 만들고, 지금은 프롬프트만 채우는 카드·문제 생성을 실제로 청크 단위 생성 + 새 마크다운 노트로 저장하는 기능까지 완성하는 것. S2(복습)·S3(대화)는 S1 다음(레고가 순서 결정, 계획상 대화 먼저).
-- **진행 상황(2026-08-01)**: 착수 전 코드 조사 3건 완료(OCR 속도·노트 저장 위치=지정 볼트 폴더·정상 종료 훅 실존 확인). 계획서 순서의 첫 조각(자료 모양 정의 — `StudyLocator`·`StudyItem`·`StudyScope`·`StudyChatDraft` 4개 모델 파일, 로직·화면 없음) 완료, 테스트 10건 추가. 둘째 조각(`StudySourceLoader` — 종류별 자료 읽기+위치표 붙이기) 완료, 테스트 14건 추가. 레고 확인 질문 반영 — 오피스(한글·워드)도 변환된 글의 제목(헤딩) 구간 단위로 부분 선택 가능하게 확장(`StudyScopeRange.sectionRange`, 설계 §5.2 I3), 테스트 7건 추가. 남은 순서: `StudyChunker` → `StudyPromptBuilder` → `StudyOutputParser` → `StudyService` → `StudyNoteWriter` → `StudyHelperView`.
+- **진행 상황(2026-08-01)**: 착수 전 코드 조사 3건 완료(OCR 속도·노트 저장 위치=지정 볼트 폴더·정상 종료 훅 실존 확인). 계획서 순서의 첫 조각(자료 모양 정의 — `StudyLocator`·`StudyItem`·`StudyScope`·`StudyChatDraft` 4개 모델 파일, 로직·화면 없음) 완료, 테스트 10건 추가. 둘째 조각(`StudySourceLoader` — 종류별 자료 읽기+위치표 붙이기) 완료, 테스트 14건 추가. 레고 확인 질문 반영 — 오피스(한글·워드)도 변환된 글의 제목(헤딩) 구간 단위로 부분 선택 가능하게 확장(`StudyScopeRange.sectionRange`, 설계 §5.2 I3), 테스트 7건 추가. 셋째 조각(`StudyChunker` — 조각을 AI에게 보낼 크기로 자르고 위치 태그 붙이기) 완료, 테스트 11건 추가. 남은 순서: `StudyPromptBuilder` → `StudyOutputParser` → `StudyService` → `StudyNoteWriter` → `StudyHelperView`.
 - **볼 것(다음 조각 착수 전)**: 계획 문서의 S1 범위(코어+카드+퀴즈+저장, 제안→확인 원칙 유지)·수용 기준을 다시 확인하고 이어간다. 사람이 많이 관여하는 큰 작업이라 조각마다 레고 확인 권장.
-- **어디**: 설계 `docs/superpowers/specs/2026-07-31-study-helper-design.md`·계획 `docs/superpowers/plans/2026-07-31-study-helper.md`(§Q1~Q5·출력 계약·게이트 매트릭스·File-level changes 참고). S0 산출물: `Sources/Views/ClaudePanelView.swift`·`Sources/App/AppState+Claude.swift`. S1 산출물: `Sources/Models/StudyLocator.swift`·`StudyItem.swift`·`StudyScope.swift`·`StudyChatDraft.swift`·`Sources/Services/StudySourceLoader.swift`.
+- **어디**: 설계 `docs/superpowers/specs/2026-07-31-study-helper-design.md`·계획 `docs/superpowers/plans/2026-07-31-study-helper.md`(§Q1~Q5·출력 계약·게이트 매트릭스·File-level changes 참고). S0 산출물: `Sources/Views/ClaudePanelView.swift`·`Sources/App/AppState+Claude.swift`. S1 산출물: `Sources/Models/StudyLocator.swift`·`StudyItem.swift`·`StudyScope.swift`·`StudyChatDraft.swift`·`Sources/Services/StudySourceLoader.swift`·`StudyChunker.swift`.
 
 ---
 
