@@ -192,6 +192,23 @@ final class TodoistServiceTests: XCTestCase {
         }
     }
 
+    // MARK: - TodoistDue.parsedDate(간트차트 막대 계산용)
+
+    func testParsedDateHandlesPlainDayFormat() {
+        let due = TodoistDue(date: "2026-08-05", string: "tomorrow", isRecurring: false)
+        XCTAssertNotNil(due.parsedDate)
+    }
+
+    func testParsedDateHandlesISO8601Format() {
+        let due = TodoistDue(date: "2026-08-05T12:00:00Z", string: "tomorrow at noon", isRecurring: false)
+        XCTAssertNotNil(due.parsedDate)
+    }
+
+    func testParsedDateReturnsNilForGarbage() {
+        let due = TodoistDue(date: "그냥이상한값", string: "?", isRecurring: false)
+        XCTAssertNil(due.parsedDate)
+    }
+
     // MARK: - 에러 안내 문구(순수)
 
     func testErrorMessagesAreKoreanAndDistinct() {

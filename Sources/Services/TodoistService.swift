@@ -40,6 +40,27 @@ struct TodoistDue: Equatable, Codable, Sendable {
         case date, string
         case isRecurring = "is_recurring"
     }
+
+    /// `date`는 보통 "yyyy-MM-dd"(날짜만)지만, 시간이 붙은 마감(due_datetime)은 ISO8601로
+    /// 올 수도 있어 둘 다 시도한다(간트차트 막대 계산용, 실패하면 nil — 그 항목은 차트에서 빠진다).
+    var parsedDate: Date? {
+        if let d = Self.dayFormatter.date(from: date) { return d }
+        return Self.isoFormatter.date(from: date)
+    }
+
+    private static let dayFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = .current
+        return formatter
+    }()
+
+    private static let isoFormatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter
+    }()
 }
 
 enum TodoistError: Error, Equatable {

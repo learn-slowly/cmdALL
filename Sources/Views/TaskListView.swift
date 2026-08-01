@@ -24,7 +24,7 @@ struct TaskListView: View {
             }
         }
         .padding(16)
-        .frame(width: 520, height: 520)
+        .frame(width: 620, height: 520)
     }
 
     private var header: some View {
@@ -56,45 +56,25 @@ struct TaskListView: View {
             Text("할일이 없습니다.").font(.callout).foregroundStyle(.secondary)
             Spacer()
         } else {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 6) {
-                    ForEach(appState.todoistTasks) { task in
-                        todoistTaskRow(task)
-                    }
+            let dated = appState.todoistTasks
+                .filter { $0.due?.parsedDate != nil }
+                .sorted { $0.due!.parsedDate! < $1.due!.parsedDate! }
+            let undatedCount = appState.todoistTasks.count - dated.count
+            if dated.isEmpty {
+                Spacer()
+                Text("마감일이 있는 할일이 없어 간트차트를 그릴 수 없습니다.")
+                    .font(.callout).foregroundStyle(.secondary)
+                Spacer()
+            } else {
+                GanttChartView(tasks: dated, today: Date()) { task in
+                    Task { await appState.completeTodoistTask(task) }
+                }
+                if undatedCount > 0 {
+                    Text("마감일 없는 할일 \(undatedCount)개는 표시되지 않습니다.")
+                        .font(.caption2).foregroundStyle(.secondary)
                 }
             }
         }
-    }
-
-    private func todoistTaskRow(_ task: TodoistTask) -> some View {
-        HStack(alignment: .top, spacing: 8) {
-            Button {
-                Task { await appState.completeTodoistTask(task) }
-            } label: {
-                Image(systemName: "circle")
-            }
-            .buttonStyle(.plain)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(task.content).font(.callout)
-                HStack(spacing: 6) {
-                    if let projectName = projectName(for: task.projectId) {
-                        Text(projectName).font(.caption2).foregroundStyle(.secondary)
-                    }
-                    if let due = task.due {
-                        Text(due.string).font(.caption2).foregroundStyle(.secondary)
-                    }
-                }
-            }
-            Spacer()
-        }
-        .padding(6)
-        .background(.quaternary.opacity(0.15), in: RoundedRectangle(cornerRadius: 6))
-    }
-
-    private func projectName(for projectId: String?) -> String? {
-        guard let projectId else { return nil }
-        return appState.todoistProjects.first { $0.id == projectId }?.name
     }
 
     // MARK: - 보낸 기록 탭

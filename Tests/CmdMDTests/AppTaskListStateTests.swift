@@ -52,7 +52,7 @@ final class AppTaskListStateTests: XCTestCase {
 
     // MARK: - 진입점·목록 불러오기
 
-    func testOpenTaskListViewLoadsTodoistTasksAndProjects() async {
+    func testOpenTaskListViewLoadsTodoistTasks() async {
         app.todoistService = TodoistService(transport: FakeTransport())
         app.settings.todoistAPIToken = "가짜토큰"
         app.openTaskListView()

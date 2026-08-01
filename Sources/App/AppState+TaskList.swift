@@ -7,7 +7,6 @@ extension AppState {
     func openTaskListView() {
         showTaskListView = true
         Task { @MainActor in await refreshTodoistTasks() }
-        Task { @MainActor in await loadTodoistProjects() }   // 할일 행에 프로젝트 이름 표시용.
         Task { @MainActor in await loadSentTaskRecords() }
     }
 
