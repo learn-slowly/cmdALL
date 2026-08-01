@@ -1,9 +1,9 @@
 import XCTest
 @testable import CmdMD
 
-/// S1 첫 조각 — 학습도우미 자료 모양(StudyLocator/StudyItem/StudyScope/StudyChatDraft)의
-/// 기본값·인코딩이 설계 문서(§3.3·§3.9·§4.7.2·§5.1·§5.2)와 어긋나지 않는지 확인한다.
-/// 아직 로직(생성·파싱·저장)은 없으므로 여기서는 값 그릇 자체만 검증한다.
+/// S1 첫 조각(StudyLocator/StudyItem/StudyScope/StudyChatDraft) + S3 첫 조각(StudyChatSession) —
+/// 학습도우미 자료·대화 모양의 기본값·인코딩이 설계 문서(§3.3·§3.9·§4.1·§4.7.2·§5.1·§5.2)와
+/// 어긋나지 않는지 확인한다. 아직 로직(생성·파싱·저장·조립)은 없으므로 값 그릇 자체만 검증한다.
 final class StudyModelsTests: XCTestCase {
 
     // MARK: - StudyLocator / StudySegment / StudyChunk
@@ -188,5 +188,31 @@ final class StudyModelsTests: XCTestCase {
     func testStudyChatDraftCurrentSchemaVersionIsStable() {
         // 이 값이 바뀌면 기존 초안이 전부 폐기(§4.7.5 2번) 대상이 되므로, 의도치 않은 변경을 잡아낸다.
         XCTAssertEqual(StudyChatDraft.currentSchemaVersion, 1)
+    }
+
+    // MARK: - StudyChatSession / StudyChatTurn (S3 첫 조각 — 세션 모델)
+
+    func testStudyChatSessionDefaultsAreEmpty() {
+        let session = StudyChatSession()
+
+        XCTAssertNil(session.sourceURL)
+        XCTAssertEqual(session.pinnedExcerpt, "")
+        XCTAssertEqual(session.turns, [])
+        XCTAssertNil(session.foldedPrefix)
+    }
+
+    func testStudyChatSessionEqualityIgnoresNothingButFieldsMatter() {
+        let id = UUID()
+        let a = StudyChatSession(id: id, pinnedExcerpt: "발췌", turns: [StudyChatTurn(role: .user, text: "질문")])
+        let b = StudyChatSession(id: id, pinnedExcerpt: "발췌", turns: [StudyChatTurn(role: .user, text: "질문")])
+        let c = StudyChatSession(id: id, pinnedExcerpt: "발췌", turns: [StudyChatTurn(role: .user, text: "다른 질문")])
+
+        XCTAssertEqual(a, b)
+        XCTAssertNotEqual(a, c)
+    }
+
+    func testStudyChatTurnTruncatedDefaultsFalse() {
+        let turn = StudyChatTurn(role: .assistant, text: "답변")
+        XCTAssertFalse(turn.truncated)
     }
 }

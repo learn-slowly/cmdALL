@@ -32,12 +32,12 @@
 - **볼 것**: 마크다운 편집 화면·마크다운 미리보기 화면(일반 노트 열기)·PDF 화면·한글/오피스 문서 화면(보기·편집 둘 다) 각각에서 글자를 드래그로 선택 → 오른쪽 버튼 → 메뉴 맨 위에 "Claude에게 물어보기"가 뜨는지 → 누르면 오른쪽 AI 패널이 열리고 선택한 글자가 컨텍스트로 잡히는지(패널에서 질문을 입력해 실제로 그 내용 기준으로 답이 오는지까지 1회). 선택 없이 우클릭했을 때는 항목이 안 뜨는지도 같이 확인.
 - **어디**: `Sources/Views/EditorTextView.swift`(`CmdMDTextView.menu(for:)`) · `Sources/Views/PDFReaderView.swift`(`CmdMDPDFView.menu(for:)`) · `Sources/Views/PreviewView.swift`(`DropThroughWebView.menu(for:)`) · 배선은 `MainEditorView.swift`·`OfficeReaderView.swift`.
 
-### 3. 학습도우미 S1 — v0.9.427로 배포 완료, 레고 실사용 확인 대기
+### 3. 학습도우미 S1 — v0.9.427로 배포 완료(레고 실사용은 계속 확인 중) + S3(대화) 코드 착수
 
 - **왜**: S0(프리셋 버튼) 실기 확인 완료(2026-08-01, 레고 "쓸만한거 같아" 판정)로 게이트 통과 후 진행한 S1(코어+카드+퀴즈+저장) 구현이 끝났다. 실기 확인 중 나온 레고 피드백 3건(부분 범위 선택 필요·쪽 번호 직접입력·개수 상한 50개+템플릿 기능)까지 같은 날 전부 반영해 **v0.9.427로 GitHub 릴리스 발행 완료**(`/Applications`도 같은 빌드로 교체 설치됨).
 - **볼 것**: 왼쪽 리본 학습도우미(졸업모자) 아이콘 클릭 → 교재 파일 선택(PDF·한글/워드·이미지·마크다운 아무거나) → "정리 카드"/"연습 문제" 고르고 개수 정하기(최대 50개) → "전체 파일 사용" 토글을 꺼서 일부만 골라보기(PDF는 쪽 번호 직접 입력, 한글/워드·마크다운은 제목 목록에서 시작~끝 선택) → 필요하면 "템플릿 관리…"에서 나만의 지시문 템플릿 만들어 골라보기 → 만들기 → 미리보기 확인 → "노트로 저장" → "노트 열기"로 내용 확인. 실사용(실제 자격증 교재 등)으로 며칠 써보고 "쓸 만하다" 판정이 나오면 다음 단계로.
-- **어디**: 설계 `docs/superpowers/specs/2026-07-31-study-helper-design.md`·계획 `docs/superpowers/plans/2026-07-31-study-helper.md`. 화면 `Sources/Views/StudyHelperView.swift`·`StudyTemplateManagerView.swift`·배선 `Sources/App/AppState+Study.swift`. S1 로직 산출물: `Sources/Models/StudyLocator.swift`·`StudyItem.swift`·`StudyScope.swift`·`StudyChatDraft.swift`·`StudyRangeChoice.swift`·`StudyTemplate.swift`·`Sources/Services/StudySourceLoader.swift`·`StudyChunker.swift`·`StudyPromptBuilder.swift`·`StudyOutputParser.swift`·`StudyService.swift`·`StudyNoteWriter.swift`.
-- **다음**: 실사용 확인이 끝나면(레고 판정) S3(대화, 레고 확정 우선순위) 또는 이번 실사용에서 나온 추가 피드백 반영으로 이어간다.
+- **어디**: 설계 `docs/superpowers/specs/2026-07-31-study-helper-design.md`·계획 `docs/superpowers/plans/2026-07-31-study-helper.md`. 화면 `Sources/Views/StudyHelperView.swift`·`StudyTemplateManagerView.swift`·배선 `Sources/App/AppState+Study.swift`. S1 로직 산출물: `Sources/Models/StudyLocator.swift`·`StudyItem.swift`·`StudyScope.swift`·`StudyChatDraft.swift`·`StudyRangeChoice.swift`·`StudyTemplate.swift`·`Sources/Services/StudySourceLoader.swift`·`StudyChunker.swift`·`StudyPromptBuilder.swift`·`StudyOutputParser.swift`·`StudyService.swift`·`StudyNoteWriter.swift`. S3 착수분(2026-08-01, 아직 화면·AI호출 없음): `Sources/Models/StudyChatSession.swift`·`Sources/Services/ChatContextAssembler.swift`.
+- **다음**: S3(대화) 이어서 진행 — `StudyChatService`(실제 Claude 호출) → 화면(`StudyChatView`) → "노트로 남기기" → `StudyChatDraftStore`(크래시 대비 임시 저장). S1은 위 "볼 것"을 레고가 실사용하며 계속 확인하고, 문제가 나오면 그때그때 반영.
 
 ---
 
