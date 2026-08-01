@@ -5,8 +5,9 @@ import CoreText
 @testable import CmdMD
 
 /// S1 두 번째 조각 — `StudySourceLoader`가 종류별로 위치 태그(§5.1~5.2)를 맞게 붙이는지
-/// 확인한다. office(kordoc)는 기존 관행대로(`ContentExtractorTests` 전례) 실제 외부
-/// 프로세스가 필요해 여기서 단위 테스트하지 않는다 — 수동 스모크 몫.
+/// 확인한다. office는 kordoc 변환(외부 프로세스) 자체는 기존 관행대로(`ContentExtractorTests`
+/// 전례) 단위 테스트하지 않지만, **변환된 글을 구간으로 나누는 로직**(`officeSegments`,
+/// §5.2 I3)은 순수 함수라 kordoc 없이 직접 검증한다.
 final class StudySourceLoaderTests: XCTestCase {
 
     // MARK: - 마크다운/텍스트: 헤딩 경계 → 줄 번호
@@ -98,6 +99,77 @@ final class StudySourceLoaderTests: XCTestCase {
         let segments = await loader.segments(for: StudyScope(fileURL: missing, kind: .markdown, range: .wholeFile))
 
         XCTAssertTrue(segments.isEmpty)
+    }
+
+    // MARK: - 오피스: 제목(헤딩) 구간 부분 선택(§5.2 I3) — kordoc 없이 순수 함수만 검증
+
+    func testOfficeSegmentsSplitAtHeadingBoundariesAllUnknownLocator() {
+        let body = "머리말\n\n# 1장\n1장 본문\n\n# 2장\n2장 본문\n"
+
+        let segments = StudySourceLoader.officeSegments(body: body, range: .wholeFile)
+
+        XCTAssertEqual(segments.count, 3)
+        XCTAssertTrue(segments.allSatisfy { $0.locator == .unknown })
+        XCTAssertTrue(segments[0].text.contains("머리말"))
+        XCTAssertTrue(segments[1].text.contains("1장 본문"))
+        XCTAssertTrue(segments[2].text.contains("2장 본문"))
+    }
+
+    func testOfficeSegmentsWithNoHeadingsProduceOneWholeSection() {
+        let body = "표만 있는 문서\n| a | b |\n|---|---|\n| 1 | 2 |\n"
+
+        let segments = StudySourceLoader.officeSegments(body: body, range: .wholeFile)
+
+        XCTAssertEqual(segments.count, 1)
+        XCTAssertEqual(segments[0].locator, .unknown)
+        XCTAssertTrue(segments[0].text.contains("표만 있는 문서"))
+    }
+
+    func testOfficeSegmentsSectionRangeSelectsOnlyChosenSection() {
+        let body = "# 1장\n1장 내용\n\n# 2장\n2장 내용\n\n# 3장\n3장 내용\n"
+
+        let segments = StudySourceLoader.officeSegments(body: body, range: .sectionRange(2, 2))
+
+        XCTAssertEqual(segments.count, 1)
+        XCTAssertTrue(segments[0].text.contains("2장 내용"))
+        XCTAssertFalse(segments[0].text.contains("1장 내용"))
+        XCTAssertFalse(segments[0].text.contains("3장 내용"))
+    }
+
+    func testOfficeSegmentsSectionRangeClampsToSectionCount() {
+        let body = "# 1장\n내용1\n\n# 2장\n내용2\n\n# 3장\n내용3\n"
+
+        // 2~10구간을 요청했지만 구간은 3개뿐 — 3구간까지만.
+        let segments = StudySourceLoader.officeSegments(body: body, range: .sectionRange(2, 10))
+
+        XCTAssertEqual(segments.count, 2)
+        XCTAssertTrue(segments[0].text.contains("내용2"))
+        XCTAssertTrue(segments[1].text.contains("내용3"))
+    }
+
+    func testOfficeSegmentsReturnsEmptyWhenSectionRangeStartsAfterSectionCount() {
+        let body = "# 1장\n내용1\n\n# 2장\n내용2\n"
+
+        let segments = StudySourceLoader.officeSegments(body: body, range: .sectionRange(5, 10))
+
+        XCTAssertTrue(segments.isEmpty)
+    }
+
+    func testOfficeSegmentsReturnsEmptyForBlankBody() {
+        let segments = StudySourceLoader.officeSegments(body: "   \n\n  \n", range: .wholeFile)
+
+        XCTAssertTrue(segments.isEmpty)
+    }
+
+    func testOfficeSegmentsReturnsEmptyForMismatchedRangeType() {
+        // 오피스는 쪽·줄 범위 개념이 없다 — 스코프가 잘못 짝지어져도 크래시 없이 빈 배열.
+        let body = "# 1장\n내용\n"
+
+        let pageRangeResult = StudySourceLoader.officeSegments(body: body, range: .pageRange(1, 2))
+        let lineRangeResult = StudySourceLoader.officeSegments(body: body, range: .lineRange(1, 2))
+
+        XCTAssertTrue(pageRangeResult.isEmpty)
+        XCTAssertTrue(lineRangeResult.isEmpty)
     }
 
     // MARK: - PDF: 인덱스+1 · 범위 클램프 · 빈 쪽 스킵

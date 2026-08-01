@@ -92,7 +92,8 @@ final class StudyModelsTests: XCTestCase {
     // MARK: - StudyScope
 
     func testStudyScopeRangeVariantsMatchDocumentKindGranularity() {
-        // §5.2: PDF=쪽 범위, 마크다운/텍스트=줄 범위, 오피스/이미지=위치 단위 없음(전체 파일만).
+        // §5.2(2026-08-01 I3): PDF=쪽 범위, 마크다운/텍스트=줄 범위, 오피스=제목(헤딩) 구간
+        // 범위 또는 전체 파일, 이미지=전체 파일만(나눌 단위 자체가 없음).
         let pdfScope = StudyScope(
             fileURL: URL(fileURLWithPath: "/tmp/책.pdf"),
             kind: .pdf,
@@ -119,6 +120,23 @@ final class StudyModelsTests: XCTestCase {
             return XCTFail("마크다운 범위는 lineRange여야 한다")
         }
         XCTAssertEqual(officeScope.range, .wholeFile)
+    }
+
+    func testStudyScopeRangeSupportsOfficeSectionRange() {
+        // §5.2 I3(2026-08-01): 오피스도 변환된 글의 제목(헤딩) 구간 단위로 부분 선택할 수 있다.
+        let officeScope = StudyScope(
+            fileURL: URL(fileURLWithPath: "/tmp/보고서.hwp"),
+            kind: .office,
+            range: .sectionRange(2, 3)
+        )
+
+        guard case .sectionRange(let start, let end) = officeScope.range else {
+            return XCTFail("오피스 부분 선택 범위는 sectionRange여야 한다")
+        }
+        XCTAssertEqual(start, 2)
+        XCTAssertEqual(end, 3)
+        XCTAssertEqual(StudyScopeRange.sectionRange(2, 3), StudyScopeRange.sectionRange(2, 3))
+        XCTAssertNotEqual(StudyScopeRange.sectionRange(2, 3), StudyScopeRange.sectionRange(2, 4))
     }
 
     // MARK: - StudyChatDraft (크래시 대비 임시 초안, §4.7.2)

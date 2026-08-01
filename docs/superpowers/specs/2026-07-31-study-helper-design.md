@@ -31,6 +31,7 @@
 |---|---|---|
 | I1 | S1 → **S3** → S2 순서 확정 | §Intent Reconciliation · §Sequencing · §쉬운 말 요약 · §게이트 매트릭스 비고 · §Handoff |
 | I2 | 크래시 대비 임시 초안 **ON** | **§4.7 신설**(위치·형식·쓰기 시점·삭제 시점·복구 흐름·민감성·설정) · §File-level(신규 `StudyChatDraftStore.swift`) · §In scope 설정 키 · §Out of scope 10번 문구 정밀화 · AC #20 정정 + #32~#35 신설 · §Verification Plan · §Observability · §Risks |
+| I3 | (2026-08-01, S1 구현 중 레고 확인) 오피스(hwp·docx 등)도 부분 선택 가능하게 | §5.2 표 갱신 — 오피스는 `StudyScopeRange.sectionRange`(변환된 글의 제목/헤딩 경계로 나눈 "N번째 구간")로 부분 선택 가능. 근거 위치는 여전히 `.unknown`(원본 파일의 몇 쪽인지는 변환 도구가 안 줘서 끝내 모름) — 바뀌는 건 "무엇을 보낼지 고르는 범위"뿐. 이미지는 나눌 단위가 없어(사진 한 장=학습 단위 하나) 전체 파일만 그대로. `Sources/Models/StudyScope.swift`·`Sources/Services/StudySourceLoader.swift` 반영 완료 |
 
 유지(변경 없음): 옵션 A 채택, S0 필수 게이트, `searchindex.sqlite` 미사용 근거, 의존성 0, provider 중립, 원본 불변, Q1~Q3·Q5, §4.1~4.6, 출력 계약 O1~O6, §4.2 예산 공식·트리밍, AC 1~19·21~31.
 
@@ -324,14 +325,14 @@ enum StudyChunker { static func chunks(from: [StudySegment], budget: Int) -> [St
 페이지·줄 모두 1-based. PDF 페이지 = PDFKit 인덱스 + 1 → UI에 "파일 기준 N쪽".
 
 #### 5.2 종류별 세그먼트
-| 종류 | 본문 출처 | locator |
-|---|---|---|
-| PDF | `PDFDocument` 직접 순회 | `.page(i+1)`(빈 페이지는 OCR 보강, 그래도 비면 스킵) |
-| 마크다운·텍스트·eml | 줄 단위 + 헤딩 경계 | `.line(첫 줄)` |
-| office | `ContentExtractor.body`(kordoc) | `.unknown` |
-| 이미지(OCR) | `OCRService` | `.unknown` |
-| media | 제외(짝꿍 노트가 있으면 마크다운 취급) | — |
-| quickLook | 제외 | — |
+| 종류 | 본문 출처 | locator | 부분 선택 범위 |
+|---|---|---|---|
+| PDF | `PDFDocument` 직접 순회 | `.page(i+1)`(빈 페이지는 OCR 보강, 그래도 비면 스킵) | `pageRange` |
+| 마크다운·텍스트·eml | 줄 단위 + 헤딩 경계 | `.line(첫 줄)` | `lineRange` |
+| office(2026-08-01 I3) | kordoc 변환 후 이 서비스가 다시 헤딩 경계로 구간 분할 | `.unknown`(원본 위치 불명 — 변경 없음) | `sectionRange`(변환된 글의 N번째 제목 구간, 헤딩 없으면 1구간=전체) |
+| 이미지(OCR) | `OCRService` | `.unknown` | `wholeFile`만(나눌 단위 없음) |
+| media | 제외(짝꿍 노트가 있으면 마크다운 취급) | — | — |
+| quickLook | 제외 | — | — |
 
 #### 5.3 청크 → 인용 매핑
 위치 태그 `[[p12]]`/`[[l345]]`/`[[?]]` 부착 → 파서가 복원 → **`coveredLocators`에 없는 태그는 `.unknown` 강등 + `invalidCitations`**.

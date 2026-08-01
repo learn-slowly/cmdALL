@@ -457,3 +457,14 @@ ralplan 최종 계획(레고 실행 승인, S0만) 실행. 게이트 순서(S0 �
 - 신규 테스트 14건(`Tests/CmdMDTests/StudySourceLoaderTests.swift`) — 헤딩 경계 분할·헤딩 없는 파일 한 조각·범위 시작줄 우선(앞선 헤딩 무시)·빈 파일/역방향 범위/없는 파일 빈 배열, PDF 인덱스+1·범위 clamp·범위가 문서 밖이면 빈 배열·OCR로도 못 건지는 빈 쪽 스킵·줄범위로 PDF 요청 시 빈 배열, 이미지 OCR 성공/실패, 미디어·QuickLook 빈 배열. PDF 텍스트 검증용으로 `CTLineDraw`로 진짜 글자 레이어가 있는 PDF를 만드는 테스트 헬퍼 신규 작성(기존 `PDFPage(image:)` 전례는 이미지뿐이라 텍스트 레이어 검증엔 못 씀). office(kordoc 실제 프로세스 필요)는 기존 관행(`ContentExtractorTests`도 그 갈래 미검증)대로 단위 테스트 대상에서 제외, 수동 스모크 몫.
 - `swift test` 1,109개(기존 1,095 + 신규 14) 전량 통과, 회귀 0. `swift build` 경고 없음.
 - 다음 조각(계획서 순서): 잘라내기(`StudyChunker`) → AI 요청문(`StudyPromptBuilder`) → 결과 해석(`StudyOutputParser`) → 실제 생성(`StudyService`) → 노트 저장(`StudyNoteWriter`) → 전용 화면(`StudyHelperView`). 화면·저장·AI 호출은 여전히 없음.
+---
+
+## 2026-08-01 — 학습도우미: 오피스 문서도 부분(제목 구간) 선택 가능하게(§5.2 I3)
+
+- 레고 질문("한글과 오피스도 부분만 가져올 수 있어?")에 답하며 확인된 실제 필요 — 오피스는 원본 파일 안에서 위치(쪽·줄)를 알 방법이 없어(변환 도구가 그 정보를 안 줌) 어제(둘째 조각)까지는 "파일 전체만" 가능했다. 원본 위치를 알 방법이 없다는 한계는 그대로 두고, **변환된 글 자체의 제목(헤딩) 구조로 부분을 고르는** 절충안으로 반영.
+- `StudyScopeRange`에 `.sectionRange(Int, Int)`(1-based, 변환된 글을 제목 경계로 나눈 "N번째~M번째 구간") 신설. 헤딩이 하나도 없으면 문서 전체가 1구간.
+- `StudySourceLoader`의 오피스 갈래를 kordoc 변환 후 그 결과 글을 다시 헤딩 경계로 나누도록 확장(`officeSegments`/`headingSections`/`sectionBounds`, 마크다운 세그먼트 분할과 같은 알고리즘이나 원본 줄 번호가 아니라 "구간 번호"만 매긴다) — 근거 위치는 여전히 `.unknown`(바뀌는 건 "무엇을 보낼지 고르는 범위"뿐, 원본 몇 쪽인지는 여전히 모름). 이미지는 나눌 단위 자체가 없어(사진 한 장=학습 단위 하나) 전체 파일만 그대로 유지.
+- 이 구간 분할 로직은 kordoc 없이도(순수 함수, `body: String` 입력) 단위 테스트 가능해 `officeSegments`/`headingSections`/`sectionBounds`를 `private` 대신 `static`(내부 접근)으로 유지 — 신규 테스트 7건(구간 분할·헤딩 없는 문서 1구간·구간 범위 선택·범위 clamp·범위가 구간 수 밖이면 빈 배열·빈 본문 빈 배열·쪽/줄 범위 오배정 시 빈 배열). `StudyModelsTests`에도 `sectionRange` 동등성 테스트 1건 추가.
+- 설계 문서(`docs/superpowers/specs/2026-07-31-study-helper-design.md`) §Post-ralplan 인터뷰 반영 표에 **I3** 신설, §5.2 표에 "부분 선택 범위" 열 추가해 종류별로 명확히 갱신 — 승인된 설계를 구현 중 확인 질문으로 정정한 사례라 계획 문서 형식 그대로 남김(임의 변경 아님, 근거 기록).
+- `swift test` 1,117개(기존 1,109 + 신규 7 + 모델 테스트 1) 전량 통과, 회귀 0. `swift build` 경고 없음.
+- 다음 조각(계획서 순서는 그대로): 잘라내기(`StudyChunker`) → AI 요청문(`StudyPromptBuilder`) → 결과 해석(`StudyOutputParser`) → 실제 생성(`StudyService`) → 노트 저장(`StudyNoteWriter`) → 전용 화면(`StudyHelperView`).
