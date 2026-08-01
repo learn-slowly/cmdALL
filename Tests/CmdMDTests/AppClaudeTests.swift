@@ -119,6 +119,21 @@ final class AppClaudeTests: XCTestCase {
     }
 
     @MainActor
+    func testResetClaudeSessionClearsPromptResponseAndError() {
+        // 2026-08-01: 패널의 "대화 지우기" 버튼 — 이전 질문/답변/에러를 전부 비운다.
+        let app = AppState(dataDirectory: tempDir)
+        app.claudePrompt = "이전 질문"
+        app.claudeResponse = "이전 답변"
+        app.claudeError = "이전 에러"
+
+        app.resetClaudeSession()
+
+        XCTAssertEqual(app.claudePrompt, "")
+        XCTAssertNil(app.claudeResponse)
+        XCTAssertNil(app.claudeError)
+    }
+
+    @MainActor
     func testInsertClaudeResponseAppendsToContentInPreviewMode() {
         let app = AppState(dataDirectory: tempDir)
         let tab = EditorTab(kind: .markdown)

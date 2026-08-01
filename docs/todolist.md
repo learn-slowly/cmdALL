@@ -26,11 +26,11 @@
 - **볼 것**: 설정 > "사진 속 글자도 읽기 (OCR)" 켜기 → 글자 있는 사진이 든 폴더 색인 → 그 글자로 검색해서 사진이 잡히는지.
 - **어디**: `AppSettings.ocrImagesEnabled` · `ContentExtractor` 이미지 분기 · `OCRService.loadCGImage(from:)`.
 
-### 3. 학습도우미 S0 프리셋 버튼 (정리 카드·문제 뽑기)
+### 3. 학습도우미 S1 착수 — 전용 화면 + 카드/문제 실제 생성·저장
 
-- **왜**: 2026-07-31 구현. AI 패널에 프리셋 버튼만 붙인 실험 단계 — **레고가 실제 교재로 3번 써보고 "쓸 만하다" 판정을 내려야만 다음 단계(S1: 카드/퀴즈 실제 생성)에 착수한다.** 이 판정 없이는 S1 코드 착수 금지(필수 게이트, 우회 없음).
-- **볼 것**: Claude 패널 열기 → "정리 카드 만들기"/"문제 뽑기" 버튼 클릭 → 프롬프트 입력창이 채워지는지 → "질문" 버튼으로 실제 전송해서 결과가 쓸 만한지(교재 3종 이상으로).
-- **어디**: `Sources/Views/ClaudePanelView.swift`(버튼)·`Sources/App/AppState+Claude.swift`(`fillStudyCardPrompt`/`fillStudyQuizPrompt`). 설계 `docs/superpowers/specs/2026-07-31-study-helper-design.md`·계획 `docs/superpowers/plans/2026-07-31-study-helper.md`.
+- **왜**: S0(프리셋 버튼) 실기 확인 완료 — 2026-08-01 레고 "쓸만한거 같아" 판정으로 게이트 통과. 승인된 계획(ralplan, 2026-07-31)의 다음 단계는 S1: 위키처럼 왼쪽 리본에 전용 자리를 갖는 학습 화면(`StudyHelperView`)을 만들고, 지금은 프롬프트만 채우는 카드·문제 생성을 실제로 청크 단위 생성 + 새 마크다운 노트로 저장하는 기능까지 완성하는 것. S2(복습)·S3(대화)는 S1 다음(레고가 순서 결정, 계획상 대화 먼저).
+- **볼 것(착수 전 확인)**: 계획 문서의 S1 범위(코어+카드+퀴즈+저장, 제안→확인 원칙 유지)·수용 기준을 다시 확인하고 시작. 사람이 많이 관여하는 큰 작업이라 착수 전 레고와 순서·범위 재확인 권장.
+- **어디**: 설계 `docs/superpowers/specs/2026-07-31-study-helper-design.md`·계획 `docs/superpowers/plans/2026-07-31-study-helper.md`(§Q1~Q5·출력 계약·게이트 매트릭스·File-level changes 참고). S0 산출물: `Sources/Views/ClaudePanelView.swift`·`Sources/App/AppState+Claude.swift`.
 
 ---
 

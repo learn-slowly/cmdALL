@@ -128,6 +128,13 @@ extension AppState {
             return nil
         }
     }
+    /// Claude 패널을 처음 연 상태로 되돌린다("세션 클리어" — 2026-08-01, 레고 요청).
+    /// 진행 중인 질의는 건드리지 않는다(끝까지 흐르게 두되, busy 중엔 프롬프트만 비운다).
+    func resetClaudeSession() {
+        claudePrompt = ""
+        claudeResponse = nil
+        claudeError = nil
+    }
 
     /// 현재 문서(또는 선택영역)를 프롬프트와 함께 claude에 보내고 응답을 패널에 표시한다.
     func askClaude() {

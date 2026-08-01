@@ -19,6 +19,16 @@ struct ClaudePanelView: View {
                     .font(.headline)
                 Spacer()
                 Button {
+                    appState.resetClaudeSession()
+                    promptFocused = true
+                } label: {
+                    Image(systemName: "arrow.counterclockwise")
+                }
+                .buttonStyle(.plain)
+                .help("대화 지우기(새로 시작)")
+                .disabled(appState.claudeBusy
+                    || (appState.claudePrompt.isEmpty && appState.claudeResponse == nil && appState.claudeError == nil))
+                Button {
                     appState.claudePanelVisible = false
                 } label: {
                     Image(systemName: "xmark")
