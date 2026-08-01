@@ -2,13 +2,33 @@ import Foundation
 
 /// 할일 목록 "간트차트" 막대 위치 계산 — 전부 순수 함수(디스크·시간 흐름 관찰 없음, 호출부가
 /// `today`를 넘긴다). 레고 결정: 모든 막대는 "오늘"에서 시작해 "마감일"까지 이어지고, 가로
-/// 범위는 마감일 있는 할일 중 가장 늦은 날짜까지 자동으로 잡는다.
+/// 범위는 마감일 있는 할일 중 가장 늦은 날짜까지 자동으로 잡되 **오늘부터 6개월까지만**
+/// 잡는다(레고 결정 2026-08-01). 6개월을 넘는 마감일은 막대 없이 날짜만, 마감일 없는 할일은
+/// 제목만 목록으로 따로 보여준다.
 enum GanttLayout {
-    /// 전체 가로축의 끝 — 마감일 있는 할일 중 가장 늦은(미래) 날짜. 전부 지났거나 목록이
-    /// 비었으면 오늘(막대가 전부 지난 상태로만 보이게).
-    static func rangeEnd(dueDates: [Date], today: Date, calendar: Calendar = .current) -> Date {
+    /// 간트차트가 그리는 최대 기간(개월).
+    static let horizonMonths = 6
+
+    /// 오늘부터 `months`개월 뒤 — 간트차트 가로축이 넘어갈 수 없는 상한.
+    static func horizonEnd(today: Date, months: Int = horizonMonths, calendar: Calendar = .current) -> Date {
         let startOfToday = calendar.startOfDay(for: today)
-        let future = dueDates.filter { calendar.startOfDay(for: $0) >= startOfToday }
+        return calendar.date(byAdding: .month, value: months, to: startOfToday) ?? startOfToday
+    }
+
+    /// 상한을 넘는 먼 미래 마감일인가 — 참이면 간트차트에서 빼고 날짜만 목록으로 보여준다.
+    static func isBeyondHorizon(due: Date, today: Date, months: Int = horizonMonths, calendar: Calendar = .current) -> Bool {
+        let limit = horizonEnd(today: today, months: months, calendar: calendar)
+        return calendar.startOfDay(for: due) > calendar.startOfDay(for: limit)
+    }
+
+    /// 전체 가로축의 끝 — 마감일 있는 할일 중 가장 늦은(미래) 날짜. 단 상한(6개월)을 넘는
+    /// 날짜는 무시한다. 전부 지났거나 목록이 비었으면 오늘(막대가 전부 지난 상태로만 보이게).
+    static func rangeEnd(dueDates: [Date], today: Date, months: Int = horizonMonths, calendar: Calendar = .current) -> Date {
+        let startOfToday = calendar.startOfDay(for: today)
+        let future = dueDates.filter {
+            calendar.startOfDay(for: $0) >= startOfToday
+                && !isBeyondHorizon(due: $0, today: today, months: months, calendar: calendar)
+        }
         return future.max() ?? startOfToday
     }
 

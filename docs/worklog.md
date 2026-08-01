@@ -734,3 +734,20 @@ todolist.md의 "지금" 절 삭제(항목 4개 전부 제거) — 남은 건 "�
 - `showFileInfoForCurrentContext()`의 `switch mainMode`에 `.tasks` 분기 추가(정보 볼 파일·폴더 대상이 없어 무동작) — 컴파일러가 잡아준 누락.
 - 테스트 조정 — 시트 기반 2건(`testOpenTaskListViewLoadsTodoistTasks`·`testCloseTaskListViewHidesSheet`)을 모드 기반 3건(`testOpenTaskListViewSwitchesToTasksMode`·`testLoadTaskListDataFillsBothTabs`·`testSwitchingAwayAndBackKeepsLoadedTasks`)으로 교체. `swift test` **1,410개** 전량 통과, 회귀 0. `swift build` 경고 없음. `scripts/test_package_app.sh` 패키징 가드 통과.
 - **로컬 재패키징·`/Applications` 교체 설치 완료**(앱이 꺼져 있는 것 확인 후 — `cmdALL.app.bak-20260801-183116`로 백업, 서명 재검증·재실행 확인).
+
+### 할일(간트차트) 6개월 상한 + 나머지는 목록으로 (2026-08-01)
+
+레고 요청 2건 반영. (1) 간트차트는 **오늘부터 6개월 뒤까지만** 그린다 — 그보다 먼 마감일 하나가
+가로축을 통째로 늘려 가까운 할일 막대가 다 뭉개지던 문제. (2) 6개월을 넘는 할일은 막대 없이
+**날짜만**, 마감일 없는 할일은 **제목만** 아래 목록으로 따로 보여준다(예전엔 "N개는 표시되지
+않습니다" 안내만 있고 아예 안 보였다).
+
+- `GanttLayout`에 순수 헬퍼 추가 — `horizonMonths`(6)·`horizonEnd(today:months:)`·
+  `isBeyondHorizon(due:today:)`. `rangeEnd`는 상한 넘는 날짜를 무시하도록 정정(전부 먼 미래면
+  오늘로 폴백).
+- `TaskListView.todoistTab`이 할일을 셋으로 나눈다 — 6개월 안(간트차트)·6개월 뒤(날짜만
+  목록)·마감일 없음(제목만 목록). 세 블록 모두 체크 버튼으로 Todoist 완료 처리 가능.
+- `GanttChartView`의 내부 `ScrollView` 제거 — 목록 블록과 한 화면에서 같이 스크롤되도록
+  바깥(`TaskListView`)에서 한 번만 감싼다.
+- 테스트 6건 추가(`GanttLayoutTests` — 상한 무시·전부 먼 미래 폴백·경계 정확히 6개월/하루 뒤·
+  과거 날짜). `swift test` **1,416개** 전량 통과, 회귀 0.

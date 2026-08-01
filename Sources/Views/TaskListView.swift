@@ -60,25 +60,68 @@ struct TaskListView: View {
             Text("할일이 없습니다.").font(.callout).foregroundStyle(.secondary)
             Spacer()
         } else {
-            let dated = appState.todoistTasks
-                .filter { $0.due?.parsedDate != nil }
-                .sorted { $0.due!.parsedDate! < $1.due!.parsedDate! }
-            let undatedCount = appState.todoistTasks.count - dated.count
-            if dated.isEmpty {
-                Spacer()
-                Text("마감일이 있는 할일이 없어 간트차트를 그릴 수 없습니다.")
-                    .font(.callout).foregroundStyle(.secondary)
-                Spacer()
-            } else {
-                GanttChartView(tasks: dated, today: Date()) { task in
-                    Task { await appState.completeTodoistTask(task) }
+            // 레고 결정(2026-08-01): 간트차트는 오늘부터 6개월까지만. 그보다 먼 마감일은 날짜만,
+            // 마감일 없는 할일은 제목만 아래 목록으로 따로 보여준다.
+            let today = Date()
+            let dated: [(task: TodoistTask, due: Date)] = appState.todoistTasks
+                .compactMap { task in
+                    guard let due = task.due?.parsedDate else { return nil }
+                    return (task: task, due: due)
                 }
-                if undatedCount > 0 {
-                    Text("마감일 없는 할일 \(undatedCount)개는 표시되지 않습니다.")
-                        .font(.caption2).foregroundStyle(.secondary)
+                .sorted { $0.due < $1.due }
+            let near = dated.filter { !GanttLayout.isBeyondHorizon(due: $0.due, today: today) }.map(\.task)
+            let far = dated.filter { GanttLayout.isBeyondHorizon(due: $0.due, today: today) }.map(\.task)
+            let undated = appState.todoistTasks.filter { $0.due?.parsedDate == nil }
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    if near.isEmpty {
+                        Text("6개월 안에 마감인 할일이 없어 간트차트를 그릴 수 없습니다.")
+                            .font(.callout).foregroundStyle(.secondary)
+                    } else {
+                        GanttChartView(tasks: near, today: today) { task in
+                            Task { await appState.completeTodoistTask(task) }
+                        }
+                    }
+                    if !far.isEmpty {
+                        plainSection(title: "6개월 뒤 이후 (\(far.count)개)", tasks: far, showsDate: true)
+                    }
+                    if !undated.isEmpty {
+                        plainSection(title: "마감일 없음 (\(undated.count)개)", tasks: undated, showsDate: false)
+                    }
                 }
             }
         }
+    }
+
+    /// 간트차트에 안 들어가는 할일(먼 미래·마감일 없음)의 단순 목록. 막대 없이 제목만,
+    /// 날짜가 있으면 오른쪽에 날짜만 붙인다.
+    private func plainSection(title: String, tasks: [TodoistTask], showsDate: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title).font(.caption).foregroundStyle(.secondary)
+            ForEach(tasks) { task in
+                plainRow(task, showsDate: showsDate)
+            }
+        }
+    }
+
+    private func plainRow(_ task: TodoistTask, showsDate: Bool) -> some View {
+        HStack(spacing: 8) {
+            Button {
+                Task { await appState.completeTodoistTask(task) }
+            } label: {
+                Image(systemName: "circle")
+            }
+            .buttonStyle(.plain)
+
+            Text(task.content).font(.caption).lineLimit(1)
+            Spacer()
+            if showsDate, let string = task.due?.string {
+                Text(string).font(.caption2).foregroundStyle(.secondary)
+            }
+        }
+        .padding(.vertical, 3).padding(.horizontal, 6)
+        .background(.quaternary.opacity(0.15), in: RoundedRectangle(cornerRadius: 6))
     }
 
     // MARK: - 보낸 기록 탭

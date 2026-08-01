@@ -2,8 +2,9 @@ import SwiftUI
 
 /// "Todoist 할일" 탭의 간트차트 — 레고 요청("간트차트처럼 보고 싶다") 반영. 모든 막대는
 /// 오늘에서 시작해 마감일까지 이어지고(§`GanttLayout`), 가로 범위는 마감일 있는 할일 중
-/// 가장 늦은 날짜까지 자동으로 잡는다. 마감일 없는 할일은 이 차트에 안 나온다(호출부가
-/// 걸러서 넘긴다).
+/// 가장 늦은 날짜까지 자동으로 잡되 오늘부터 6개월까지만 잡는다. 마감일이 6개월을 넘거나
+/// 아예 없는 할일은 이 차트에 안 나온다(호출부가 걸러서 목록으로 따로 보여준다).
+/// 스크롤은 호출부(`TaskListView`)가 한 번에 감싸므로 여기선 하지 않는다.
 struct GanttChartView: View {
     let tasks: [TodoistTask]
     let today: Date
@@ -16,12 +17,8 @@ struct GanttChartView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             axisHeader
-            ScrollView {
-                VStack(alignment: .leading, spacing: 6) {
-                    ForEach(tasks) { task in
-                        row(for: task)
-                    }
-                }
+            ForEach(tasks) { task in
+                row(for: task)
             }
         }
     }

@@ -37,6 +37,40 @@ final class GanttLayoutTests: XCTestCase {
         XCTAssertEqual(end, calendar.startOfDay(for: today))
     }
 
+    // MARK: - 6개월 상한(레고 결정 2026-08-01)
+
+    func testRangeEndIgnoresDatesBeyondSixMonths() {
+        let dates = [day(10, from: today), day(400, from: today)]
+        let end = GanttLayout.rangeEnd(dueDates: dates, today: today)
+        XCTAssertEqual(end, calendar.startOfDay(for: day(10, from: today)))
+    }
+
+    func testRangeEndFallsBackToTodayWhenEveryDateIsBeyondSixMonths() {
+        let dates = [day(300, from: today), day(400, from: today)]
+        let end = GanttLayout.rangeEnd(dueDates: dates, today: today)
+        XCTAssertEqual(end, calendar.startOfDay(for: today))
+    }
+
+    func testHorizonEndIsSixMonthsAfterToday() {
+        let end = GanttLayout.horizonEnd(today: today, calendar: calendar)
+        let expected = calendar.date(byAdding: .month, value: 6, to: calendar.startOfDay(for: today))!
+        XCTAssertEqual(end, expected)
+    }
+
+    func testIsBeyondHorizonExactlySixMonthsIsFalse() {
+        let limit = GanttLayout.horizonEnd(today: today, calendar: calendar)
+        XCTAssertFalse(GanttLayout.isBeyondHorizon(due: limit, today: today, calendar: calendar))
+    }
+
+    func testIsBeyondHorizonOneDayAfterLimitIsTrue() {
+        let limit = GanttLayout.horizonEnd(today: today, calendar: calendar)
+        XCTAssertTrue(GanttLayout.isBeyondHorizon(due: day(1, from: limit), today: today, calendar: calendar))
+    }
+
+    func testIsBeyondHorizonPastDateIsFalse() {
+        XCTAssertFalse(GanttLayout.isBeyondHorizon(due: day(-30, from: today), today: today, calendar: calendar))
+    }
+
     // MARK: - barFraction
 
     func testBarFractionAtRangeEndIsOne() {
