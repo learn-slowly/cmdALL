@@ -19,6 +19,7 @@ struct StudyHelperView: View {
                 .font(.caption).foregroundStyle(.secondary)
 
             sourceRow
+            rangeRow
             optionsRow
             planLabel
 
@@ -48,6 +49,137 @@ struct StudyHelperView: View {
         }
     }
 
+    // MARK: - 부분 범위 선택(레고 2026-08-01 피드백 — "교재 전체를 한 번에 넣는 건 비현실적")
+
+    private var rangeRow: some View {
+        @Bindable var state = appState
+        return Group {
+            if let kind = appState.studyScopeKind, kind != .image {
+                VStack(alignment: .leading, spacing: 6) {
+                    Toggle("전체 파일 사용", isOn: $state.studyUseWholeFile)
+                        .disabled(appState.studyBusy)
+                        .onChange(of: state.studyUseWholeFile) { _, _ in
+                            Task { await appState.updateStudyPreviewPlan() }
+                        }
+
+                    if !appState.studyUseWholeFile {
+                        partialRangePicker(kind: kind)
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func partialRangePicker(kind: DocumentKind) -> some View {
+        switch kind {
+        case .pdf:
+            if appState.studyPDFPageCount > 0 {
+                pageRangePicker
+            }
+        case .markdown:
+            if appState.studyHeadingChoices.isEmpty {
+                Text("이 파일엔 제목(#)이 없어 부분만 고를 수 없습니다 — 전체로 만듭니다.")
+                    .font(.caption).foregroundStyle(.secondary)
+            } else {
+                headingRangePicker
+            }
+        case .office:
+            if appState.studyRangeLoading {
+                HStack(spacing: 6) {
+                    ProgressView().controlSize(.small)
+                    Text("구간 목록 불러오는 중…").font(.caption).foregroundStyle(.secondary)
+                }
+            } else if appState.studySectionChoices.count <= 1 {
+                Text("이 문서엔 제목 구간이 하나뿐이라 부분만 고를 수 없습니다 — 전체로 만듭니다.")
+                    .font(.caption).foregroundStyle(.secondary)
+            } else {
+                sectionRangePicker
+            }
+        default:
+            EmptyView()
+        }
+    }
+
+    private var pageRangePicker: some View {
+        @Bindable var state = appState
+        return HStack {
+            Text("전체 \(appState.studyPDFPageCount)쪽 중").font(.caption).foregroundStyle(.secondary)
+            Stepper("\(appState.studyPageRangeStart)쪽부터",
+                    value: $state.studyPageRangeStart, in: 1...appState.studyPDFPageCount)
+                .onChange(of: state.studyPageRangeStart) { _, newValue in
+                    if state.studyPageRangeEnd < newValue { state.studyPageRangeEnd = newValue }
+                    Task { await appState.updateStudyPreviewPlan() }
+                }
+            Stepper("\(appState.studyPageRangeEnd)쪽까지",
+                    value: $state.studyPageRangeEnd, in: 1...appState.studyPDFPageCount)
+                .onChange(of: state.studyPageRangeEnd) { _, newValue in
+                    if state.studyPageRangeStart > newValue { state.studyPageRangeStart = newValue }
+                    Task { await appState.updateStudyPreviewPlan() }
+                }
+        }
+        .font(.caption)
+    }
+
+    private var headingRangePicker: some View {
+        @Bindable var state = appState
+        return HStack {
+            Text("시작").font(.caption).foregroundStyle(.secondary)
+            Picker("시작", selection: $state.studyHeadingRangeStartIndex) {
+                ForEach(Array(appState.studyHeadingChoices.enumerated()), id: \.offset) { index, choice in
+                    Text(choice.title).tag(index)
+                }
+            }
+            .labelsHidden()
+            .onChange(of: state.studyHeadingRangeStartIndex) { _, newValue in
+                if state.studyHeadingRangeEndIndex < newValue { state.studyHeadingRangeEndIndex = newValue }
+                Task { await appState.updateStudyPreviewPlan() }
+            }
+            Text("~")
+            Text("끝").font(.caption).foregroundStyle(.secondary)
+            Picker("끝", selection: $state.studyHeadingRangeEndIndex) {
+                ForEach(Array(appState.studyHeadingChoices.enumerated()), id: \.offset) { index, choice in
+                    Text(choice.title).tag(index)
+                }
+            }
+            .labelsHidden()
+            .onChange(of: state.studyHeadingRangeEndIndex) { _, newValue in
+                if state.studyHeadingRangeStartIndex > newValue { state.studyHeadingRangeStartIndex = newValue }
+                Task { await appState.updateStudyPreviewPlan() }
+            }
+        }
+        .font(.caption)
+    }
+
+    private var sectionRangePicker: some View {
+        @Bindable var state = appState
+        return HStack {
+            Text("시작").font(.caption).foregroundStyle(.secondary)
+            Picker("시작", selection: $state.studySectionRangeStart) {
+                ForEach(appState.studySectionChoices) { choice in
+                    Text(choice.title).tag(choice.index)
+                }
+            }
+            .labelsHidden()
+            .onChange(of: state.studySectionRangeStart) { _, newValue in
+                if state.studySectionRangeEnd < newValue { state.studySectionRangeEnd = newValue }
+                Task { await appState.updateStudyPreviewPlan() }
+            }
+            Text("~")
+            Text("끝").font(.caption).foregroundStyle(.secondary)
+            Picker("끝", selection: $state.studySectionRangeEnd) {
+                ForEach(appState.studySectionChoices) { choice in
+                    Text(choice.title).tag(choice.index)
+                }
+            }
+            .labelsHidden()
+            .onChange(of: state.studySectionRangeEnd) { _, newValue in
+                if state.studySectionRangeStart > newValue { state.studySectionRangeStart = newValue }
+                Task { await appState.updateStudyPreviewPlan() }
+            }
+        }
+        .font(.caption)
+    }
     // MARK: - 카드/문제 · 개수
 
     private var optionsRow: some View {

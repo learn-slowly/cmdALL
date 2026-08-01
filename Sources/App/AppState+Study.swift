@@ -1,6 +1,7 @@
 import Foundation
 import AppKit
 import UniformTypeIdentifiers
+import PDFKit
 
 /// 학습도우미(Study Helper) S1 — `StudyHelperView` 배선. 실제 로직은 전부 `Study*`
 /// (Models/Services)에 있고, 이 파일은 화면 진입점 + AppState 상태만 잇는다
@@ -34,7 +35,9 @@ extension AppState {
         studyOutcomeSummary = nil
         studySavedNoteURL = nil
         studyError = nil
-        Task { await updateStudyPreviewPlan() }
+        studyUseWholeFile = true
+        resetStudyRangeMetadata()
+        Task { await loadStudyRangeMetadata(kind: kind, url: url) }
     }
 
     private static func studyDocumentKind(for url: URL) -> DocumentKind? {
@@ -46,11 +49,81 @@ extension AppState {
         return nil
     }
 
-    /// 현재 선택된 학습 범위 — 부분 범위 선택 UI는 이번 화면에 없어 항상 전체 파일
-    /// (`StudyScope`·`StudyChunker`는 이미 부분 범위를 지원하므로 후속 확장 여지).
+    private func resetStudyRangeMetadata() {
+        studyPDFPageCount = 0
+        studyPageRangeStart = 1
+        studyPageRangeEnd = 1
+        studyHeadingChoices = []
+        studyLineCount = 0
+        studyHeadingRangeStartIndex = 0
+        studyHeadingRangeEndIndex = 0
+        studySectionChoices = []
+        studySectionRangeStart = 1
+        studySectionRangeEnd = 1
+        studyRangeLoading = false
+    }
+
+    /// 종류별 부분 범위 선택 목록을 채운다(레고 2026-08-01 피드백 — "교재 전체를 한 번에
+    /// 넣는 건 비현실적"). PDF는 쪽수만 세면 되지만, 오피스는 kordoc 변환이 끝나야 헤딩을
+    /// 알 수 있어 그동안 `studyRangeLoading`을 켠다. 이미지는 나눌 단위가 없어 항상 전체.
+    @MainActor
+    func loadStudyRangeMetadata(kind: DocumentKind, url: URL) async {
+        switch kind {
+        case .pdf:
+            let pageCount = PDFDocument(url: url)?.pageCount ?? 0
+            studyPDFPageCount = pageCount
+            studyPageRangeStart = 1
+            studyPageRangeEnd = max(1, pageCount)
+        case .markdown:
+            guard let content = try? String(contentsOf: url, encoding: .utf8) else { break }
+            let lines = content.components(separatedBy: .newlines)
+            studyLineCount = lines.count
+            studyHeadingChoices = TOCBuilder.extractHeadings(from: content)
+                .sorted { $0.lineNumber < $1.lineNumber }
+                .map { StudyHeadingChoice(title: $0.text, lineNumber: $0.lineNumber) }
+            studyHeadingRangeStartIndex = 0
+            studyHeadingRangeEndIndex = max(0, studyHeadingChoices.count - 1)
+        case .office:
+            studyRangeLoading = true
+            defer { studyRangeLoading = false }
+            guard let markdown = try? await kordocService.markdown(for: url) else { break }
+            let labeled = StudySourceLoader.labeledSections(from: markdown)
+            studySectionChoices = labeled.map { StudySectionChoice(title: $0.title, index: $0.index) }
+            studySectionRangeStart = 1
+            studySectionRangeEnd = max(1, labeled.count)
+        case .image, .media, .quickLook:
+            break // 나눌 단위가 없어 항상 전체 파일(§5.2).
+        }
+        await updateStudyPreviewPlan()
+    }
+
+    /// 현재 선택된 학습 범위 — "전체" 토글이 켜져 있거나 부분 선택 데이터가 없으면 전체 파일.
     private func currentStudyScope() -> StudyScope? {
         guard let url = studyScopeFileURL, let kind = studyScopeKind else { return nil }
-        return StudyScope(fileURL: url, kind: kind, range: .wholeFile)
+        return StudyScope(fileURL: url, kind: kind, range: currentStudyRange(kind: kind))
+    }
+
+    private func currentStudyRange(kind: DocumentKind) -> StudyScopeRange {
+        guard !studyUseWholeFile else { return .wholeFile }
+        switch kind {
+        case .pdf:
+            guard studyPDFPageCount > 0 else { return .wholeFile }
+            return .pageRange(studyPageRangeStart, studyPageRangeEnd)
+        case .markdown:
+            guard !studyHeadingChoices.isEmpty,
+                  studyHeadingRangeStartIndex < studyHeadingChoices.count,
+                  studyHeadingRangeEndIndex < studyHeadingChoices.count else { return .wholeFile }
+            let startLine = studyHeadingChoices[studyHeadingRangeStartIndex].lineNumber
+            let endLine = (studyHeadingRangeEndIndex + 1 < studyHeadingChoices.count)
+                ? studyHeadingChoices[studyHeadingRangeEndIndex + 1].lineNumber - 1
+                : studyLineCount
+            return .lineRange(startLine, endLine)
+        case .office:
+            guard !studySectionChoices.isEmpty else { return .wholeFile }
+            return .sectionRange(studySectionRangeStart, studySectionRangeEnd)
+        case .image, .media, .quickLook:
+            return .wholeFile
+        }
     }
 
     // MARK: - 사전 분량 표시(AC #9) — AI 호출 없이 청크 수·글자 수만 계산.

@@ -1,4 +1,6 @@
 import XCTest
+import PDFKit
+import AppKit
 @testable import CmdMD
 
 /// 학습도우미(Study Helper) S1 마지막 조각 — `AppState+Study.swift` 배선(파일 선택→미리 분량
@@ -174,5 +176,102 @@ final class AppStudyStateTests: XCTestCase {
 
         XCTAssertNil(app.studySavedNoteURL)
         XCTAssertEqual(app.studyError, "저장할 볼트가 없습니다. Vault Manager에서 볼트를 먼저 등록해 주세요.")
+    }
+
+    // MARK: - 부분 범위 선택(레고 2026-08-01 피드백 — "교재 전체를 한 번에 넣는 건 비현실적")
+
+    private func makeBlankPDF(name: String = "교재.pdf", pageCount: Int) -> URL {
+        let pdf = PDFDocument()
+        for index in 0..<pageCount {
+            let bitmap = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 10, pixelsHigh: 10,
+                                           bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true,
+                                           isPlanar: false, colorSpaceName: .calibratedRGB,
+                                           bytesPerRow: 0, bitsPerPixel: 0)!
+            let image = NSImage(size: NSSize(width: 10, height: 10))
+            image.addRepresentation(bitmap)
+            pdf.insert(PDFPage(image: image)!, at: index)
+        }
+        let url = sourceDir.appendingPathComponent(name)
+        XCTAssertTrue(pdf.write(to: url))
+        return url
+    }
+
+    func testLoadRangeMetadataForPDFCapturesPageCountAndDefaultsToFullRange() async {
+        let url = makeBlankPDF(pageCount: 5)
+        app.studyScopeFileURL = url
+        app.studyScopeKind = .pdf
+
+        await app.loadStudyRangeMetadata(kind: .pdf, url: url)
+
+        XCTAssertEqual(app.studyPDFPageCount, 5)
+        XCTAssertEqual(app.studyPageRangeStart, 1)
+        XCTAssertEqual(app.studyPageRangeEnd, 5)
+    }
+
+    func testLoadRangeMetadataForMarkdownCapturesHeadingsInLineOrder() async {
+        let content = "머리말\n\n# 1장\n1장 내용\n\n# 2장\n2장 내용\n"
+        let url = makeSource(name: "교재.md", content: content)
+        app.studyScopeFileURL = url
+        app.studyScopeKind = .markdown
+
+        await app.loadStudyRangeMetadata(kind: .markdown, url: url)
+
+        XCTAssertEqual(app.studyHeadingChoices.map(\.title), ["1장", "2장"])
+        XCTAssertEqual(app.studyHeadingChoices.map(\.lineNumber), [3, 6])
+        XCTAssertGreaterThan(app.studyLineCount, 0)
+    }
+
+    func testMarkdownWithoutHeadingsHasEmptyChoiceListSoPartialPickerStaysHidden() async {
+        let url = makeSource(name: "표만.md", content: "그냥 평문\n둘째 줄\n")
+        app.studyScopeFileURL = url
+        app.studyScopeKind = .markdown
+
+        await app.loadStudyRangeMetadata(kind: .markdown, url: url)
+
+        XCTAssertTrue(app.studyHeadingChoices.isEmpty)
+    }
+
+    func testPickingSourceResetsPreviousRangeSelectionAndDefaultsWholeFile() async {
+        // 첫 파일에서 부분 범위를 골랐다가 다른 파일을 고르면 이전 선택이 새 파일로 새지 않아야 한다.
+        app.studyUseWholeFile = false
+        app.studyPageRangeStart = 3
+        app.studyPageRangeEnd = 4
+
+        let url = makeBlankPDF(name: "새교재.pdf", pageCount: 2)
+        app.studyScopeFileURL = url
+        app.studyScopeKind = .pdf
+        await app.loadStudyRangeMetadata(kind: .pdf, url: url)
+
+        XCTAssertEqual(app.studyPageRangeStart, 1)
+        XCTAssertEqual(app.studyPageRangeEnd, 2, "새 파일의 쪽수로 다시 기본값(전체)이 설정돼야 한다")
+    }
+
+    /// 부분 범위를 고르면 실제로 그 범위만 AI에 전송된다 — §Q1 "범위 선택 필수화"의 핵심 검증.
+    func testPartialHeadingRangeSendsOnlySelectedSectionToClaude() async {
+        let content = "# 1장\n1장 전용 내용 마커\n\n# 2장\n2장 전용 내용 마커\n"
+        let url = makeSource(name: "교재.md", content: content)
+        app.studyScopeFileURL = url
+        app.studyScopeKind = .markdown
+        await app.loadStudyRangeMetadata(kind: .markdown, url: url)
+
+        // 2장만 선택(시작=끝=두 번째 헤딩).
+        app.studyUseWholeFile = false
+        app.studyHeadingRangeStartIndex = 1
+        app.studyHeadingRangeEndIndex = 1
+
+        let fake = ScriptedClaude([validCardResponse()])
+        app.studyService = StudyService(claude: fake, sourceLoader: app.studySourceLoader)
+
+        await app.generateStudyItems()
+
+        XCTAssertFalse(app.studyPreviewCards.isEmpty, "부분 범위로도 정상 생성돼야 한다")
+        // updateStudyPreviewPlan이 같은 scope로 계산한 조각 수·글자 수가 전체 파일보다 작아야
+        // 실제로 일부만 보내졌다는 근거가 된다.
+        app.studyUseWholeFile = true
+        await app.updateStudyPreviewPlan()
+        let wholeFileChars = app.studyPreviewCharCount
+        app.studyUseWholeFile = false
+        await app.updateStudyPreviewPlan()
+        XCTAssertLessThan(app.studyPreviewCharCount, wholeFileChars)
     }
 }

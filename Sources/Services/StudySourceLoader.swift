@@ -116,6 +116,29 @@ actor StudySourceLoader {
         }
         return sections
     }
+    /// 구간 선택 화면용 — `headingSections`와 정확히 같은 경계 판정(빈 구간 제외 포함)을 써서
+    /// 1-based 구간 번호에 표시용 제목을 붙인다. 여기 나오는 `index`가 `sectionBounds`/
+    /// `officeSegments`가 받는 구간 번호와 정확히 같아야 사용자가 고른 범위가 실제로 그대로
+    /// 반영된다(빈 구간이 건너뛰어지므로 헤딩 목록 순번과는 어긋날 수 있어 별도 계산).
+    static func labeledSections(from content: String) -> [(index: Int, title: String)] {
+        let lines = content.components(separatedBy: .newlines)
+        guard !lines.isEmpty else { return [] }
+
+        let headings = TOCBuilder.extractHeadings(from: content)
+        let titleByLine = Dictionary(uniqueKeysWithValues: headings.map { ($0.lineNumber, $0.text) })
+        let headingLines = headings.map(\.lineNumber).filter { $0 > 1 }
+        let starts = ([1] + headingLines).sorted()
+
+        var labeled: [(index: Int, title: String)] = []
+        for (i, start) in starts.enumerated() {
+            let end = i + 1 < starts.count ? starts[i + 1] - 1 : lines.count
+            guard start <= end else { continue }
+            let body = lines[(start - 1)...(end - 1)].joined(separator: "\n")
+            guard !body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { continue }
+            labeled.append((index: labeled.count + 1, title: titleByLine[start] ?? "머리말"))
+        }
+        return labeled
+    }
 
     static func sectionBounds(range: StudyScopeRange, sectionCount: Int) -> (Int, Int)? {
         switch range {

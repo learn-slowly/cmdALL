@@ -172,6 +172,63 @@ final class StudySourceLoaderTests: XCTestCase {
         XCTAssertTrue(lineRangeResult.isEmpty)
     }
 
+    // MARK: - 오피스 구간 선택 화면용 제목 붙이기(labeledSections) — 범위 고르는 화면의 데이터 소스
+
+    func testLabeledSectionsAttachesHeadingTitlesInOrder() {
+        let body = "# 1장 서론\n1장 내용\n\n# 2장 본론\n2장 내용\n\n# 3장 결론\n3장 내용\n"
+
+        let labeled = StudySourceLoader.labeledSections(from: body)
+
+        XCTAssertEqual(labeled.map(\.index), [1, 2, 3])
+        XCTAssertEqual(labeled.map(\.title), ["1장 서론", "2장 본론", "3장 결론"])
+    }
+
+    func testLabeledSectionsFirstSectionWithoutHeadingUsesPreambleLabel() {
+        let body = "머리말 문단\n\n# 1장\n1장 내용\n"
+
+        let labeled = StudySourceLoader.labeledSections(from: body)
+
+        XCTAssertEqual(labeled.map(\.index), [1, 2])
+        XCTAssertEqual(labeled[0].title, "머리말")
+        XCTAssertEqual(labeled[1].title, "1장")
+    }
+
+    func testLabeledSectionsNoHeadingsProducesSingleSection() {
+        let body = "표만 있는 문서\n| a | b |\n|---|---|\n| 1 | 2 |\n"
+
+        let labeled = StudySourceLoader.labeledSections(from: body)
+
+        XCTAssertEqual(labeled.count, 1)
+        XCTAssertEqual(labeled[0].index, 1)
+    }
+
+    func testLabeledSectionsSkipsEmptySectionsButKeepsIndexContiguous() {
+        // 첫 헤딩 앞이 빈 줄뿐이라 그 구간(1번)이 통째로 건너뛰어진다 — 남는 구간의 index는
+        // 2가 아니라 1로 다시 매겨져야 한다(officeSegments가 받는 번호와 정확히 같아야 함).
+        let body = "\n\n# 1장\n1장 내용\n"
+
+        let labeled = StudySourceLoader.labeledSections(from: body)
+
+        XCTAssertEqual(labeled.map(\.index), [1])
+        XCTAssertEqual(labeled[0].title, "1장")
+    }
+
+    func testLabeledSectionsEmptyBodyProducesNoSections() {
+        XCTAssertTrue(StudySourceLoader.labeledSections(from: "   \n\n  \n").isEmpty)
+    }
+
+    /// `labeledSections`의 index가 `officeSegments`(실제 채택 로직)가 쓰는 구간 번호와
+    /// 정확히 같은지 — 화면에서 고른 번호를 그대로 넘겨도 같은 구간이 나와야 한다.
+    func testLabeledSectionsIndexMatchesOfficeSegmentsSectionRange() {
+        let body = "머리말\n\n# 1장\n1장 내용\n\n# 2장\n2장 내용\n"
+        let labeled = StudySourceLoader.labeledSections(from: body)
+        XCTAssertEqual(labeled.map(\.title), ["머리말", "1장", "2장"])
+
+        let secondSection = StudySourceLoader.officeSegments(body: body, range: .sectionRange(2, 2))
+        XCTAssertEqual(secondSection.count, 1)
+        XCTAssertTrue(secondSection[0].text.contains("1장 내용"))
+    }
+
     // MARK: - PDF: 인덱스+1 · 범위 클램프 · 빈 쪽 스킵
 
     func testPDFSegmentsUsePageIndexPlusOneAsLocator() async throws {

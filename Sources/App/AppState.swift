@@ -350,12 +350,29 @@ final class AppState {
     var wikiGraphFocusNotice: String? = nil
     // MARK: - 학습도우미(Study Helper) S1
     var showStudyHelper: Bool = false
-    /// 학습 범위(§Q1) — 파일 하나 + 종류. 부분 범위 선택 UI는 S1 첫 화면에선 미제공(전체 파일만,
-    /// 후속 확장 여지 — StudyScope·StudyChunker는 이미 부분 범위를 지원한다).
+    /// 학습 범위(§Q1) — 파일 하나 + 종류.
     var studyScopeFileURL: URL? = nil
     var studyScopeKind: DocumentKind? = nil
     var studyGenerationKind: StudyItemKind = .card
     var studyRequestedCount: Int = 5
+    /// 부분 범위 선택(레고 2026-08-01 피드백 — "교재 전체를 한 번에 넣는 건 비현실적") — 기본은
+    /// 켜짐(전체 파일, 이전 동작과 호환), 끄면 종류별 범위 UI가 나타난다.
+    var studyUseWholeFile: Bool = true
+    var studyPDFPageCount: Int = 0
+    var studyPageRangeStart: Int = 1
+    var studyPageRangeEnd: Int = 1
+    /// 마크다운/텍스트 파일의 헤딩 목록(원본 줄 번호 포함) — 시작·끝 헤딩을 고르면 그 사이
+    /// 줄 범위로 변환한다.
+    var studyHeadingChoices: [StudyHeadingChoice] = []
+    var studyLineCount: Int = 0
+    var studyHeadingRangeStartIndex: Int = 0
+    var studyHeadingRangeEndIndex: Int = 0
+    /// 오피스 문서의 구간 목록(kordoc 변환 후 헤딩 경계로 나눈 것) — 변환이 끝나야 채워진다.
+    var studySectionChoices: [StudySectionChoice] = []
+    var studySectionRangeStart: Int = 1
+    var studySectionRangeEnd: Int = 1
+    /// 오피스 구간 목록을 kordoc 변환으로 불러오는 동안(화면 "구간 불러오는 중…" 표시용).
+    var studyRangeLoading: Bool = false
     /// AC #9 "실행 전 보낼 분량 약 N자 · 조각 C개" — 파일 고를 때 AI 호출 없이 미리 계산.
     var studyPreviewCharCount: Int = 0
     var studyPreviewChunkCount: Int = 0
