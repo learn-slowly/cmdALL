@@ -50,4 +50,64 @@ enum GanttLayout {
     static func isOverdue(due: Date, today: Date, calendar: Calendar = .current) -> Bool {
         calendar.startOfDay(for: due) < calendar.startOfDay(for: today)
     }
+
+    // MARK: - 가로축 눈금(레고 요청 2026-08-01 — "1개월 단위라도 선을, 1주 단위면 더 좋고")
+
+    /// 주 단위 눈금을 쓰는 최대 기간(일). 이보다 길면 선이 너무 촘촘해져 월 단위로 바꾼다.
+    static let weeklyTickMaxDays = 84
+
+    /// 눈금 하나 — 날짜와 가로 위치(0.0=오늘, 1.0=차트 끝).
+    struct Tick: Equatable, Identifiable {
+        let date: Date
+        let fraction: Double
+        var id: Date { date }
+    }
+
+    /// 눈금 간격 — 주 단위(달력의 주 시작 요일)냐 월 단위(매달 1일)냐.
+    enum TickUnit: Equatable {
+        case week
+        case month
+    }
+
+    struct Axis: Equatable {
+        let unit: TickUnit
+        let ticks: [Tick]
+    }
+
+    /// 오늘~차트 끝 사이의 눈금 목록. 12주 이내면 주 단위, 그보다 길면 월 단위. 오늘 당일(끝==오늘)이면
+    /// 그릴 눈금이 없다(빈 배열).
+    static func axis(today: Date, rangeEnd: Date, calendar: Calendar = .current) -> Axis {
+        let start = calendar.startOfDay(for: today)
+        let end = calendar.startOfDay(for: rangeEnd)
+        let totalDays = calendar.dateComponents([.day], from: start, to: end).day ?? 0
+        guard totalDays > 0 else { return Axis(unit: .week, ticks: []) }
+
+        let unit: TickUnit = totalDays <= weeklyTickMaxDays ? .week : .month
+        let matching = unit == .week
+            ? DateComponents(hour: 0, minute: 0, second: 0, weekday: calendar.firstWeekday)
+            : DateComponents(day: 1, hour: 0, minute: 0, second: 0)
+        let dates = boundaries(after: start, until: end, matching: matching, calendar: calendar)
+        let ticks = dates.map {
+            Tick(date: $0, fraction: barFraction(today: start, due: $0, rangeEnd: end, calendar: calendar))
+        }
+        return Axis(unit: unit, ticks: ticks)
+    }
+
+    /// `start` 다음부터 `end`까지, 주어진 달력 조건(주 시작 요일 또는 매달 1일)에 맞는 날짜들.
+    private static func boundaries(after start: Date, until end: Date, matching: DateComponents, calendar: Calendar) -> [Date] {
+        var result: [Date] = []
+        var cursor = start
+        while result.count < 64 {
+            guard let next = calendar.nextDate(after: cursor,
+                                               matching: matching,
+                                               matchingPolicy: .nextTime,
+                                               direction: .forward) else { break }
+            let day = calendar.startOfDay(for: next)
+            guard day <= end else { break }
+            guard day > cursor else { break }   // 전진하지 않으면 무한루프 방지.
+            result.append(day)
+            cursor = day
+        }
+        return result
+    }
 }

@@ -71,6 +71,52 @@ final class GanttLayoutTests: XCTestCase {
         XCTAssertFalse(GanttLayout.isBeyondHorizon(due: day(-30, from: today), today: today, calendar: calendar))
     }
 
+    // MARK: - 가로축 눈금(레고 요청 2026-08-01)
+
+    func testAxisIsEmptyWhenRangeIsSingleDay() {
+        let axis = GanttLayout.axis(today: today, rangeEnd: today, calendar: calendar)
+        XCTAssertTrue(axis.ticks.isEmpty)
+    }
+
+    func testAxisUsesWeeklyTicksForShortRange() {
+        let axis = GanttLayout.axis(today: today, rangeEnd: day(30, from: today), calendar: calendar)
+        XCTAssertEqual(axis.unit, .week)
+        XCTAssertTrue((4...5).contains(axis.ticks.count), "30일 범위면 주 시작일이 4~5번(오늘 요일에 따라 다름)")
+        for tick in axis.ticks {
+            XCTAssertEqual(calendar.component(.weekday, from: tick.date), calendar.firstWeekday)
+        }
+    }
+
+    func testAxisUsesMonthlyTicksForLongRange() {
+        let axis = GanttLayout.axis(today: today, rangeEnd: day(150, from: today), calendar: calendar)
+        XCTAssertEqual(axis.unit, .month)
+        XCTAssertFalse(axis.ticks.isEmpty)
+        for tick in axis.ticks {
+            XCTAssertEqual(calendar.component(.day, from: tick.date), 1)
+        }
+    }
+
+    func testAxisTicksStayInsideRangeAndAscend() {
+        let end = day(60, from: today)
+        let axis = GanttLayout.axis(today: today, rangeEnd: end, calendar: calendar)
+        XCTAssertFalse(axis.ticks.isEmpty)
+        for tick in axis.ticks {
+            XCTAssertGreaterThan(tick.date, calendar.startOfDay(for: today))
+            XCTAssertLessThanOrEqual(tick.date, calendar.startOfDay(for: end))
+            XCTAssertGreaterThan(tick.fraction, 0.0)
+            XCTAssertLessThanOrEqual(tick.fraction, 1.0)
+        }
+        XCTAssertEqual(axis.ticks, axis.ticks.sorted { $0.date < $1.date })
+    }
+
+    func testAxisTickFractionMatchesDayOffset() {
+        let end = day(28, from: today)
+        let axis = GanttLayout.axis(today: today, rangeEnd: end, calendar: calendar)
+        let tick = try! XCTUnwrap(axis.ticks.first)
+        let offset = calendar.dateComponents([.day], from: calendar.startOfDay(for: today), to: tick.date).day!
+        XCTAssertEqual(tick.fraction, Double(offset) / 28.0, accuracy: 0.0001)
+    }
+
     // MARK: - barFraction
 
     func testBarFractionAtRangeEndIsOne() {
