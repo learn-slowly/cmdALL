@@ -105,18 +105,25 @@ struct StudyHelperView: View {
         @Bindable var state = appState
         return HStack {
             Text("전체 \(appState.studyPDFPageCount)쪽 중").font(.caption).foregroundStyle(.secondary)
-            Stepper("\(appState.studyPageRangeStart)쪽부터",
-                    value: $state.studyPageRangeStart, in: 1...appState.studyPDFPageCount)
-                .onChange(of: state.studyPageRangeStart) { _, newValue in
-                    if state.studyPageRangeEnd < newValue { state.studyPageRangeEnd = newValue }
+            TextField("", value: $state.studyPageRangeStart, format: .number)
+                .frame(width: 48)
+                .textFieldStyle(.roundedBorder)
+                .multilineTextAlignment(.trailing)
+                .onChange(of: state.studyPageRangeStart) { _, _ in
+                    appState.clampStudyPageRange(changed: .start)
                     Task { await appState.updateStudyPreviewPlan() }
                 }
-            Stepper("\(appState.studyPageRangeEnd)쪽까지",
-                    value: $state.studyPageRangeEnd, in: 1...appState.studyPDFPageCount)
-                .onChange(of: state.studyPageRangeEnd) { _, newValue in
-                    if state.studyPageRangeStart > newValue { state.studyPageRangeStart = newValue }
+            Text("쪽부터")
+            Text("~")
+            TextField("", value: $state.studyPageRangeEnd, format: .number)
+                .frame(width: 48)
+                .textFieldStyle(.roundedBorder)
+                .multilineTextAlignment(.trailing)
+                .onChange(of: state.studyPageRangeEnd) { _, _ in
+                    appState.clampStudyPageRange(changed: .end)
                     Task { await appState.updateStudyPreviewPlan() }
                 }
+            Text("쪽까지")
         }
         .font(.caption)
     }

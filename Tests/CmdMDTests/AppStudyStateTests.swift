@@ -208,6 +208,40 @@ final class AppStudyStateTests: XCTestCase {
         XCTAssertEqual(app.studyPageRangeEnd, 5)
     }
 
+    // MARK: - 쪽 번호 직접입력 정리(레고 2026-08-01 요청 — 스테퍼 대신 타이핑)
+
+    func testClampStudyPageRangeKeepsWithinDocumentBoundsAndOrder() async {
+        app.studyPDFPageCount = 10
+        app.studyPageRangeStart = 999   // 직접입력으로 쪽수를 넘겨 쳤을 때.
+        app.studyPageRangeEnd = 5
+
+        app.clampStudyPageRange(changed: .start)
+
+        XCTAssertEqual(app.studyPageRangeStart, 10, "문서 쪽수를 넘으면 최대 쪽수로 정리돼야 한다")
+        XCTAssertEqual(app.studyPageRangeEnd, 10, "시작이 끝보다 커지면 끝을 밀어줘야 한다")
+    }
+
+    func testClampStudyPageRangeRejectsZeroOrNegativeInput() async {
+        app.studyPDFPageCount = 20
+        app.studyPageRangeStart = 0
+        app.studyPageRangeEnd = 15
+
+        app.clampStudyPageRange(changed: .start)
+
+        XCTAssertEqual(app.studyPageRangeStart, 1, "0 이하로 지우거나 음수를 치면 1쪽으로 정리돼야 한다")
+    }
+
+    func testClampStudyPageRangePushesStartDownWhenEndTypedSmaller() async {
+        app.studyPDFPageCount = 20
+        app.studyPageRangeStart = 10
+        app.studyPageRangeEnd = 3   // 끝을 시작보다 작게 직접 쳤을 때.
+
+        app.clampStudyPageRange(changed: .end)
+
+        XCTAssertEqual(app.studyPageRangeStart, 3, "끝이 시작보다 작아지면 시작을 끌어내려야 한다")
+        XCTAssertEqual(app.studyPageRangeEnd, 3)
+    }
+
     func testLoadRangeMetadataForMarkdownCapturesHeadingsInLineOrder() async {
         let content = "머리말\n\n# 1장\n1장 내용\n\n# 2장\n2장 내용\n"
         let url = makeSource(name: "교재.md", content: content)

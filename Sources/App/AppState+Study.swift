@@ -126,6 +126,23 @@ extension AppState {
         }
     }
 
+    /// 직접입력(TextField)으로 고친 쪽 번호가 문서 쪽수를 벗어나거나 시작>끝이 되지 않게 정리한다.
+    /// 어느 필드를 방금 고쳤는지에 따라 반대쪽을 밀어준다(레고 2026-08-01 요청 — 스테퍼 대신 직접입력).
+    enum StudyPageRangeField { case start, end }
+
+    @MainActor
+    func clampStudyPageRange(changed field: StudyPageRangeField) {
+        guard studyPDFPageCount > 0 else { return }
+        studyPageRangeStart = min(max(1, studyPageRangeStart), studyPDFPageCount)
+        studyPageRangeEnd = min(max(1, studyPageRangeEnd), studyPDFPageCount)
+        switch field {
+        case .start:
+            if studyPageRangeEnd < studyPageRangeStart { studyPageRangeEnd = studyPageRangeStart }
+        case .end:
+            if studyPageRangeStart > studyPageRangeEnd { studyPageRangeStart = studyPageRangeEnd }
+        }
+    }
+
     // MARK: - 사전 분량 표시(AC #9) — AI 호출 없이 청크 수·글자 수만 계산.
 
     @MainActor
