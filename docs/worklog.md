@@ -733,3 +733,4 @@ todolist.md의 "지금" 절 삭제(항목 4개 전부 제거) — 남은 건 "�
 - **`openTaskListView()`가 시트 플래그 대신 `mainMode = .tasks`로 전환**, `showTaskListView` 상태·`closeTaskListView()`·`ContentView`의 `.sheet` 배선 전부 제거(죽은 코드 남기지 않음). `loadTaskListData()`(두 탭 한 번에)를 새로 뽑아 진입·재진입 공용으로.
 - `showFileInfoForCurrentContext()`의 `switch mainMode`에 `.tasks` 분기 추가(정보 볼 파일·폴더 대상이 없어 무동작) — 컴파일러가 잡아준 누락.
 - 테스트 조정 — 시트 기반 2건(`testOpenTaskListViewLoadsTodoistTasks`·`testCloseTaskListViewHidesSheet`)을 모드 기반 3건(`testOpenTaskListViewSwitchesToTasksMode`·`testLoadTaskListDataFillsBothTabs`·`testSwitchingAwayAndBackKeepsLoadedTasks`)으로 교체. `swift test` **1,410개** 전량 통과, 회귀 0. `swift build` 경고 없음. `scripts/test_package_app.sh` 패키징 가드 통과.
+- **로컬 재패키징·`/Applications` 교체 설치 완료**(앱이 꺼져 있는 것 확인 후 — `cmdALL.app.bak-20260801-183116`로 백업, 서명 재검증·재실행 확인).
