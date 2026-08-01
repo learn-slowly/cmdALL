@@ -719,3 +719,4 @@ todolist.md의 "지금" 절 삭제(항목 4개 전부 제거) — 남은 건 "�
 - **`GanttChartView`**(신규 화면 컴포넌트) — "Todoist 할일" 탭의 기존 평범한 목록을 대체. 왼쪽 제목(140pt 고정폭) + 체크 버튼 + 오른쪽 막대(파랑, 지난 마감은 빨강) + 마감 문구. 마감일 없는 할일은 차트에 안 나오고 "N개는 표시되지 않습니다" 안내만.
 - 그동안 `openTaskListView()`가 같이 부르던 `loadTodoistProjects()`(행에 프로젝트 이름 표시용)는 이제 화면에서 안 쓰여 제거 — 설정 화면 쪽 프로젝트 선택은 그쪽 자체 "연결 확인" 버튼으로 여전히 동작.
 - 신규 테스트 16건 — `GanttLayoutTests` 13건(범위 계산·막대 비율 경계값·지난 마감·0으로 나누기 방어·클램프), `TodoistServiceTests`에 `parsedDate` 3건(날짜만·ISO8601·깨진 값). `AppTaskListStateTests`의 진입점 테스트 이름을 `testOpenTaskListViewLoadsTodoistTasks`로 정정(더 이상 프로젝트를 같이 안 불러오므로). `swift test` **1,409개** 전량 통과, 회귀 0. `swift build` 경고 없음. `scripts/test_package_app.sh` 패키징 가드 통과.
+- **로컬 재패키징·`/Applications` 교체 설치 완료**(레고 "앱을 닫음" 확인 후 — `cmdALL.app.bak-20260801-182436`로 백업, 서명 재검증·재실행 확인).
