@@ -15,6 +15,25 @@ final class StudyChunkerTests: XCTestCase {
         XCTAssertTrue(StudyChunker.chunks(from: segments, budget: 0).isEmpty)
         XCTAssertTrue(StudyChunker.chunks(from: segments, budget: -5).isEmpty)
     }
+    // MARK: - taggedText(from:) — 대화(S3) 핀 발췌 조립용, 예산 제한 없음
+
+    func testTaggedTextJoinsAllSegmentsWithTagsAndNoBudgetCap() {
+        let segments = [
+            StudySegment(text: "첫 문단", locator: .page(1)),
+            StudySegment(text: "둘째 문단", locator: .line(10)),
+            StudySegment(text: "셋째 문단", locator: .unknown),
+        ]
+
+        let text = StudyChunker.taggedText(from: segments)
+
+        XCTAssertTrue(text.contains("[[p1]] 첫 문단"))
+        XCTAssertTrue(text.contains("[[l10]] 둘째 문단"))
+        XCTAssertTrue(text.contains("[[?]] 셋째 문단"))
+    }
+
+    func testTaggedTextEmptyInputReturnsEmptyString() {
+        XCTAssertEqual(StudyChunker.taggedText(from: []), "")
+    }
 
     func testSingleSegmentIsTaggedWithLocatorPrefix() {
         let segments = [StudySegment(text: "AAAA", locator: .page(1))]

@@ -45,6 +45,10 @@ struct StudyHelperView: View {
                 Text("교재 파일을 선택하세요").foregroundStyle(.secondary)
             }
             Spacer()
+            if appState.studyScopeFileURL != nil {
+                Button("대화하며 공부하기") { appState.startStudyChat() }
+                    .disabled(appState.studyBusy)
+            }
             Button(appState.studyScopeFileURL == nil ? "파일 선택…" : "다른 파일…") {
                 appState.pickStudySourceFile()
             }

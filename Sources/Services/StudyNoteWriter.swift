@@ -73,6 +73,46 @@ enum StudyNoteWriter {
         lines.append("> 근거: \(bracketTag(question.locator)) \"\(question.quote)\"")
         return lines.joined(separator: "\n")
     }
+    // MARK: - 대화 노트(S3, "노트로 남기기")
+
+    /// 화면의 턴 전문을 그대로 옮긴다(AC #21). 카드·문제와 달리 항목 앵커·복습 스케줄이
+    /// 없다 — 대화는 복습 대상이 아니다(§Out of scope). frontmatter 뒤에 참고한 핀 발췌 +
+    /// 턴을 순서대로 나열할 뿐인 순수 함수(디스크에 쓰지 않는다, 호출부가 write(to:)한다).
+    static func buildChatNote(
+        session: StudyChatSession, sourceKind: DocumentKind?, noteFolder: URL, title: String,
+        now: Date = Date(), makeUUID: () -> UUID = UUID.init
+    ) -> BuildResult {
+        let noteID = makeUUID()
+        var lines = ["---", "study_id: \(noteID.uuidString)", "study_kind: chat"]
+        if let sourceURL = session.sourceURL {
+            lines.append("study_source: \(CompanionNote.yamlQuoted(relativePath(from: noteFolder, to: sourceURL)))")
+        }
+        if let sourceKind {
+            lines.append("study_source_kind: \(sourceKind.rawValue)")
+        }
+        lines.append("study_created: \(isoFormatter.string(from: now))")
+        lines.append("---")
+        lines.append("")
+        lines.append("# \(title)")
+
+        let pinned = session.pinnedExcerpt.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !pinned.isEmpty {
+            lines.append("")
+            lines.append("## 참고한 부분")
+            lines.append("")
+            lines.append(session.pinnedExcerpt)
+        }
+
+        lines.append("")
+        lines.append("## 대화")
+        for turn in session.turns {
+            lines.append("")
+            lines.append(turn.role == .user ? "### 사용자" : "### 도우미")
+            lines.append(turn.text)
+        }
+
+        return BuildResult(body: lines.joined(separator: "\n") + "\n", itemUIDs: [])
+    }
 
     // MARK: - frontmatter(§3.5) · 앵커(§3.3)
 

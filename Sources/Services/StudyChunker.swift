@@ -13,6 +13,14 @@ import Foundation
 enum StudyChunker {
     private static let separator = "\n\n"
 
+    /// 청크로 나누지 않고 위치 태그만 붙여 전부 이어붙인다 — 대화(S3)의 핀 발췌 조립용
+    /// (`AppState+StudyChat.swift`). 태그 규칙은 `chunks(from:budget:)`와 동일해 카드·문제와
+    /// 같은 형식의 위치 표시를 대화에서도 그대로 인용할 수 있다. 예산 제한은 두지 않는다 —
+    /// 너무 크면 `ChatContextAssembler`의 3단계(핀 발췌 트리밍)가 대신 줄인다.
+    static func taggedText(from segments: [StudySegment]) -> String {
+        segments.map { "\(tagString(for: $0.locator)) \($0.text)" }.joined(separator: separator)
+    }
+
     static func chunks(from segments: [StudySegment], budget: Int) -> [StudyChunk] {
         guard budget > 0, !segments.isEmpty else { return [] }
 

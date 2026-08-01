@@ -394,6 +394,17 @@ final class AppState {
     /// AC #24 "청크 C개 중 k개 성공" + O4 "유효 인용 k/n" 요약 문구.
     var studyOutcomeSummary: String? = nil
     var studySavedNoteURL: URL? = nil
+    // MARK: - 학습도우미 대화(S3)
+    /// 대화 화면 표시 여부. 학습도우미(S1) 화면에서 범위를 고른 뒤 "대화하며 공부하기"로 연다.
+    var showStudyChat: Bool = false
+    /// 메모리에만 있는 세션(설계 §4.1) — 크래시 대비 임시 저장(§4.7)은 이번 슬라이스 범위 밖.
+    var studyChatSession: StudyChatSession? = nil
+    var studyChatText: String = ""
+    var studyChatBusy: Bool = false
+    var studyChatError: String? = nil
+    /// 트리밍이 실제로 발동했을 때만 잠깐 보여주는 안내("이전 대화 일부를 줄여서 보냈어요").
+    var studyChatNotice: String? = nil
+    var studyChatSavedNoteURL: URL? = nil
 
     // MARK: - 파일 작업(F1a) 상태
 
@@ -471,6 +482,8 @@ final class AppState {
     let studySourceLoader: StudySourceLoader
     /// 테스트가 가짜 Claude 주입 StudyService로 교체할 수 있게 internal var(클린업 전례).
     var studyService: StudyService
+    /// 테스트가 가짜 Claude 주입 StudyChatService로 교체할 수 있게 internal var(위와 동일 전례).
+    var studyChatService: StudyChatService
     let moveExecutor: MoveExecutor
     let dataURL: URL
 
@@ -639,6 +652,7 @@ final class AppState {
         wikiRulesService = WikiRulesService(claude: aiRouter)
         studySourceLoader = StudySourceLoader(kordoc: kordocService)
         studyService = StudyService(claude: aiRouter, sourceLoader: studySourceLoader)
+        studyChatService = StudyChatService(claude: aiRouter)
         moveExecutor = MoveExecutor(store: moveLogStore)
 
         fileService = FileService()

@@ -91,6 +91,9 @@ struct ContentView: View {
         .sheet(isPresented: $state.showStudyHelper) {
             StudyHelperView()
         }
+        .sheet(isPresented: $state.showStudyChat) {
+            StudyChatView()
+        }
         .sheet(isPresented: $state.showQuickCapture) {
             // The ⇧⌘M quick-capture panel — previously the hotkey set a flag
             // that nothing observed.

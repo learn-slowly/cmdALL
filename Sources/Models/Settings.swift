@@ -141,6 +141,14 @@ struct AppSettings: Codable, Equatable {
     /// 문제)별로 여러 개 만들 수 있고, 화면에서 고르지 않으면("기본") 지시문 추가 없이 기존
     /// 동작 그대로다.
     var studyTemplates: [StudyTemplate] = []
+    // MARK: 학습도우미 대화(S3)
+    /// 대화 한 턴을 보낼 때 컨텍스트 전체 길이 상한(문자 수, §4.2.2). UI 권장 4,000~40,000,
+    /// 0 이하는 저장 거부(설정 화면이 Stepper 범위로 강제). 값을 너무 작게 줄이면 보낼
+    /// 자리가 없어 `.noSend`로 안내만 나간다 — 잘린 채 보내는 일은 없다.
+    var chatContextCap: Int = 12_000
+    /// 오래된 턴을 접을 때 AI로 5줄 요약할지(§4.3). 기본 OFF — 꺼져 있으면 결정적 접기
+    /// ("역할: 앞 200자…")만 쓰고 AI 호출이 0회다. 켜도 실패하면 조용히 결정적 접기로 폴백.
+    var studyChatAISummary: Bool = false
 
     // MARK: RAG 설정
     /// 자료에 묻기(RAG) 질의 확장 토글(동의어 recall 보완). 기본 ON.
@@ -220,6 +228,8 @@ struct AppSettings: Codable, Equatable {
         wikiRulesCapturedAt = try c.decodeIfPresent(Date.self, forKey: .wikiRulesCapturedAt) ?? d.wikiRulesCapturedAt
         wikiGraphFolderColors = try c.decodeIfPresent([String: String].self, forKey: .wikiGraphFolderColors) ?? d.wikiGraphFolderColors
         studyTemplates = try c.decodeIfPresent([StudyTemplate].self, forKey: .studyTemplates) ?? d.studyTemplates
+        chatContextCap = try c.decodeIfPresent(Int.self, forKey: .chatContextCap) ?? d.chatContextCap
+        studyChatAISummary = try c.decodeIfPresent(Bool.self, forKey: .studyChatAISummary) ?? d.studyChatAISummary
         ragExpandQuery = try c.decodeIfPresent(Bool.self, forKey: .ragExpandQuery) ?? d.ragExpandQuery
         libraryLayouts = try c.decodeIfPresent([String: LibraryLayout].self, forKey: .libraryLayouts) ?? d.libraryLayouts
         librarySorts = try c.decodeIfPresent([String: LibrarySort].self, forKey: .librarySorts) ?? d.librarySorts

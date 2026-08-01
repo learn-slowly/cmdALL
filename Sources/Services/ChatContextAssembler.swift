@@ -171,8 +171,9 @@ enum ChatContextAssembler {
         role == .user ? "사용자" : "도우미"
     }
 
-    /// §4.3 기본 압축 규칙 그대로: `역할: 앞 200자 + "…"`. AI 호출 0.
-    private static func deterministicFold(_ turn: StudyChatTurn) -> String {
+    /// §4.3 기본 압축 규칙 그대로: `역할: 앞 200자 + "…"`. AI 호출 0. `StudyChatService`(S3)가
+    /// 옵트인 AI 요약(§4.3) 실패 시 폴백으로도 그대로 재사용한다(internal — 같은 모듈 재사용).
+    static func deterministicFold(_ turn: StudyChatTurn) -> String {
         let prefix = String(turn.text.prefix(200))
         let suffix = turn.text.count > 200 ? "…" : ""
         return "\(roleLabel(turn.role)): \(prefix)\(suffix)"

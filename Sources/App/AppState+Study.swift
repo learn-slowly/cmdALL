@@ -98,7 +98,8 @@ extension AppState {
     }
 
     /// 현재 선택된 학습 범위 — "전체" 토글이 켜져 있거나 부분 선택 데이터가 없으면 전체 파일.
-    private func currentStudyScope() -> StudyScope? {
+    /// internal — 대화(S3, `AppState+StudyChat.swift`)도 같은 범위 선택 UI를 그대로 재사용한다.
+    func currentStudyScope() -> StudyScope? {
         guard let url = studyScopeFileURL, let kind = studyScopeKind else { return nil }
         return StudyScope(fileURL: url, kind: kind, range: currentStudyRange(kind: kind))
     }

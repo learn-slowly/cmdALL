@@ -621,3 +621,19 @@ ralplan 최종 계획(레고 실행 승인, S0만) 실행. 게이트 순서(S0 �
 - `budgetSplit(cap:framingLength:)`·`framingLength(...)`를 내부 헬퍼가 아니라 별도 노출 함수로 만들어 테스트가 정확한 경계값(예: "이번 프레이밍 길이가 딱 cap과 같을 때")을 손으로 억지 계산하지 않고 직접 잴 수 있게 했다.
 - 신규 테스트 21건 — `ChatContextAssemblerTests` 18건(설계 문서 검산 예시(cap=12,000) 그대로 재현·`reserve` 올림 경계·프레이밍이 예약분보다 크면 그만큼 줄어듦·프레이밍≥cap 즉시 실패·이번 질문 자리 0이면 즉시 실패·잔여가 항상 핀에 가산됨+4구획 합=contentBudget(여러 cap)·사후조건 `count≤cap`·이미 다 들어가면 트리밍 없이 그대로(no-op)·같은 입력→같은 결과(결정성)·요약이 턴보다 먼저 잘림·밀려난 턴이 정확히 "역할: 앞 200자…" 형식으로 남음·3턴 이상에서 앞 턴 내용이 어떤 형태로든 살아남음·핀 발췌가 최후 수단 직전에만 잘림·질문이 정말 최후에만 잘림·**마커 오버헤드 때문에 4단계를 다 거쳐도 못 맞추는 cap이 실제로 존재함을 400개 cap을 훑어 실증**·극단값(cap 1·2·959·960·961) 무크래시), `StudyModelsTests` 3건(세션 기본값·동등성·턴 truncated 기본값 false). `swift test` **1,260개**(기존 1,239 + 신규 21) 전량 통과, 회귀 0. `swift build` 경고 없음(신규 코드 관련).
 - 다음 조각(계획서 순서): `StudyChatService`(스트림·취소, 세션 데이터+어셈블러를 엮어 실제로 Claude를 부름) → 화면(`StudyChatView`) → 옵트인 "노트로 남기기" → `StudyChatDraftStore`(크래시 대비 임시 저장, §4.7). AI 호출은 아직 한 번도 안 일어났다 — 이번 조각은 전부 순수 계산·순수 데이터만.
+- 다음 조각(계획서 순서): `StudyChatService`(스트림·취소, 세션 데이터+어셈블러를 엮어 실제로 Claude를 부름) → 화면(`StudyChatView`) → 옵트인 "노트로 남기기" → `StudyChatDraftStore`(크래시 대비 임시 저장, §4.7). AI 호출은 아직 한 번도 안 일어났다 — 이번 조각은 전부 순수 계산·순수 데이터만.
+
+## 2026-08-01 — 학습도우미 S3 둘째 조각(실제 대화 — StudyChatService·화면·노트로 남기기)
+
+레고님 확인("ㄱㄱ") 후 진행. 이번엔 "크래시 대비 임시 저장(`StudyChatDraftStore`, §4.7)"은 빼고, **실제로 교재를 보면서 Claude와 대화를 주고받는 부분**까지만 완성했다 — 계획서 순서상 다음 남은 조각(초안 저장소)은 별도 세션으로 미룬다(당일 todolist에 명시).
+
+- **`StudyChatService`**(신규 actor) — 세션 데이터 + `ChatContextAssembler`를 엮어 실제로 `askStream`을 부른다. 책임 셋: ①스트림·취소 소유(세션 id별 `Task` 보관, "중단"이 `cancel(sessionId:)`로 끊는다) ②"턴 유지 개수"를 넘는 오래된 턴을 미리 접는 정책(기본은 결정적 접기, `studyChatAISummary` 켜면 AI 5줄 요약 1회+타임아웃 재시도 1회, 실패하면 조용히 결정적 접기로 폴백) ③대화 턴 자체는 콜별 타임아웃 지정 없음·자동 재시도 없음(카드·퀴즈의 300초+1회 재시도와 다른 계약, §4.4). `ChatContextAssembler`는 여전히 AI를 안 부르는 순수 함수로 남겼다 — 접기 정책만 서비스가 미리 처리하고 결과를 순수 함수에 넘긴다.
+  - **취소 관련 실측 함정 발견**: `Task`가 취소되는 동안 `for try await chunk in stream`(`AsyncThrowingStream`)이 대기 중이면, 실제로는 에러 없이 **조용히 반복이 끝난다**(catch 블록도 안 탄다) — 미니 재현 스크립트로 직접 확인. 루프 안의 `Task.isCancelled` 체크만으론 "받던 도중 취소"를 놓쳐 취소가 마치 정상 완료처럼 보이는 버그가 났다(첫 자체 테스트가 이 함정을 실제로 잡아냄). 루프를 빠져나온 직후 한 번 더 `Task.isCancelled`를 확인하도록 수정해 해결.
+- **`ChatContextAssembler.deterministicFold`를 `private`에서 모듈 내부로 공개** — `StudyChatService`가 AI 요약 실패 폴백에 같은 접기 규칙을 재사용(전례: 기존 함수 재사용 원칙).
+- **`StudyChunker.taggedText(from:)`**(신규) — 청크로 나누지 않고 위치 태그만 붙여 전부 이어붙인다. 대화의 "핀 발췌"(교재에서 골라 고정한 부분) 조립용 — 예산 제한 없이 통째로 만들고, 너무 크면 `ChatContextAssembler`의 3단계(핀 발췌 트리밍)가 알아서 줄인다.
+- **`StudyNoteWriter.buildChatNote(...)`**(신규) — "노트로 남기기"(AC #21 "화면의 원본 턴 전문을 저장한다"). 카드·문제와 달리 항목 앵커·복습 스케줄이 없다(대화는 복습 대상 아님, 설계 범위 밖) — frontmatter(`study_kind: chat`) 뒤에 참고한 핀 발췌 + 사용자/도우미 턴을 순서대로 나열만 한다.
+- **`AppState+StudyChat.swift`**(신규) — 화면 배선: `startStudyChat()`(학습도우미 S1에서 고른 파일·범위를 그대로 재사용해 핀 발췌 조립) → `sendStudyChatMessage()`(사용자 턴 즉시 표시 + 도우미 턴 스트리밍 실시간 채움, `.noSend`/실패 시 부분 전송 없이 원상복구+입력 복원) → `stopStudyChat()`(AC #19) → `saveStudyChatAsNote()`("노트로 남기기") → `closeStudyChat()`(정상 종료 경로, AC #20 — 이번 조각엔 초안이 없어 세션만 비운다).
+- **`StudyChatView`**(신규 화면) — 학습도우미(S1) 시트에 "대화하며 공부하기" 버튼(파일 고른 뒤에만 노출) → 대화창(턴 목록·입력줄·중단/보내기·노트로 남기기·노트 열기). 크래시 복구 시트는 이번 조각 범위 밖이라 없음.
+- **설정 신설**: `chatContextCap`(기본 12,000, 설정 화면 Stepper 4,000~40,000 — 0 이하 자체가 불가능하게 UI로 강제) · `studyChatAISummary`(기본 OFF). GeneralSettingsView에 "학습도우미 대화" 섹션 추가.
+- 신규 테스트 23건 — `StudyChatServiceTests` 10건(정상 스트리밍·이전 턴이 컨텍스트에 포함되는지·cap 너무 작으면 AI 호출 0회·트리밍 발동 여부 플래그·질문 자체가 잘리는 경우·**취소 시 부분 텍스트 보존**·취소가 아닌 진짜 에러 구분·접기 정책(결정적/AI 요약+실패 폴백)), `AppStudyChatStateTests` 9건(시작·전송·no-send 복원·중단·저장·닫기 전 구간의 "이어 붙임"), `StudyChunkerTests` 2건(`taggedText` 태그·빈 입력), `StudyNoteWriterTests` 2건(대화 노트 형식·핀 발췌 없을 때 섹션 생략). `swift test` **1,283개**(기존 1,260 + 신규 23) 전량 통과, 회귀 0. `swift build` 경고 없음(신규 코드 관련).
+- 다음 조각(계획서 순서): `StudyChatDraftStore`(크래시 대비 임시 저장, §4.7 — 디바운스 쓰기·원자적 교체·14일 만료·정상 종료 훅에서 삭제·복구 시트). 그 전에 레고 실사용으로 대화 자체가 "쓸 만한지"부터 확인 필요.

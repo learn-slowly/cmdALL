@@ -189,6 +189,18 @@ struct GeneralSettingsView: View {
             }
 
             Section {
+                Stepper(
+                    "한 번에 보낼 글자 수: \(appState.settings.chatContextCap)",
+                    value: $state.settings.chatContextCap, in: 4_000...40_000, step: 1_000)
+                Text("대화 한 턴을 보낼 때 핀 발췌·이전 대화·질문을 합쳐 보내는 글자 수 상한입니다. 너무 작게 줄이면 보낼 자리가 없어 안내만 나오고, 잘린 채 보내는 일은 없습니다.")
+                    .font(.caption).foregroundStyle(.secondary)
+                Toggle("오래된 대화를 AI로 요약해서 압축", isOn: $state.settings.studyChatAISummary)
+                Text("기본은 앞부분만 남기고 자르는 방식입니다. 켜면 대화가 길어질 때 AI가 짧게 요약해 대신 넣습니다(실패하면 자동으로 자르기 방식으로 돌아갑니다).")
+                    .font(.caption).foregroundStyle(.secondary)
+            } header: {
+                Text("학습도우미 대화")
+            }
+            Section {
                 LabeledContent("Version", value: AppInfo.versionLabel)
                 LabeledContent("Fork by", value: AppInfo.forkMaker)
                 LabeledContent("Original", value: AppInfo.originalMaker)

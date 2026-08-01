@@ -229,4 +229,37 @@ final class StudyNoteWriterTests: XCTestCase {
         XCTAssertEqual(result1.body, result2.body)
         XCTAssertEqual(result1.itemUIDs, result2.itemUIDs)
     }
+
+    // MARK: - 대화 노트(S3, AC #21 "화면의 원본 턴 전문을 저장한다")
+
+    func testChatNoteHasChatKindAndNoItemAnchors() {
+        var session = StudyChatSession(sourceURL: makeSource(), pinnedExcerpt: "[[p1]] 핵심 발췌")
+        session.turns = [
+            StudyChatTurn(role: .user, text: "질문 하나"),
+            StudyChatTurn(role: .assistant, text: "답변 하나", truncated: true),
+        ]
+        let result = StudyNoteWriter.buildChatNote(
+            session: session, sourceKind: .pdf, noteFolder: noteFolder, title: "대화 제목",
+            now: fixedDate, makeUUID: sequentialUUIDGenerator())
+
+        XCTAssertTrue(result.body.contains("study_kind: chat"))
+        XCTAssertTrue(result.body.contains("study_source_kind: pdf"))
+        XCTAssertTrue(result.body.contains("# 대화 제목"))
+        XCTAssertTrue(result.body.contains("핵심 발췌"))
+        XCTAssertTrue(result.body.contains("### 사용자\n질문 하나"))
+        XCTAssertTrue(result.body.contains("### 도우미\n답변 하나"))
+        XCTAssertFalse(result.body.contains("<!-- study item="), "대화는 항목 앵커가 없어야 함(복습 대상 아님)")
+        XCTAssertTrue(result.itemUIDs.isEmpty)
+    }
+
+    func testChatNoteWithoutPinnedExcerptOmitsSectionHeading() {
+        var session = StudyChatSession(sourceURL: nil, pinnedExcerpt: "")
+        session.turns = [StudyChatTurn(role: .user, text: "안녕")]
+        let result = StudyNoteWriter.buildChatNote(
+            session: session, sourceKind: nil, noteFolder: noteFolder, title: "제목",
+            now: fixedDate, makeUUID: sequentialUUIDGenerator())
+
+        XCTAssertFalse(result.body.contains("## 참고한 부분"))
+        XCTAssertFalse(result.body.contains("study_source:"), "원본 경로가 없으면 study_source 줄도 없어야 함")
+    }
 }
