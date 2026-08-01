@@ -76,6 +76,8 @@ struct StudyReviewView: View {
                     .padding(.horizontal, 6).padding(.vertical, 2)
                     .background(.quaternary, in: RoundedRectangle(cornerRadius: 4))
                 Spacer()
+                Button("원본 보기") { appState.openCurrentStudyReviewSource() }
+                    .font(.caption)
                 Button("노트 열기") { appState.openCurrentStudyReviewNote() }
                     .font(.caption)
             }

@@ -176,6 +176,73 @@ final class AppStudyReviewStateTests: XCTestCase {
         XCTAssertEqual(app.mainMode, .reader)
     }
 
+    // MARK: - 근거 태그 → 원본 자료 열기(레고 2026-08-01)
+
+    /// 노트 폴더에 원본 교재 파일이 실제로 있어야 열기가 성립한다 — 빈 파일로 존재만 만든다.
+    private func makeSourceFile() -> URL {
+        let url = effectiveFolder().appendingPathComponent("교재.pdf")
+        try? Data().write(to: url)
+        return url
+    }
+
+    func testOpenCurrentStudyReviewSourceOpensSourceFile() async {
+        writeDueCardNote()
+        let sourceURL = makeSourceFile()
+        await app.rebuildStudyIndex()
+        await app.openStudyReview()
+
+        XCTAssertTrue(app.openCurrentStudyReviewSource())
+        XCTAssertNil(app.studyReviewError)
+        XCTAssertFalse(app.showStudyReview, "원본을 열었으면 복습 시트는 닫힌다")
+        XCTAssertEqual(app.mainMode, .reader)
+        XCTAssertNotNil(sourceURL)
+    }
+
+    func testOpenCurrentStudyReviewSourceReportsMissingFile() async {
+        writeDueCardNote()   // 원본 교재 파일은 만들지 않는다(옮겼거나 지운 상황).
+        await app.rebuildStudyIndex()
+        await app.openStudyReview()
+
+        XCTAssertFalse(app.openCurrentStudyReviewSource())
+        XCTAssertNotNil(app.studyReviewError)
+        XCTAssertTrue(app.showStudyReview, "열지 못했으면 복습 화면을 닫지 않는다")
+    }
+
+    func testOpenStudyEvidenceJumpsToSourceFromOpenNote() async {
+        let noteURL = writeDueCardNote()
+        makeSourceFile()
+        await app.loadAndActivateDocument(at: noteURL, inNewTab: true)
+        XCTAssertEqual(app.currentTabFileURL?.standardizedFileURL, noteURL.standardizedFileURL)
+
+        XCTAssertTrue(app.openStudyEvidence(tag: "p1"), "근거 태그는 원본 교재로 간다")
+    }
+
+    func testOpenStudyEvidenceReportsMissingSourceInsteadOfNoteSearch() async {
+        let noteURL = writeDueCardNote()   // 원본 교재 파일은 만들지 않는다.
+        await app.loadAndActivateDocument(at: noteURL, inNewTab: true)
+
+        XCTAssertTrue(app.openStudyEvidence(tag: "p1"), "근거 태그는 노트 이름으로 다시 찾지 않는다")
+        XCTAssertNotNil(app.toastMessage)
+    }
+
+    func testOpenStudyEvidenceIgnoresOrdinaryWikiLink() async {
+        let noteURL = writeDueCardNote()
+        makeSourceFile()
+        await app.loadAndActivateDocument(at: noteURL, inNewTab: true)
+
+        XCTAssertFalse(app.openStudyEvidence(tag: "다른 노트"), "평범한 노트 이름은 기존 노트 찾기로 넘어간다")
+    }
+
+    func testOpenStudyEvidenceIgnoresLocatorInOrdinaryNote() async {
+        let folder = effectiveFolder()
+        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let plainNote = folder.appendingPathComponent("그냥노트.md")
+        try? "# 그냥 노트\n\n[[p9]]\n".write(to: plainNote, atomically: true, encoding: .utf8)
+        await app.loadAndActivateDocument(at: plainNote, inNewTab: true)
+
+        XCTAssertFalse(app.openStudyEvidence(tag: "p9"), "학습 노트가 아니면 위치로 해석하지 않는다")
+    }
+
     // MARK: - 설정 폴더 등록/해제
 
     func testRegisterStudyFolderAppendsPathOnce() {

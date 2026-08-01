@@ -764,3 +764,25 @@ todolist.md의 "지금" 절 삭제(항목 4개 전부 제거) — 남은 건 "�
   잠재 어긋남 제거).
 - 테스트 5건 추가(빈 범위·주/월 단위 선택·눈금이 범위 안이고 오름차순·비율이 날짜 간격과 일치).
   `swift test` **1,421개** 전량 통과.
+
+### 학습 노트 근거 태그(`[[p9]]`)가 원본 자료로 가게 (2026-08-01)
+
+레고 보고: 카드·문제 노트의 `> 근거: [[p9]] "…"` 를 눌러도 아무 데도 안 갔다("이게 링크가
+안 걸리네?"). 원인 — 근거 태그는 겉모습만 위키링크지 실제로는 "9쪽"이라는 **위치 표시**인데,
+앱은 이걸 "p9라는 이름의 노트"로 찾다가 실패했다(`Linked note not found: p9`).
+
+- 신규 순수 헬퍼 `StudySourceLink` — 태그(`p9`·`p9-12`·`l345`·`?`)를 위치로 해석
+  (`StudyNoteWriter.parseAnchorLoc` 재사용, 평범한 노트 이름은 nil), 같은 노트의 항목 앵커에서
+  원본 파일 상대경로를 찾고(위치가 같은 항목 우선 → 없으면 첫 항목 → frontmatter `study_source`),
+  percent-encoded 상대경로를 절대 URL로 푼다.
+- `AppState.openStudyEvidence(tag:)` — `openLinkedNote` 맨 앞에서 가로채 원본 교재를 그 쪽
+  (`scrollToPDFPage`)·그 줄(`scrollToLine`)로 연다. 기존 RAG 출처 점프와 같은 배선 재사용.
+  원본 파일이 없으면 노트 이름으로 되돌아가지 않고 이유를 알려준다(안내 토스트).
+- **실측으로 잡은 함정**: 화면 버퍼(`currentDocument.content`)는 frontmatter가 떼어진 본문이라
+  `study_id`가 없어 학습 노트로 인식되지 않는다 → 앵커·frontmatter는 **디스크 원문**에서 읽는다.
+  또 `URL(fileURLWithPath:relativeTo:)`는 기준 URL이 폴더임을 명시하지 않으면 한 단계 위에서
+  상대경로를 풀어버려 `../교재.pdf`가 엉뚱한 곳을 가리켰다 → `isDirectory: true` 명시.
+- 복습 화면에 **"원본 보기"** 버튼 추가(`openCurrentStudyReviewSource()`) — 복습 카드 본문은 그냥
+  글자라 링크를 누를 수 없어서, 같은 헬퍼로 원본 그 위치를 여는 버튼을 뒀다.
+- 테스트 19건 추가(`StudySourceLinkTests` 13 + `AppStudyReviewStateTests` 6). `swift test`
+  **1,440개** 전량 통과.

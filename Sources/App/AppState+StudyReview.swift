@@ -107,6 +107,56 @@ extension AppState {
         openDocument(at: URL(fileURLWithPath: item.notePath), inNewTab: true)
     }
 
+    /// 근거 태그(`[[p9]]`) 클릭 — 학습 노트가 열려 있으면 **원본 교재**의 그 쪽/줄을 연다.
+    /// 위치 태그가 아니거나(=평범한 위키링크) 원본 파일을 못 찾으면 false를 돌려 기존
+    /// 노트 찾기로 넘긴다(§`StudySourceLink`, 레고 2026-08-01).
+    @discardableResult
+    func openStudyEvidence(tag: String) -> Bool {
+        guard let locator = StudySourceLink.locator(fromTag: tag),
+              let noteURL = currentTabFileURL else { return false }
+        // 항목 앵커·frontmatter는 **디스크 원문**에서만 읽는다 — 화면 버퍼(`currentDocument.content`)는
+        // frontmatter가 떼어진 본문이라 `study_id`가 없어 학습 노트로 인식되지 않는다(2026-08-01 실측).
+        guard let content = try? String(contentsOf: noteURL, encoding: .utf8),
+              let relative = StudySourceLink.sourceRelativePath(for: locator, in: content) else { return false }
+        guard openStudySource(relativePath: relative, noteURL: noteURL, locator: locator) else {
+            // 학습 노트의 근거 태그가 맞는데 원본만 없는 경우 — 노트 이름으로 다시 찾아봐야
+            // 헛수고이므로 여기서 끝내고 이유를 알려준다.
+            showToast("원본 자료를 찾지 못했습니다(옮겼거나 지웠을 수 있어요).")
+            return true
+        }
+        return true
+    }
+
+    /// "원본 보기"(복습 화면) — 노트 파일을 디스크에서 읽어 원본 교재의 그 위치를 연다.
+    @MainActor
+    @discardableResult
+    func openCurrentStudyReviewSource() -> Bool {
+        guard let item = currentStudyReviewItem else { return false }
+        let noteURL = URL(fileURLWithPath: item.notePath)
+        guard let content = try? String(contentsOf: noteURL, encoding: .utf8),
+              let relative = StudySourceLink.sourceRelativePath(for: item.loc, in: content) else {
+            studyReviewError = "원본 자료 위치를 노트에서 찾지 못했습니다."
+            return false
+        }
+        guard openStudySource(relativePath: relative, noteURL: noteURL, locator: item.loc) else {
+            studyReviewError = "원본 자료 파일을 찾지 못했습니다(옮겼거나 지웠을 수 있어요)."
+            return false
+        }
+        showStudyReview = false
+        return true
+    }
+
+    /// 공통 열기 — 파일이 실제로 있을 때만 연다(옮겼거나 지운 원본에 헛되이 탭을 열지 않는다).
+    private func openStudySource(relativePath: String, noteURL: URL, locator: StudyLocator) -> Bool {
+        guard let sourceURL = StudySourceLink.sourceURL(relativePath: relativePath,
+                                                        noteFolder: noteURL.deletingLastPathComponent()),
+              FileManager.default.fileExists(atPath: sourceURL.path) else { return false }
+        openDocument(at: sourceURL, inNewTab: true,
+                     scrollToLine: StudySourceLink.line(of: locator),
+                     scrollToPDFPage: StudySourceLink.page(of: locator))
+        return true
+    }
+
     /// 채점(§3.6 "채점 쓰기") — 앵커 줄만 치환 + 백업 1부, 쓰기 직전 재확인(§3.6 "채점 직전
     /// 외부 변경"). 성공하면 캐시 한 행도 즉시 갱신하고 다음 항목으로 넘어간다.
     @MainActor

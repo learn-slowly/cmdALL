@@ -242,6 +242,10 @@ extension AppState {
     func openLinkedNote(_ rawTarget: String) {
         guard let target = LinkedNoteResolver.normalizedTarget(rawTarget) else { return }
 
+        // 학습 노트의 근거 태그(`[[p9]]`·`[[l345]]`)는 노트 이름이 아니라 위치 표시다 —
+        // 노트 찾기보다 먼저 원본 자료의 그 쪽/줄로 보낸다(레고 2026-08-01 "링크가 안 걸리네").
+        if openStudyEvidence(tag: target) { return }
+
         let roots = linkedNoteSearchRoots()
         let resolver = LinkedNoteResolver(roots: roots)
 
