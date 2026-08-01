@@ -205,6 +205,9 @@ struct CmdMDApp: App {
                 Button("학습도우미") {
                     appState.openStudyHelper()
                 }
+                Button("오늘 복습") {
+                    appState.openStudyReviewSheet()
+                }
 
                 Divider()
                 

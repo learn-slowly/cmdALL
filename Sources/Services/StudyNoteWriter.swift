@@ -136,21 +136,52 @@ enum StudyNoteWriter {
     /// §3.3 앵커 정규 문법 — 새로 만든 항목은 항상 오늘 시작(§3.9 초기값, `StudyReviewState.initial`과 정합).
     private static func anchor(uid: UUID, scope: StudyScope, noteFolder: URL, locator: StudyLocator, now: Date) -> String {
         let initial = StudyReviewState.initial(now: now)
-        let ease = String(format: "%.2f", initial.ease)
-        return "<!-- study item=\(uid.uuidString) src=\(relativePath(from: noteFolder, to: scope.fileURL)) "
-            + "loc=\(anchorLoc(locator)) due=\(dayFormatter.string(from: initial.due)) "
-            + "ivl=\(initial.interval) ease=\(ease) reps=\(initial.reps) lapses=\(initial.lapses) -->"
+        return formatAnchorLine(uid: uid, src: relativePath(from: noteFolder, to: scope.fileURL),
+                                 loc: locator, state: initial)
+    }
+
+    /// 앵커 줄 렌더링(§3.3) — 알려진 키 8개 고정 순서 + `extraTokens`(미지 키 보존, `StudyNoteParser`가
+    /// 채점 재작성 시 원래 있던 키를 그대로 뒤에 붙여 넘긴다). 새로 만든 항목은 `extraTokens` 없음.
+    static func formatAnchorLine(uid: UUID, src: String, loc: StudyLocator, state: StudyReviewState, extraTokens: [String] = []) -> String {
+        let ease = String(format: "%.2f", state.ease)
+        var tokens = [
+            "item=\(uid.uuidString)", "src=\(src)", "loc=\(anchorLoc(loc))",
+            "due=\(dayFormatter.string(from: state.due))", "ivl=\(state.interval)",
+            "ease=\(ease)", "reps=\(state.reps)", "lapses=\(state.lapses)"
+        ]
+        tokens.append(contentsOf: extraTokens)
+        return "<!-- study " + tokens.joined(separator: " ") + " -->"
     }
 
     // MARK: - 위치 표기 변환(앵커용 `p12`/`l345`/`-` · 본문 인용용 `[[p12]]`, §3.3·O1)
 
-    private static func anchorLoc(_ locator: StudyLocator) -> String {
+    static func anchorLoc(_ locator: StudyLocator) -> String {
         switch locator {
         case .page(let n): return "p\(n)"
         case .pageRange(let a, let b): return "p\(a)-\(b)"
         case .line(let n): return "l\(n)"
         case .unknown: return "-"
         }
+    }
+
+    /// `anchorLoc(_:)`의 역변환 — `StudyNoteParser`가 앵커 줄을 읽어들일 때 쓴다. 알 수 없는
+    /// 형식이면 nil(파일 손상·수기 편집 대응, §3.3 "위반 줄은 건너뛰고 경고 1건").
+    static func parseAnchorLoc(_ s: String) -> StudyLocator? {
+        if s == "-" { return .unknown }
+        if s.hasPrefix("p") {
+            let rest = s.dropFirst()
+            if let dash = rest.firstIndex(of: "-") {
+                guard let a = Int(rest[rest.startIndex..<dash]), let b = Int(rest[rest.index(after: dash)...]) else { return nil }
+                return .pageRange(a, b)
+            }
+            guard let n = Int(rest) else { return nil }
+            return .page(n)
+        }
+        if s.hasPrefix("l") {
+            guard let n = Int(s.dropFirst()) else { return nil }
+            return .line(n)
+        }
+        return nil
     }
 
     private static func bracketTag(_ locator: StudyLocator) -> String {
@@ -194,4 +225,7 @@ enum StudyNoteWriter {
         formatter.timeZone = .current
         return formatter
     }()
+
+    /// 앵커 `due=` 값 파싱(`StudyNoteParser` 전용) — `dayFormatter`와 동일 규칙.
+    static func parseDay(_ s: String) -> Date? { dayFormatter.date(from: s) }
 }

@@ -201,6 +201,36 @@ struct GeneralSettingsView: View {
                 Text("학습도우미 대화")
             }
             Section {
+                if appState.settings.studyFolders.isEmpty {
+                    Text("직접 등록한 폴더 없음 — 기본값은 학습 노트 저장 폴더 1곳(\(appState.effectiveStudyFolders().first?.path ?? "볼트 미설정")).")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(appState.settings.studyFolders, id: \.self) { path in
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text((path as NSString).lastPathComponent)
+                                    .font(.callout)
+                                Text(path)
+                                    .font(.caption).foregroundStyle(.secondary)
+                                    .lineLimit(1).truncationMode(.middle)
+                            }
+                            Spacer()
+                            Button(role: .destructive) { appState.unregisterStudyFolder(path) } label: {
+                                Image(systemName: "minus.circle")
+                            }
+                            .controlSize(.small)
+                        }
+                    }
+                }
+                Button("폴더 추가…") { addStudyFolder() }
+            } header: {
+                Text("학습도우미 복습")
+            } footer: {
+                Text("\"오늘 복습\"이 훑을 폴더입니다. 하나도 등록 안 하면 카드·문제를 저장하는 폴더 1곳을 자동으로 씁니다. 손으로 추가하면 그 목록만 씁니다.")
+                    .font(.caption)
+            }
+            Section {
                 LabeledContent("Version", value: AppInfo.versionLabel)
                 LabeledContent("Fork by", value: AppInfo.forkMaker)
                 LabeledContent("Original", value: AppInfo.originalMaker)
@@ -283,6 +313,16 @@ struct GeneralSettingsView: View {
                 Label("codex CLI 미설치", systemImage: "xmark.octagon")
                     .foregroundStyle(.red)
             }
+        }
+    }
+    /// 복습 캐시가 훑을 폴더를 손으로 추가(비어 있으면 기본값=카드/문제 노트 저장 폴더 1곳).
+    private func addStudyFolder() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.allowsMultipleSelection = false
+        if panel.runModal() == .OK, let url = panel.url {
+            appState.registerStudyFolder(url)
         }
     }
 }

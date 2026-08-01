@@ -405,6 +405,20 @@ final class AppState {
     /// 트리밍이 실제로 발동했을 때만 잠깐 보여주는 안내("이전 대화 일부를 줄여서 보냈어요").
     var studyChatNotice: String? = nil
     var studyChatSavedNoteURL: URL? = nil
+    // MARK: - 학습도우미 복습(S2)
+    /// 오늘 복습 화면 표시 여부.
+    var showStudyReview: Bool = false
+    /// 오늘 복습 대기열(§3.9 하루 상한 적용 완료 상태, 기한 오름차순) — 화면은 이 배열만 훑는다.
+    var studyReviewQueue: [StudyIndexItem] = []
+    var studyReviewIndex: Int = 0
+    /// 카드/문제 정답을 보여줄지(문제는 채점 전 정답 숨김, 카드는 항상 펼쳐 보임 — 화면에서 분기).
+    var studyReviewRevealAnswer: Bool = false
+    var studyReviewBusy: Bool = false
+    var studyReviewError: String? = nil
+    /// 재빌드 직후 1줄 안내("학습 목록을 다시 훑었습니다: N건(제외 M건)").
+    var studyReviewRebuildNotice: String? = nil
+    /// 사이드바 리본/메뉴 배지용 — 재빌드·채점 때마다 갱신(§3.9 "신호는 앱 내 배지만").
+    var studyDueCount: Int = 0
 
     // MARK: - 파일 작업(F1a) 상태
 
@@ -484,6 +498,8 @@ final class AppState {
     var studyService: StudyService
     /// 테스트가 가짜 Claude 주입 StudyChatService로 교체할 수 있게 internal var(위와 동일 전례).
     var studyChatService: StudyChatService
+    /// 복습 캐시(§3.8) — init에서 대입(searchIndex와 같은 패턴, appDir 하위 studyindex.sqlite).
+    let studyIndex: StudyIndex
     let moveExecutor: MoveExecutor
     let dataURL: URL
 
@@ -653,6 +669,7 @@ final class AppState {
         studySourceLoader = StudySourceLoader(kordoc: kordocService)
         studyService = StudyService(claude: aiRouter, sourceLoader: studySourceLoader)
         studyChatService = StudyChatService(claude: aiRouter)
+        studyIndex = StudyIndex(dbURL: appDir.appendingPathComponent("studyindex.sqlite"))
         moveExecutor = MoveExecutor(store: moveLogStore)
 
         fileService = FileService()
@@ -679,6 +696,7 @@ final class AppState {
         Task { @MainActor in self.startFolderWatching() }
         restoreSessionIfNeeded()
         rebuildNoteIndex()
+        Task { @MainActor in await self.rebuildStudyIndex() }   // 복습 캐시 앱 시작 1회(§3.7 트리거)
         announceUpdateRestartIfNeeded()   // 업데이트로 재시작했으면 알린다
         checkForUpdates()   // silent, throttled to once per 6h
 

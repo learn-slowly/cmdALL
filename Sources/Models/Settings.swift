@@ -153,6 +153,11 @@ struct AppSettings: Codable, Equatable {
     /// 오래된 턴을 접을 때 AI로 5줄 요약할지(§4.3). 기본 OFF — 꺼져 있으면 결정적 접기
     /// ("역할: 앞 200자…")만 쓰고 AI 호출이 0회다. 켜도 실패하면 조용히 결정적 접기로 폴백.
     var studyChatAISummary: Bool = false
+    // MARK: 학습도우미 복습(S2)
+    /// 복습 캐시(§3.7)를 훑을 폴더(절대경로). 비어 있으면 "카드/문제 노트 저장 위치 1곳"이
+    /// 기본값(코드에서 계산, `AppState.effectiveStudyFolders()`) — 설정 화면에서 직접 추가한
+    /// 폴더가 있으면 그것만 쓴다.
+    var studyFolders: [String] = []
 
     // MARK: RAG 설정
     /// 자료에 묻기(RAG) 질의 확장 토글(동의어 recall 보완). 기본 ON.
@@ -235,6 +240,7 @@ struct AppSettings: Codable, Equatable {
         lastStudySourcePath = try c.decodeIfPresent(String.self, forKey: .lastStudySourcePath) ?? d.lastStudySourcePath
         chatContextCap = try c.decodeIfPresent(Int.self, forKey: .chatContextCap) ?? d.chatContextCap
         studyChatAISummary = try c.decodeIfPresent(Bool.self, forKey: .studyChatAISummary) ?? d.studyChatAISummary
+        studyFolders = try c.decodeIfPresent([String].self, forKey: .studyFolders) ?? d.studyFolders
         ragExpandQuery = try c.decodeIfPresent(Bool.self, forKey: .ragExpandQuery) ?? d.ragExpandQuery
         libraryLayouts = try c.decodeIfPresent([String: LibraryLayout].self, forKey: .libraryLayouts) ?? d.libraryLayouts
         librarySorts = try c.decodeIfPresent([String: LibrarySort].self, forKey: .librarySorts) ?? d.librarySorts

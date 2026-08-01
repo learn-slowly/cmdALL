@@ -306,6 +306,15 @@ struct Command: Identifiable {
             ) {
                 appState.openStudyHelper()
             },
+            Command(
+                title: "오늘 복습",
+                subtitle: "만들어 둔 카드·문제를 복습할 차례가 됐는지 확인",
+                icon: "checkmark.circle",
+                shortcut: nil,
+                keywords: ["복습", "리뷰", "review", "spaced", "간격반복", "flashcard"]
+            ) {
+                appState.openStudyReviewSheet()
+            },
 
             Command(
                 title: "폴더 정리 (배치)",

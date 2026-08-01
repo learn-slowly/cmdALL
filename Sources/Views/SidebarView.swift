@@ -58,6 +58,20 @@ struct SidebarRibbon: View {
             RibbonButton(icon: "graduationcap", help: "학습도우미") {
                 appState.openStudyHelper()
             }
+            ZStack(alignment: .topTrailing) {
+                RibbonButton(icon: "checkmark.circle", help: "오늘 복습" + (appState.studyDueCount > 0 ? " (\(appState.studyDueCount)개)" : "")) {
+                    appState.openStudyReviewSheet()
+                }
+                if appState.studyDueCount > 0 {
+                    Text("\(min(appState.studyDueCount, 99))")
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundStyle(.white)
+                        .padding(3)
+                        .background(Circle().fill(Color.red))
+                        .offset(x: 2, y: 2)
+                        .allowsHitTesting(false)
+                }
+            }
 
             RibbonButton(icon: "folder.badge.plus", help: "Open Folder (⌥⌘O)") {
                 appState.openFolder()
