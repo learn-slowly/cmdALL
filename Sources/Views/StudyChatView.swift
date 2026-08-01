@@ -88,8 +88,12 @@ struct StudyChatView: View {
         VStack(alignment: .leading, spacing: 2) {
             Text(turn.role == .user ? "나" : "도우미")
                 .font(.caption).bold().foregroundStyle(.secondary)
-            Text(turn.text.isEmpty ? "…" : turn.text)
-                .textSelection(.enabled)
+            if turn.text.isEmpty {
+                Text("…")
+            } else {
+                ChatMarkdownView(text: turn.text)
+                    .textSelection(.enabled)
+            }
             if turn.truncated {
                 Text("(길어서 일부만 보냈어요)").font(.caption2).foregroundStyle(.secondary)
             }
