@@ -33,12 +33,17 @@ struct URLSessionTodoistTransport: TodoistTransport {
 }
 
 /// cmdALL이 처음으로 다루는 "바깥 인터넷 서비스" 연동 — kordoc·claude처럼 로컬 CLI가
-/// 아니라 진짜 HTTPS 호출이다(Todoist REST API v2). 토큰은 `AppSettings.todoistAPIToken`에
-/// 평문 저장된다(다른 설정값과 같은 파일 — 이 컴퓨터 접근 권한이 있으면 볼 수 있다는 뜻,
-/// 개인용 로컬 앱이라는 전제하에 감수한 트레이드오프).
+/// 아니라 진짜 HTTPS 호출이다. 토큰은 `AppSettings.todoistAPIToken`에 평문 저장된다
+/// (다른 설정값과 같은 파일 — 이 컴퓨터 접근 권한이 있으면 볼 수 있다는 뜻, 개인용 로컬
+/// 앱이라는 전제하에 감수한 트레이드오프).
+///
+/// **2026-08-01 주소 정정**: 처음엔 `rest/v2/`로 만들었는데 레고 실사용 중 그 주소가
+/// **410 Gone**(완전히 폐지됨)으로 확인됐다 — Todoist가 REST v2를 접고 통합 `api/v1/`로
+/// 옮겼다. `GET /api/v1/tasks`·`GET /api/v1/projects`가 401(인증 필요, 즉 주소 자체는
+/// 살아있음)을 돌려주는 것으로 새 경로를 실측 확인했다.
 actor TodoistService {
     private let transport: TodoistTransport
-    private static let baseURL = "https://api.todoist.com/rest/v2/"
+    private static let baseURL = "https://api.todoist.com/api/v1/"
 
     init(transport: TodoistTransport = URLSessionTodoistTransport()) {
         self.transport = transport
@@ -57,20 +62,33 @@ actor TodoistService {
         return request
     }
 
+    /// 응답 형식을 딱 하나로 단정하지 않는다 — 예전 REST v2는 배열을 그대로 줬고, 새 v1은
+    /// `{"results": [...], "next_cursor": ...}`로 페이지네이션 감싸서 준다는 보고가 있다.
+    /// 실사용 중 형식이 또 바뀌어도(레고가 겪은 410처럼) 앱이 조용히 죽지 않게 둘 다 시도한다.
     func fetchProjects(token: String) async throws -> [TodoistProject] {
         guard !token.trimmingCharacters(in: .whitespaces).isEmpty else { throw TodoistError.noToken }
         let request = makeRequest("projects", method: "GET", token: token)
         do {
             let (data, response) = try await transport.send(request)
             try Self.checkStatus(response)
-            return try JSONDecoder().decode([TodoistProject].self, from: data)
+            return try Self.decodeProjects(data)
         } catch let error as TodoistError {
             throw error
-        } catch is DecodingError {
-            throw TodoistError.network("응답 형식을 읽지 못했습니다.")
         } catch {
             throw TodoistError.network(error.localizedDescription)
         }
+    }
+
+    private struct PagedProjects: Decodable { let results: [TodoistProject] }
+
+    private static func decodeProjects(_ data: Data) throws -> [TodoistProject] {
+        if let bare = try? JSONDecoder().decode([TodoistProject].self, from: data) {
+            return bare
+        }
+        if let paged = try? JSONDecoder().decode(PagedProjects.self, from: data) {
+            return paged.results
+        }
+        throw TodoistError.network("응답 형식을 읽지 못했습니다.")
     }
 
     /// - Parameter projectId: nil이면 Todoist 기본 받은함(Inbox)으로 들어간다.

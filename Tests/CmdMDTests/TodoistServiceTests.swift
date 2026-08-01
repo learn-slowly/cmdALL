@@ -46,6 +46,16 @@ final class TodoistServiceTests: XCTestCase {
         XCTAssertTrue(projects[0].isInboxProject)
     }
 
+    /// 2026-08-01 — 410 실사용 사고 이후, v1 API의 페이지네이션 감싼 응답 형식도 받아들이는지.
+    func testFetchProjectsDecodesPagedResultsWrapper() async throws {
+        let json = #"{"results":[{"id":"1","name":"Inbox","is_inbox_project":true}],"next_cursor":null}"#
+        let transport = FakeTransport(.success(json.data(using: .utf8)!, 200))
+        let service = TodoistService(transport: transport)
+        let projects = try await service.fetchProjects(token: "가짜토큰")
+        XCTAssertEqual(projects.count, 1)
+        XCTAssertEqual(projects[0].name, "Inbox")
+    }
+
     func testFetchProjectsWithoutTokenThrowsNoToken() async {
         let transport = FakeTransport(.success(Data(), 200))
         let service = TodoistService(transport: transport)
