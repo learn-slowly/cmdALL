@@ -34,7 +34,7 @@
 
 ### 3. 학습도우미 S1 배포 완료 + S3(대화) 코드 완성(레고 실기 확인 대기)
 
-- **왜**: S0(프리셋 버튼)·S1(코어+카드+퀴즈+저장)이 v0.9.427로 배포 완료. 이어서 2026-08-01 두 번째 세션에서 S3(대화하며 공부하기)의 코드 구현이 끝났다 — 실제 Claude와 스트리밍 대화·"노트로 남기기"까지 동작한다. 아직 배포(릴리스)는 안 됐고, 레고가 로컬 빌드로 먼저 써 봐야 한다.
+- **왜**: S0(프리셋 버튼)·S1(코어+카드+퀴즈+저장)이 v0.9.427로 배포 완료. 이어서 2026-08-01 두 번째 세션에서 S3(대화하며 공부하기)의 코드 구현이 끝나 **`/Applications`에 로컬 설치까지 완료**됐다 — 실제 Claude와 스트리밍 대화·"노트로 남기기"까지 지금 앱에서 바로 눌러볼 수 있다. 아직 GitHub 릴리스(배포)는 안 올렸다 — 레고 실사용 확인 먼저.
 - **볼 것 — S1(계속 확인 중)**: 왼쪽 리본 학습도우미(졸업모자) 아이콘 → 교재 파일 선택 → "정리 카드"/"연습 문제" → 개수(최대 50개) → 부분 범위 선택 → 필요하면 템플릿 → 만들기 → 미리보기 → "노트로 저장" → "노트 열기".
 - **볼 것 — S3 대화(신규, 이번에 처음 확인)**: 학습도우미 화면에서 파일을 고른 뒤 "대화하며 공부하기" 버튼 → 대화창에서 교재 내용 질문 → 답이 실시간으로 채워지는지 → 답 오는 도중 "중단" 눌러서 멈추는지(멈춰도 그때까지 받은 글자는 남아있는지) → 여러 번 주고받은 뒤 앞 질문 내용을 참고해서 답하는지 → "노트로 남기기" → "노트 열기"로 내용 확인(참고한 부분 + 대화 전문이 그대로 들어있는지). 설정(General 탭 맨 위쪽)에서 "한 번에 보낼 글자 수"·"AI로 요약해서 압축" 옵션도 확인 가능. **주의**: 대화 중 앱이 꺼지면 지금은 대화가 그냥 사라진다(크래시 복구 기능은 아직 없음, 아래 "다음" 참고).
 - **어디**: 설계 `docs/superpowers/specs/2026-07-31-study-helper-design.md`·계획 `docs/superpowers/plans/2026-07-31-study-helper.md`. S1 화면 `Sources/Views/StudyHelperView.swift`·`StudyTemplateManagerView.swift`·배선 `Sources/App/AppState+Study.swift`. S3 화면 `Sources/Views/StudyChatView.swift`·배선 `Sources/App/AppState+StudyChat.swift`·엔진 `Sources/Services/StudyChatService.swift`·`ChatContextAssembler.swift`·모델 `Sources/Models/StudyChatSession.swift`.
