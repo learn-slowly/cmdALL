@@ -100,6 +100,9 @@ struct ContentView: View {
         .sheet(isPresented: $state.showTaskFinder) {
             TaskFinderView()
         }
+        .sheet(isPresented: $state.showTaskListView) {
+            TaskListView()
+        }
         .sheet(isPresented: $state.showQuickCapture) {
             // The ⇧⌘M quick-capture panel — previously the hotkey set a flag
             // that nothing observed.

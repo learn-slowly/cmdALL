@@ -324,6 +324,15 @@ struct Command: Identifiable {
             ) {
                 appState.openTaskFinder()
             },
+            Command(
+                title: "할일 목록 보기",
+                subtitle: "Todoist 할일 전체 + 이 앱에서 보낸 기록",
+                icon: "list.bullet.rectangle",
+                shortcut: nil,
+                keywords: ["할일", "todo", "todoist", "task", "목록", "리스트"]
+            ) {
+                appState.openTaskListView()
+            },
 
             Command(
                 title: "폴더 정리 (배치)",

@@ -211,6 +211,9 @@ struct CmdMDApp: App {
                 Button("문서에서 할일 찾기") {
                     appState.openTaskFinder()
                 }
+                Button("할일 목록 보기") {
+                    appState.openTaskListView()
+                }
 
                 Divider()
                 

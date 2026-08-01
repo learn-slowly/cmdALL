@@ -103,16 +103,25 @@ final class TodoistServiceTests: XCTestCase {
     // MARK: - createTask
 
     func testCreateTaskSendsAuthorizationHeaderAndContent() async throws {
-        let transport = FakeTransport(.success(Data(), 200))
+        let json = #"{"id":"999","content":"보고서 제출","priority":1,"checked":false}"#
+        let transport = FakeTransport(.success(json.data(using: .utf8)!, 200))
         let service = TodoistService(transport: transport)
-        let ok = try await service.createTask(content: "보고서 제출", projectId: nil, token: "내토큰")
-        XCTAssertTrue(ok)
+        let created = try await service.createTask(content: "보고서 제출", projectId: nil, token: "내토큰")
+        XCTAssertEqual(created?.id, "999", "생성 응답을 디코드해 id를 돌려줘야 한다(보낸 기록 연결용)")
         let request = await transport.lastRequest
         XCTAssertEqual(request?.value(forHTTPHeaderField: "Authorization"), "Bearer 내토큰")
         let body = try XCTUnwrap(request?.httpBody)
-        let json = try XCTUnwrap(try JSONSerialization.jsonObject(with: body) as? [String: Any])
-        XCTAssertEqual(json["content"] as? String, "보고서 제출")
-        XCTAssertNil(json["project_id"], "project_id를 안 주면 요청 본문에도 없어야 한다(Inbox로 감)")
+        let bodyJSON = try XCTUnwrap(try JSONSerialization.jsonObject(with: body) as? [String: Any])
+        XCTAssertEqual(bodyJSON["content"] as? String, "보고서 제출")
+        XCTAssertNil(bodyJSON["project_id"], "project_id를 안 주면 요청 본문에도 없어야 한다(Inbox로 감)")
+    }
+
+    func testCreateTaskWithUndecodableResponseStillSucceeds() async throws {
+        // 응답 본문이 예상과 달라도(빈 값 등) 전송 자체(2xx)는 성공으로 본다 — created만 nil.
+        let transport = FakeTransport(.success(Data(), 200))
+        let service = TodoistService(transport: transport)
+        let created = try await service.createTask(content: "할일", projectId: nil, token: "토큰")
+        XCTAssertNil(created)
     }
 
     func testCreateTaskIncludesProjectIdWhenProvided() async throws {
@@ -133,6 +142,53 @@ final class TodoistServiceTests: XCTestCase {
             XCTFail()
         } catch {
             XCTAssertEqual(error as? TodoistError, .noToken)
+        }
+    }
+
+    // MARK: - fetchTasks
+
+    func testFetchTasksDecodesPagedResultsWrapper() async throws {
+        let json = #"{"results":[{"id":"1","content":"보고서 제출","project_id":"10","priority":2,"checked":false,"due":{"date":"2026-08-05","string":"tomorrow","is_recurring":false}}],"next_cursor":null}"#
+        let transport = FakeTransport(.success(json.data(using: .utf8)!, 200))
+        let service = TodoistService(transport: transport)
+        let tasks = try await service.fetchTasks(token: "가짜토큰")
+        XCTAssertEqual(tasks.count, 1)
+        XCTAssertEqual(tasks[0].content, "보고서 제출")
+        XCTAssertEqual(tasks[0].projectId, "10")
+        XCTAssertEqual(tasks[0].due?.string, "tomorrow")
+    }
+
+    func testFetchTasksWithoutTokenThrowsNoToken() async {
+        let transport = FakeTransport(.success(Data(), 200))
+        let service = TodoistService(transport: transport)
+        do {
+            _ = try await service.fetchTasks(token: "")
+            XCTFail()
+        } catch {
+            XCTAssertEqual(error as? TodoistError, .noToken)
+        }
+    }
+
+    // MARK: - closeTask
+
+    func testCloseTaskSendsCorrectPath() async throws {
+        let transport = FakeTransport(.success(Data(), 200))
+        let service = TodoistService(transport: transport)
+        let ok = try await service.closeTask(taskId: "123", token: "토큰")
+        XCTAssertTrue(ok)
+        let request = await transport.lastRequest
+        XCTAssertTrue(request?.url?.path.hasSuffix("/tasks/123/close") ?? false)
+        XCTAssertEqual(request?.httpMethod, "POST")
+    }
+
+    func testCloseTask401MapsToInvalidToken() async {
+        let transport = FakeTransport(.httpError(401))
+        let service = TodoistService(transport: transport)
+        do {
+            _ = try await service.closeTask(taskId: "123", token: "틀린토큰")
+            XCTFail()
+        } catch {
+            XCTAssertEqual(error as? TodoistError, .invalidToken)
         }
     }
 

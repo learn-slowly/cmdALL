@@ -79,28 +79,33 @@ extension AppState {
         taskFinderError = nil
         defer { taskFinderBusy = false }
 
-        var succeeded = 0
+        var sentIDs: Set<UUID> = []
         var lastError: Error?
         for candidate in selected {
             do {
-                try await todoistService.createTask(
+                let created = try await todoistService.createTask(
                     content: candidate.text, projectId: settings.todoistDefaultProjectId, token: token)
-                succeeded += 1
+                sentIDs.insert(candidate.id)
+                let record = SentTaskRecord(
+                    id: UUID(), text: candidate.text,
+                    sourceFileName: taskFinderSourceURL?.lastPathComponent,
+                    sourcePath: taskFinderSourceURL?.path,
+                    sentAt: Date(), todoistTaskId: created?.id)
+                await sentTaskLogStore.append(record)
             } catch {
                 lastError = error
             }
         }
 
-        if succeeded > 0 {
+        if !sentIDs.isEmpty {
             // 보낸 것만 후보·선택 목록에서 뺀다 — 실패분은 남겨 재시도할 수 있게 한다.
-            let sentIDs = Set(selected.prefix(succeeded).map(\.id))
             taskFinderCandidates.removeAll { sentIDs.contains($0.id) }
             taskFinderSelected.subtract(sentIDs)
         }
-        if selected.count == succeeded {
-            taskFinderSentSummary = "\(succeeded)개 보냈습니다."
+        if sentIDs.count == selected.count {
+            taskFinderSentSummary = "\(sentIDs.count)개 보냈습니다."
         } else {
-            taskFinderSentSummary = "\(selected.count)개 중 \(succeeded)개 보냈습니다."
+            taskFinderSentSummary = "\(selected.count)개 중 \(sentIDs.count)개 보냈습니다."
             if let lastError { taskFinderError = TodoistService.errorMessage(lastError) }
         }
     }

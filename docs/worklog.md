@@ -691,3 +691,18 @@ todolist.md의 "지금" 절 삭제(항목 4개 전부 제거) — 남은 건 "�
 - **주소 정정(2026-08-01, 같은 날 실사용 즉시 발견).** 레고님이 토큰 넣고 "연결 확인" 누르자마자 "서버 오류(코드 410)" — Todoist가 REST API v2(`rest/v2/`)를 완전히 폐지하고 통합 `api/v1/`로 옮긴 것으로 실측 확인(`GET /api/v1/tasks`·`/api/v1/projects`가 401=인증필요 반환, 즉 새 주소는 살아있음). `TodoistService.baseURL` 정정 + `fetchProjects`가 예전 배열 응답·새 `{results:[...]}` 페이지네이션 응답 둘 다 받아들이도록 방어적으로 디코드(형식이 또 바뀌어도 앱이 조용히 안 죽게). 신규 테스트 1건, `swift test` **1,374개** 전량 통과. **재패키징·`/Applications` 재설치 완료**(레고 "닫음" 확인 후 — 기존 앱 `cmdALL.app.bak-20260801-173925`로 백업, 서명 재검증·재실행 확인).
 - **필드명 정정(2026-08-01, 같은 날 재확인 즉시 발견).** 주소를 고쳤는데도 레고님이 여전히 "응답 형식을 읽지 못했습니다" — 진짜 원인은 응답 안의 받은함 여부 필드명이 `is_inbox_project`(REST v2 시절 이름, 잘못 가정)가 아니라 `inbox_project`였던 것. Todoist 공식 문서의 `GET /api/v1/projects` 실제 응답 예시를 직접 대조해 확정(문서: "결과는 `{results:[...], next_cursor}`"로 페이지네이션 감싸고 프로젝트 객체는 `inbox_project` 필드를 씀 — 이번에 처음으로 문서 원문을 제대로 찾아 근거를 확보). `TodoistProject.CodingKeys` 수정 + 테스트 픽스처 3건 갱신(`AppTaskFinderStateTests`는 실제 페이지네이션 형식으로 함께 교체). `swift test` 1,374개 전량 통과. **재패키징·`/Applications` 재설치 완료**(레고 "닫음" 재확인 — `cmdALL.app.bak-20260801-175251`로 백업).
 - **레고 실사용 확인 완료(2026-08-01, "됐다").** "연결 확인" 정상 동작 확인 — 문서에서 할일 찾기 → Todoist 전체 흐름 실사용 검증 끝. `docs/todolist.md`의 "지금" 절에서 이 항목 제거.
+
+---
+
+## 2026-08-01 — 할일 목록 보기(신규 기능) — Todoist 실시간 목록 + 보낸 기록
+
+레고님이 "됐다. 이제 todolist보기 화면을 만들자"고 요청(문서에서 할일 찾기 → Todoist 확인 직후). `ask` 도구 4문항(보려는 것·범위·완료 처리·진입점)을 직접 묻고 확인받은 뒤 착수(설계 문서 `docs/superpowers/specs/2026-08-01-task-list-view-design.md`).
+
+- **API 계약을 착수 전에 문서로 확정** — 이전 두 차례(410 폐지·필드명 오류) 실패를 반복하지 않으려고, `Get Tasks`(`GET /api/v1/tasks`)·`Close Task`(`POST /api/v1/tasks/{task_id}/close`) 공식 문서의 실제 응답 예시를 먼저 읽고 확정한 뒤 코드를 짰다. 결과: 이번엔 첫 시도에 형식 문제 없음.
+- **`TodoistService` 확장** — `TodoistTask`/`TodoistDue` 모델 추가, `fetchTasks(token:)`(전체 프로젝트 통틀어, 레고 결정)·`closeTask(taskId:token:)` 신설. `decodeList<T>` 제네릭화로 프로젝트·할일 디코드 로직 공유(중복 제거). `createTask`가 `Bool` 대신 생성된 `TodoistTask?`를 돌려주도록 변경(응답 디코드 실패해도 2xx면 성공 취급 — 실패 사용자 체감 없음) — 보낸 기록에 Todoist 쪽 id를 연결하기 위해서다.
+- **`SentTaskLogStore`**(신규 actor, 전례 `MoveLogStore`) — "문서에서 할일 찾기 → Todoist" 전송 성공마다 문서명·경로·시각·Todoist id를 JSON으로 영속(최근 200건만 유지). `AppState+TaskFinder.swift`의 `sendSelectedTasksToTodoist()`가 매 전송마다 기록.
+- **기존 결함 발견·수정(이번 확장 중)** — `sendSelectedTasksToTodoist()`가 "성공 개수"만 세고 `selected.prefix(succeeded)`로 "보낸 것"을 추정하던 방식은, **앞쪽 항목이 실패하고 뒤쪽 항목이 성공하면 실패한 항목이 잘못 제거되고 성공한 항목이 목록에 남는** 결함이 있었다(만든 지 하루도 안 된 코드에서 발견). 실제 성공한 id 집합을 직접 추적하도록 수정 + 회귀 테스트(`testSendSelectedTasksTracksActualSuccessNotJustCount`)로 재발 방지.
+- **`AppState+TaskList.swift`/`TaskListView`**(신규) — 세그먼트 탭 2개: **Todoist 할일**(전체 프로젝트 통틀어, 체크하면 `closeTask` 호출 — **양방향**(레고 결정), 실패 시 목록에 그대로 남아 재시도 가능·낙관적 갱신 없음) / **보낸 기록**(`SentTaskLogStore` 최신순). 진입점: File 메뉴·커맨드팔레트 "할일 목록 보기"(레고 결정 — 새 화면).
+- 신규 테스트 39건 — `TodoistServiceTests`에 `fetchTasks`(페이지네이션 디코드·토큰 없음) 2건·`closeTask`(경로·401 매핑) 2건·`createTask` 응답 디코드 갱신 2건 추가, `SentTaskLogStoreTests` 5건(왕복·최신순 정렬·인스턴스 간 영속·200건 상한·빈 저장소), `AppTaskListStateTests` 7건(진입점 로드·완료 처리 성공/실패/토큰없음·보낸 기록 로드·닫기), `AppTaskFinderStateTests`에 회귀 테스트 2건 추가(보낸 기록 연결·성공 추적 정확성). `swift test` **1,393개** 전량 통과, 회귀 0. `swift build` 경고 없음. `scripts/test_package_app.sh` 패키징 가드 통과.
+- 이번에 안 한 것(설계 문서 §이번에 하지 않은 것) — 하위작업/라벨/마감일 편집(읽기+완료만), 보낸 기록의 실시간 상태 동기화 표시, 페이지네이션(다음 커서, 첫 50개만).
+- 재패키징 완료, 재설치는 앱 실행 여부 확인 후 별도 기록.

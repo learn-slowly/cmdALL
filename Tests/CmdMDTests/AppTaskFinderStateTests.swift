@@ -48,6 +48,23 @@ final class AppTaskFinderStateTests: XCTestCase {
                 let json = #"{"results":[{"id":"1","name":"Inbox","inbox_project":true},{"id":"2","name":"업무","inbox_project":false}],"next_cursor":null}"#
                 return (json.data(using: .utf8)!, response)
             }
+            if path.hasSuffix("tasks") && request.httpMethod == "POST" {
+                let json = #"{"id":"created-1","content":"x","priority":1,"checked":false}"#
+                return (json.data(using: .utf8)!, response)
+            }
+            return (Data(), response)
+        }
+    }
+
+    /// 호출 순서대로 성공/실패를 미리 정해두는 가짜 전송 — 실제 성공/실패 추적 로직 회귀 테스트용.
+    private actor FakeSequencedTransport: TodoistTransport {
+        enum Outcome { case succeed, fail }
+        private var outcomes: [Outcome]
+        init(outcomes: [Outcome]) { self.outcomes = outcomes }
+        func send(_ request: URLRequest) async throws -> (Data, URLResponse) {
+            let outcome = outcomes.isEmpty ? .succeed : outcomes.removeFirst()
+            let code = outcome == .succeed ? 200 : 500
+            let response = HTTPURLResponse(url: request.url!, statusCode: code, httpVersion: nil, headerFields: nil)!
             return (Data(), response)
         }
     }
@@ -121,6 +138,43 @@ final class AppTaskFinderStateTests: XCTestCase {
         XCTAssertEqual(app.taskFinderSentSummary, "1개 보냈습니다.")
         let sent = await transport.sentBodies
         XCTAssertEqual(sent.first?["content"] as? String, "보고서 제출")
+    }
+
+    func testSendSelectedTasksRecordsSentTaskLog() async {
+        let transport = FakeTransport()
+        app.todoistService = TodoistService(transport: transport)
+        app.settings.todoistAPIToken = "가짜토큰"
+        _ = openMarkdownTab(content: "- [ ] 보고서 제출", name: "출처.md")
+        let candidate = TaskCandidate(text: "보고서 제출", source: .checkbox)
+        app.taskFinderCandidates = [candidate]
+        app.taskFinderSelected = [candidate.id]
+        app.taskFinderSourceURL = sourceDir.appendingPathComponent("출처.md")
+
+        await app.sendSelectedTasksToTodoist()
+
+        let records = await app.sentTaskLogStore.load()
+        XCTAssertEqual(records.count, 1)
+        XCTAssertEqual(records[0].text, "보고서 제출")
+        XCTAssertEqual(records[0].sourceFileName, "출처.md")
+        XCTAssertEqual(records[0].todoistTaskId, "created-1", "생성 응답의 id가 기록에 남아야 한다")
+    }
+
+    /// 회귀 테스트 — 이 기능을 만들 때 있었던 결함: 앞쪽 항목이 실패하고 뒤쪽 항목이 성공하면
+    /// (성공 개수만 세는 방식이라) 실패한 앞쪽 항목이 "보낸 것"으로 잘못 지워지고 성공한
+    /// 뒤쪽 항목이 목록에 남아버렸다. 이제는 실제로 성공한 id만 정확히 추적해야 한다.
+    func testSendSelectedTasksTracksActualSuccessNotJustCount() async {
+        let transport = FakeSequencedTransport(outcomes: [.fail, .succeed])
+        app.todoistService = TodoistService(transport: transport)
+        app.settings.todoistAPIToken = "가짜토큰"
+        let willFail = TaskCandidate(text: "실패할 항목", source: .checkbox)
+        let willSucceed = TaskCandidate(text: "성공할 항목", source: .checkbox)
+        app.taskFinderCandidates = [willFail, willSucceed]
+        app.taskFinderSelected = [willFail.id, willSucceed.id]
+
+        await app.sendSelectedTasksToTodoist()
+
+        XCTAssertEqual(app.taskFinderCandidates.map(\.text), ["실패할 항목"],
+                        "실패한 항목만 남고 성공한 항목은 빠져야 한다")
     }
 
     func testSendSelectedTasksOnlySendsSelectedOnes() async {

@@ -434,6 +434,13 @@ final class AppState {
     var todoistProjects: [TodoistProject] = []
     var todoistProjectsLoading: Bool = false
     var todoistProjectsError: String? = nil
+    // MARK: - 할일 목록 보기(Todoist 실시간 + 보낸 기록)
+    var showTaskListView: Bool = false
+    var taskListSelectedTab: TaskListTab = .todoist
+    var todoistTasks: [TodoistTask] = []
+    var todoistTasksLoading: Bool = false
+    var todoistTasksError: String? = nil
+    var sentTaskRecords: [SentTaskRecord] = []
 
     // MARK: - 파일 작업(F1a) 상태
 
@@ -519,6 +526,8 @@ final class AppState {
     var taskFinderService: TaskFinderService
     /// 테스트가 가짜 전송(TodoistTransport) 주입 TodoistService로 교체할 수 있게 internal var.
     var todoistService: TodoistService
+    /// "문서에서 할일 찾기 → Todoist" 전송 이력(전례: `MoveLogStore`, init에서 appDir로 대입).
+    let sentTaskLogStore: SentTaskLogStore
     let moveExecutor: MoveExecutor
     let dataURL: URL
 
@@ -691,6 +700,7 @@ final class AppState {
         studyIndex = StudyIndex(dbURL: appDir.appendingPathComponent("studyindex.sqlite"))
         taskFinderService = TaskFinderService(claude: aiRouter)
         todoistService = TodoistService()
+        sentTaskLogStore = SentTaskLogStore(directory: appDir)
         moveExecutor = MoveExecutor(store: moveLogStore)
 
         fileService = FileService()

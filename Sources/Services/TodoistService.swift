@@ -14,6 +14,34 @@ struct TodoistProject: Equatable, Identifiable, Codable, Sendable {
     }
 }
 
+/// Todoist 할일 하나(응답 필드 전부가 아니라 화면에 필요한 것만 — 공식 문서 `Get Tasks`/
+/// `Create Task` 응답 예시로 실측 확인, 2026-08-01).
+struct TodoistTask: Equatable, Identifiable, Codable, Sendable {
+    let id: String
+    let content: String
+    let projectId: String?
+    let priority: Int
+    let due: TodoistDue?
+    let checked: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case id, content, priority, checked
+        case projectId = "project_id"
+        case due
+    }
+}
+
+struct TodoistDue: Equatable, Codable, Sendable {
+    let date: String
+    let string: String
+    let isRecurring: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case date, string
+        case isRecurring = "is_recurring"
+    }
+}
+
 enum TodoistError: Error, Equatable {
     case noToken
     /// 401/403 — 토큰이 없거나 잘못됨.
@@ -73,7 +101,7 @@ actor TodoistService {
         do {
             let (data, response) = try await transport.send(request)
             try Self.checkStatus(response)
-            return try Self.decodeProjects(data)
+            return try Self.decodeList(data, as: TodoistProject.self)
         } catch let error as TodoistError {
             throw error
         } catch {
@@ -81,25 +109,59 @@ actor TodoistService {
         }
     }
 
-    private struct PagedProjects: Decodable { let results: [TodoistProject] }
+    private struct PagedResults<T: Decodable>: Decodable { let results: [T] }
 
-    private static func decodeProjects(_ data: Data) throws -> [TodoistProject] {
-        if let bare = try? JSONDecoder().decode([TodoistProject].self, from: data) {
+    /// 배열을 바로 주는 옛 형식과 `{results:[...], next_cursor}`로 감싼 새 형식 둘 다 시도.
+    private static func decodeList<T: Decodable>(_ data: Data, as type: T.Type) throws -> [T] {
+        if let bare = try? JSONDecoder().decode([T].self, from: data) {
             return bare
         }
-        if let paged = try? JSONDecoder().decode(PagedProjects.self, from: data) {
+        if let paged = try? JSONDecoder().decode(PagedResults<T>.self, from: data) {
             return paged.results
         }
         throw TodoistError.network("응답 형식을 읽지 못했습니다.")
     }
 
+    /// 등록된 모든 프로젝트를 통틀어 활성(완료 안 된) 할일을 가져온다(§scope_filter 레고 결정).
+    func fetchTasks(token: String) async throws -> [TodoistTask] {
+        guard !token.trimmingCharacters(in: .whitespaces).isEmpty else { throw TodoistError.noToken }
+        let request = makeRequest("tasks", method: "GET", token: token)
+        do {
+            let (data, response) = try await transport.send(request)
+            try Self.checkStatus(response)
+            return try Self.decodeList(data, as: TodoistTask.self)
+        } catch let error as TodoistError {
+            throw error
+        } catch {
+            throw TodoistError.network(error.localizedDescription)
+        }
+    }
+
     /// - Parameter projectId: nil이면 Todoist 기본 받은함(Inbox)으로 들어간다.
+    /// - Returns: 생성된 할일(가능하면 — 응답 디코드에 실패해도 전송 자체는 성공으로 본다.
+    ///   호출부가 `todoistTaskId`를 기록하지 못할 뿐 사용자에게는 실패로 보이지 않는다).
     @discardableResult
-    func createTask(content: String, projectId: String?, token: String) async throws -> Bool {
+    func createTask(content: String, projectId: String?, token: String) async throws -> TodoistTask? {
         guard !token.trimmingCharacters(in: .whitespaces).isEmpty else { throw TodoistError.noToken }
         var body: [String: Any] = ["content": content]
         if let projectId { body["project_id"] = projectId }
         let request = makeRequest("tasks", method: "POST", token: token, body: body)
+        do {
+            let (data, response) = try await transport.send(request)
+            try Self.checkStatus(response)
+            return try? JSONDecoder().decode(TodoistTask.self, from: data)
+        } catch let error as TodoistError {
+            throw error
+        } catch {
+            throw TodoistError.network(error.localizedDescription)
+        }
+    }
+
+    /// 할일을 완료 처리한다(§complete_action 레고 결정 — 앱에서 체크하면 Todoist도 완료됨).
+    @discardableResult
+    func closeTask(taskId: String, token: String) async throws -> Bool {
+        guard !token.trimmingCharacters(in: .whitespaces).isEmpty else { throw TodoistError.noToken }
+        let request = makeRequest("tasks/\(taskId)/close", method: "POST", token: token)
         do {
             let (_, response) = try await transport.send(request)
             try Self.checkStatus(response)
