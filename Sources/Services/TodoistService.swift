@@ -8,7 +8,9 @@ struct TodoistProject: Equatable, Identifiable, Codable, Sendable {
 
     enum CodingKeys: String, CodingKey {
         case id, name
-        case isInboxProject = "is_inbox_project"
+        // 실제 필드명은 `inbox_project`다(공식 문서 응답 예시로 실측 확인, 2026-08-01 —
+        // 처음엔 REST v2 시절 이름 `is_inbox_project`로 잘못 가정해 디코드가 조용히 실패했었다).
+        case isInboxProject = "inbox_project"
     }
 }
 

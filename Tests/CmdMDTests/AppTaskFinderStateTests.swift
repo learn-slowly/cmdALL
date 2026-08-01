@@ -45,7 +45,7 @@ final class AppTaskFinderStateTests: XCTestCase {
             let response = HTTPURLResponse(url: request.url!, statusCode: statusCode, httpVersion: nil, headerFields: nil)!
             let path = request.url!.path
             if path.hasSuffix("projects") {
-                let json = #"[{"id":"1","name":"Inbox","is_inbox_project":true},{"id":"2","name":"업무","is_inbox_project":false}]"#
+                let json = #"{"results":[{"id":"1","name":"Inbox","inbox_project":true},{"id":"2","name":"업무","inbox_project":false}],"next_cursor":null}"#
                 return (json.data(using: .utf8)!, response)
             }
             return (Data(), response)
