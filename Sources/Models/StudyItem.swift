@@ -2,7 +2,7 @@ import Foundation
 
 /// 학습 노트 하나가 카드 모음인지 문제 모음인지 — frontmatter `study_kind`로 저장된다(§3.5).
 /// "챕터 1개 = 노트 1개"이고 노트 안 항목은 전부 같은 kind다(Q1 근거 a).
-enum StudyItemKind: String, Equatable {
+enum StudyItemKind: String, Equatable, Hashable {
     case card
     case question
 }

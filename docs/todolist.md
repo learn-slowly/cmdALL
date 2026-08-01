@@ -32,12 +32,13 @@
 - **볼 것**: 마크다운 편집 화면·마크다운 미리보기 화면(일반 노트 열기)·PDF 화면·한글/오피스 문서 화면(보기·편집 둘 다) 각각에서 글자를 드래그로 선택 → 오른쪽 버튼 → 메뉴 맨 위에 "Claude에게 물어보기"가 뜨는지 → 누르면 오른쪽 AI 패널이 열리고 선택한 글자가 컨텍스트로 잡히는지(패널에서 질문을 입력해 실제로 그 내용 기준으로 답이 오는지까지 1회). 선택 없이 우클릭했을 때는 항목이 안 뜨는지도 같이 확인.
 - **어디**: `Sources/Views/EditorTextView.swift`(`CmdMDTextView.menu(for:)`) · `Sources/Views/PDFReaderView.swift`(`CmdMDPDFView.menu(for:)`) · `Sources/Views/PreviewView.swift`(`DropThroughWebView.menu(for:)`) · 배선은 `MainEditorView.swift`·`OfficeReaderView.swift`.
 
-### 3. 학습도우미 S1 착수 — 전용 화면 + 카드/문제 실제 생성·저장
+### 3. 학습도우미 S1 완료 — 전용 화면에서 카드/문제 만들고 저장해보기
 
-- **왜**: S0(프리셋 버튼) 실기 확인 완료 — 2026-08-01 레고 "쓸만한거 같아" 판정으로 게이트 통과. 승인된 계획(ralplan, 2026-07-31)의 다음 단계는 S1: 위키처럼 왼쪽 리본에 전용 자리를 갖는 학습 화면(`StudyHelperView`)을 만들고, 지금은 프롬프트만 채우는 카드·문제 생성을 실제로 청크 단위 생성 + 새 마크다운 노트로 저장하는 기능까지 완성하는 것. S2(복습)·S3(대화)는 S1 다음(레고가 순서 결정, 계획상 대화 먼저).
-- **진행 상황(2026-08-01)**: 착수 전 코드 조사 3건 완료(OCR 속도·노트 저장 위치=지정 볼트 폴더·정상 종료 훅 실존 확인). 계획서 순서의 첫 조각(자료 모양 정의 — `StudyLocator`·`StudyItem`·`StudyScope`·`StudyChatDraft` 4개 모델 파일, 로직·화면 없음) 완료, 테스트 10건 추가. 둘째 조각(`StudySourceLoader` — 종류별 자료 읽기+위치표 붙이기) 완료, 테스트 14건 추가. 레고 확인 질문 반영 — 오피스(한글·워드)도 변환된 글의 제목(헤딩) 구간 단위로 부분 선택 가능하게 확장(`StudyScopeRange.sectionRange`, 설계 §5.2 I3), 테스트 7건 추가. 셋째 조각(`StudyChunker` — 조각을 AI에게 보낼 크기로 자르고 위치 태그 붙이기) 완료, 테스트 11건 추가. 넷째 조각(`StudyPromptBuilder` — 카드·문제 생성 지시문) 완료, 테스트 12건 추가. 다섯째 조각(`StudyOutputParser` — AI 응답을 카드·문제로 해석·검증) 완료, 테스트 28건 추가. 여섯째 조각(`StudyService` — 실제 Claude 호출·청크 순회·재시도·부분 성공 집계, 학습도우미 최초의 실제 AI 호출) 완료, 테스트 10건 추가(가짜 Claude 주입, 실제 CLI 호출 없음). 일곱째 조각(`StudyNoteWriter` — 생성 결과를 학습 노트 마크다운 텍스트로 옮기고 항목별 고유 식별자 발급, 여전히 디스크에 쓰지 않는 순수 함수) 완료, 테스트 15건 추가. 남은 순서: `StudyHelperView`(전용 화면 — 여기서 실제 파일 저장까지 이어 붙인다).
-- **볼 것(다음 조각 착수 전)**: 계획 문서의 S1 범위(코어+카드+퀴즈+저장, 제안→확인 원칙 유지)·수용 기준을 다시 확인하고 이어간다. 사람이 많이 관여하는 큰 작업이라 조각마다 레고 확인 권장. `StudyNoteWriter`까지는 AI 호출·노트 텍스트 만들기가 다 되지만 아직 화면이 없어 레고가 직접 눌러볼 수 있는 건 없다 — `StudyHelperView`가 나와야 실기 확인 가능.
-- **어디**: 설계 `docs/superpowers/specs/2026-07-31-study-helper-design.md`·계획 `docs/superpowers/plans/2026-07-31-study-helper.md`(§Q1~Q5·출력 계약·게이트 매트릭스·File-level changes 참고). S0 산출물: `Sources/Views/ClaudePanelView.swift`·`Sources/App/AppState+Claude.swift`. S1 산출물: `Sources/Models/StudyLocator.swift`·`StudyItem.swift`·`StudyScope.swift`·`StudyChatDraft.swift`·`Sources/Services/StudySourceLoader.swift`·`StudyChunker.swift`·`StudyPromptBuilder.swift`·`StudyOutputParser.swift`·`StudyService.swift`·`StudyNoteWriter.swift`.
+- **왜**: S0(프리셋 버튼) 실기 확인 완료(2026-08-01, 레고 "쓸만한거 같아" 판정)로 게이트 통과 후 진행한 S1(코어+카드+퀴즈+저장) 구현이 오늘 전부 끝났다. 왼쪽 리본에 학습도우미 전용 화면이 생겼고, 교재 파일을 골라 실제로 Claude가 정리 카드·연습 문제를 만들어 새 마크다운 노트로 저장하는 것까지 전 구간이 동작한다.
+- **볼 것**: 왼쪽 리본 학습도우미(졸업모자) 아이콘 클릭 → 교재 파일 선택(PDF·한글/워드·이미지·마크다운 아무거나) → "정리 카드" 또는 "연습 문제" 고르고 개수 정하기 → 화면에 "보낼 분량 약 N자 · 조각 C개"가 뜨는지 → 만들기 → 잠시 기다린 후 카드/문제 미리보기가 뜨는지(제목·내용·근거 발췌) → "노트로 저장" 눌러서 실제 파일이 생기는지 → "노트 열기"로 그 파일 내용이 제대로 보이는지(카드/문제 형식·근거 위치 표시). 로그인 안 된 상태·글자 없는 사진 등 실패 상황에서 한국어 안내가 뜨는지도 겸사겸사.
+- **의도적으로 뺀 것(이번 화면엔 없음)**: 교재의 일부만 골라 보내는 기능(지금은 항상 파일 전체) — 필요하면 다음에 추가.
+- **어디**: 설계 `docs/superpowers/specs/2026-07-31-study-helper-design.md`·계획 `docs/superpowers/plans/2026-07-31-study-helper.md`. 화면 `Sources/Views/StudyHelperView.swift`·배선 `Sources/App/AppState+Study.swift`. S1 로직 산출물: `Sources/Models/StudyLocator.swift`·`StudyItem.swift`·`StudyScope.swift`·`StudyChatDraft.swift`·`Sources/Services/StudySourceLoader.swift`·`StudyChunker.swift`·`StudyPromptBuilder.swift`·`StudyOutputParser.swift`·`StudyService.swift`·`StudyNoteWriter.swift`.
+- **다음**: 이 실기 확인이 끝나면(레고 판정) S3(대화, 레고 확정 우선순위) 또는 S1 피드백 반영으로 이어간다.
 
 ---
 

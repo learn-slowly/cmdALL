@@ -88,6 +88,9 @@ struct ContentView: View {
         .sheet(isPresented: $state.showAskCorpus) {
             AskCorpusView()
         }
+        .sheet(isPresented: $state.showStudyHelper) {
+            StudyHelperView()
+        }
         .sheet(isPresented: $state.showQuickCapture) {
             // The ⇧⌘M quick-capture panel — previously the hotkey set a flag
             // that nothing observed.

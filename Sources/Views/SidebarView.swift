@@ -55,6 +55,9 @@ struct SidebarRibbon: View {
             RibbonButton(icon: "text.book.closed", help: "위키 홈 열기") {
                 appState.openWikiHome()
             }
+            RibbonButton(icon: "graduationcap", help: "학습도우미") {
+                appState.showStudyHelper = true
+            }
 
             RibbonButton(icon: "folder.badge.plus", help: "Open Folder (⌥⌘O)") {
                 appState.openFolder()

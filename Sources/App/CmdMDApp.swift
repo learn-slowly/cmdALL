@@ -202,6 +202,9 @@ struct CmdMDApp: App {
                 Button("위키 관계도") {
                     appState.requestWikiGraph()
                 }
+                Button("학습도우미") {
+                    appState.showStudyHelper = true
+                }
 
                 Divider()
                 

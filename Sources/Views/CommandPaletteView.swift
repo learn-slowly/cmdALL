@@ -297,6 +297,15 @@ struct Command: Identifiable {
             ) {
                 appState.requestWikiGraph()
             },
+            Command(
+                title: "학습도우미",
+                subtitle: "교재 파일로 정리 카드·연습 문제 만들기",
+                icon: "graduationcap",
+                shortcut: nil,
+                keywords: ["학습", "카드", "문제", "퀴즈", "study", "flashcard"]
+            ) {
+                appState.showStudyHelper = true
+            },
 
             Command(
                 title: "폴더 정리 (배치)",

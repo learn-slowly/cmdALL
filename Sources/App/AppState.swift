@@ -348,6 +348,24 @@ final class AppState {
     var wikiGraphFocusedNodeID: String? = nil
     /// 로드 완료 시 1회 결정되는 시작 안내 문구(계획 §관계도 시작 규칙).
     var wikiGraphFocusNotice: String? = nil
+    // MARK: - 학습도우미(Study Helper) S1
+    var showStudyHelper: Bool = false
+    /// 학습 범위(§Q1) — 파일 하나 + 종류. 부분 범위 선택 UI는 S1 첫 화면에선 미제공(전체 파일만,
+    /// 후속 확장 여지 — StudyScope·StudyChunker는 이미 부분 범위를 지원한다).
+    var studyScopeFileURL: URL? = nil
+    var studyScopeKind: DocumentKind? = nil
+    var studyGenerationKind: StudyItemKind = .card
+    var studyRequestedCount: Int = 5
+    /// AC #9 "실행 전 보낼 분량 약 N자 · 조각 C개" — 파일 고를 때 AI 호출 없이 미리 계산.
+    var studyPreviewCharCount: Int = 0
+    var studyPreviewChunkCount: Int = 0
+    var studyBusy: Bool = false
+    var studyError: String? = nil
+    var studyPreviewCards: [StudyCard] = []
+    var studyPreviewQuestions: [StudyQuestion] = []
+    /// AC #24 "청크 C개 중 k개 성공" + O4 "유효 인용 k/n" 요약 문구.
+    var studyOutcomeSummary: String? = nil
+    var studySavedNoteURL: URL? = nil
 
     // MARK: - 파일 작업(F1a) 상태
 
@@ -421,6 +439,10 @@ final class AppState {
     let wikiGraphLoader = WikiGraphLoader()
     /// 테스트에서 가짜 Claude 주입 WikiRulesService로 교체할 수 있게 internal var.
     var wikiRulesService: WikiRulesService
+    /// StudySourceLoader는 kordocService를 공유(경로+mtime 세션 캐시 재사용).
+    let studySourceLoader: StudySourceLoader
+    /// 테스트가 가짜 Claude 주입 StudyService로 교체할 수 있게 internal var(클린업 전례).
+    var studyService: StudyService
     let moveExecutor: MoveExecutor
     let dataURL: URL
 
@@ -587,6 +609,8 @@ final class AppState {
         wikiIngestService = WikiIngestService(claude: aiRouter, kordoc: kordocService)
         wikiBackupStore = WikiBackupStore(directory: appDir)
         wikiRulesService = WikiRulesService(claude: aiRouter)
+        studySourceLoader = StudySourceLoader(kordoc: kordocService)
+        studyService = StudyService(claude: aiRouter, sourceLoader: studySourceLoader)
         moveExecutor = MoveExecutor(store: moveLogStore)
 
         fileService = FileService()
