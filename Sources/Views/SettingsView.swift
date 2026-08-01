@@ -142,7 +142,7 @@ struct GeneralSettingsView: View {
                 }
                 .disabled(appState.claudeAuthBusy)
                 LabeledContent("모델") {
-                    VStack(alignment: .trailing, spacing: 6) {
+                    HStack(spacing: 6) {
                         Picker("빠른 선택", selection: $state.settings.claudeModel) {
                             Text("자동(기본값)").tag("")
                             Text("opus").tag("opus")
@@ -150,11 +150,11 @@ struct GeneralSettingsView: View {
                             Text("fable(최신)").tag("fable")
                         }
                         .labelsHidden()
-                        .frame(maxWidth: 220)
+                        .frame(maxWidth: 130)
                         TextField("직접 입력", text: $state.settings.claudeModel, prompt: Text("직접 입력(예: claude-opus-5)"))
                             .textFieldStyle(.roundedBorder)
                             .labelsHidden()
-                            .frame(maxWidth: 220)
+                            .frame(maxWidth: 170)
                     }
                 }
             } header: {
