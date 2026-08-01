@@ -56,7 +56,7 @@ struct SidebarRibbon: View {
                 appState.openWikiHome()
             }
             RibbonButton(icon: "graduationcap", help: "학습도우미") {
-                appState.showStudyHelper = true
+                appState.openStudyHelper()
             }
 
             RibbonButton(icon: "folder.badge.plus", help: "Open Folder (⌥⌘O)") {

@@ -14,6 +14,22 @@ extension AppState {
 
     // MARK: - 범위 선택
 
+    /// 학습도우미를 연다 — 레고 2026-08-01 요청("교재파일은 직전에 선택한 파일을 기억해줄래?
+    /// 매번 선택하려니 귀찮다"). 이미 골라둔 파일이 있으면(같은 세션에서 이미 열어본 경우)
+    /// 그대로 두고, 없으면 지난번에 고른 파일(`settings.lastStudySourcePath`)을 시도한다 —
+    /// 그 사이 파일이 지워지거나 옮겨졌을 수 있어 실존 확인 후에만 복원하고, 실패해도 조용히
+    /// "파일을 선택하세요" 빈 상태로 열릴 뿐 에러를 띄우지 않는다(사용자가 시작한 동작이 아니라
+    /// 편의 복원이라 실패가 눈에 띄면 오히려 방해된다).
+    func openStudyHelper() {
+        showStudyHelper = true
+        guard studyScopeFileURL == nil,
+              let path = settings.lastStudySourcePath else { return }
+        let url = URL(fileURLWithPath: path)
+        guard FileManager.default.fileExists(atPath: url.path),
+              let kind = Self.studyDocumentKind(for: url) else { return }
+        applyStudySelection(url: url, kind: kind)
+    }
+
     /// 학습할 파일 선택 — 학습도우미가 지원하는 종류만(PDF·마크다운/텍스트·오피스·이미지,
     /// `StudySourceLoader` 지원 범위와 동일). 미디어·QuickLook 전용 파일은 목록에서 제외.
     func pickStudySourceFile() {
@@ -28,6 +44,15 @@ extension AppState {
         guard panel.runModal() == .OK, let url = panel.url,
               let kind = Self.studyDocumentKind(for: url) else { return }
 
+        applyStudySelection(url: url, kind: kind)
+        // 다음에 학습도우미를 열 때 이 파일을 기억한다("매번 선택하려니 귀찮다" 요청).
+        settings.lastStudySourcePath = url.path
+        saveUserData()
+    }
+
+    /// `pickStudySourceFile()`·`openStudyHelper()`(복원)가 공유하는 실제 선택 적용 — 미리보기·
+    /// 저장 상태 초기화 + 범위 메타데이터 비동기 로드까지 항상 같은 순서로 실행되게 한다.
+    private func applyStudySelection(url: URL, kind: DocumentKind) {
         studyScopeFileURL = url
         studyScopeKind = kind
         studyPreviewCards = []

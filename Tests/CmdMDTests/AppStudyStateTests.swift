@@ -61,6 +61,52 @@ final class AppStudyStateTests: XCTestCase {
         """
     }
 
+    // MARK: - 학습도우미 열기 → 마지막 교재 파일 복원(레고 2026-08-01 "매번 선택하려니 귀찮다")
+
+    func testOpenStudyHelperRestoresLastSelectedFile() {
+        let src = makeSource(name: "지난번교재.md")
+        app.settings.lastStudySourcePath = src.path
+        XCTAssertNil(app.studyScopeFileURL)
+
+        app.openStudyHelper()
+
+        XCTAssertTrue(app.showStudyHelper)
+        XCTAssertEqual(app.studyScopeFileURL, src)
+        XCTAssertEqual(app.studyScopeKind, .markdown)
+    }
+
+    func testOpenStudyHelperIgnoresMissingLastFileWithoutCrashing() {
+        let missing = sourceDir.appendingPathComponent("지워진파일.md")
+        app.settings.lastStudySourcePath = missing.path
+
+        app.openStudyHelper()
+
+        XCTAssertTrue(app.showStudyHelper)
+        XCTAssertNil(app.studyScopeFileURL, "실존하지 않는 파일은 조용히 무시돼야 함")
+        XCTAssertNil(app.studyError, "복원 실패는 에러로 띄우지 않는다(사용자가 시작한 동작이 아님)")
+    }
+
+    func testOpenStudyHelperWithNoSavedPathLeavesSelectionEmpty() {
+        app.settings.lastStudySourcePath = nil
+
+        app.openStudyHelper()
+
+        XCTAssertTrue(app.showStudyHelper)
+        XCTAssertNil(app.studyScopeFileURL)
+    }
+
+    func testOpenStudyHelperDoesNotOverrideAlreadySelectedFile() {
+        let current = makeSource(name: "지금선택.md")
+        let last = makeSource(name: "예전선택.md")
+        app.studyScopeFileURL = current
+        app.studyScopeKind = .markdown
+        app.settings.lastStudySourcePath = last.path
+
+        app.openStudyHelper()
+
+        XCTAssertEqual(app.studyScopeFileURL, current, "같은 세션에서 이미 골라둔 파일을 덮어쓰면 안 됨")
+    }
+
     // MARK: - 파일 선택 → 사전 분량 표시(AC #9)
 
     func testPickingSourceUpdatesPreviewPlanAndResetsPriorResult() async {

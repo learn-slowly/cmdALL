@@ -304,7 +304,7 @@ struct Command: Identifiable {
                 shortcut: nil,
                 keywords: ["학습", "카드", "문제", "퀴즈", "study", "flashcard"]
             ) {
-                appState.showStudyHelper = true
+                appState.openStudyHelper()
             },
 
             Command(

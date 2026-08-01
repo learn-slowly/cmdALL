@@ -141,6 +141,10 @@ struct AppSettings: Codable, Equatable {
     /// 문제)별로 여러 개 만들 수 있고, 화면에서 고르지 않으면("기본") 지시문 추가 없이 기존
     /// 동작 그대로다.
     var studyTemplates: [StudyTemplate] = []
+    /// 마지막으로 고른 학습 교재 파일(절대경로) — 다음에 학습도우미를 열 때 자동으로
+    /// 다시 골라 준다(레고 2026-08-01 요청 "매번 선택하려니 귀찮다"). 파일이 지워지거나
+    /// 옮겨졌으면 열 때 실존 확인 후 조용히 무시(에러 없음).
+    var lastStudySourcePath: String? = nil
     // MARK: 학습도우미 대화(S3)
     /// 대화 한 턴을 보낼 때 컨텍스트 전체 길이 상한(문자 수, §4.2.2). UI 권장 4,000~40,000,
     /// 0 이하는 저장 거부(설정 화면이 Stepper 범위로 강제). 값을 너무 작게 줄이면 보낼
@@ -228,6 +232,7 @@ struct AppSettings: Codable, Equatable {
         wikiRulesCapturedAt = try c.decodeIfPresent(Date.self, forKey: .wikiRulesCapturedAt) ?? d.wikiRulesCapturedAt
         wikiGraphFolderColors = try c.decodeIfPresent([String: String].self, forKey: .wikiGraphFolderColors) ?? d.wikiGraphFolderColors
         studyTemplates = try c.decodeIfPresent([StudyTemplate].self, forKey: .studyTemplates) ?? d.studyTemplates
+        lastStudySourcePath = try c.decodeIfPresent(String.self, forKey: .lastStudySourcePath) ?? d.lastStudySourcePath
         chatContextCap = try c.decodeIfPresent(Int.self, forKey: .chatContextCap) ?? d.chatContextCap
         studyChatAISummary = try c.decodeIfPresent(Bool.self, forKey: .studyChatAISummary) ?? d.studyChatAISummary
         ragExpandQuery = try c.decodeIfPresent(Bool.self, forKey: .ragExpandQuery) ?? d.ragExpandQuery

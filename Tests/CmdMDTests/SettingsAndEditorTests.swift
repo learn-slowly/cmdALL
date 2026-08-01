@@ -63,6 +63,22 @@ final class SettingsAndEditorTests: XCTestCase {
         let decoded = try JSONDecoder().decode(AppSettings.self, from: old)
         XCTAssertEqual(decoded.studyTemplates, [])
     }
+    func testLastStudySourcePathRoundTrip() throws {
+        var settings = AppSettings()
+        settings.lastStudySourcePath = "/Users/lego/vault/자격증교재.pdf"
+
+        let data = try JSONEncoder().encode(settings)
+        let decoded = try JSONDecoder().decode(AppSettings.self, from: data)
+
+        XCTAssertEqual(decoded.lastStudySourcePath, settings.lastStudySourcePath)
+    }
+
+    func testLastStudySourcePathDefaultsToNilForOldSettingsFile() throws {
+        // lastStudySourcePath 키가 아예 없던 구 settings.json도 깨지지 않고 nil로(레고 2026-08-01).
+        let old = Data(#"{"fontSize":14}"#.utf8)
+        let decoded = try JSONDecoder().decode(AppSettings.self, from: old)
+        XCTAssertNil(decoded.lastStudySourcePath)
+    }
 
     // MARK: Session state
 

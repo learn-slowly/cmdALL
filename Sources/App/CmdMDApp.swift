@@ -203,7 +203,7 @@ struct CmdMDApp: App {
                     appState.requestWikiGraph()
                 }
                 Button("학습도우미") {
-                    appState.showStudyHelper = true
+                    appState.openStudyHelper()
                 }
 
                 Divider()
