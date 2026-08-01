@@ -121,6 +121,35 @@ final class StudyServiceTests: XCTestCase {
         XCTAssertEqual(outcome.items[0].options.count, 3)
     }
 
+    // MARK: - 사용자 템플릿 추가 지시(레고 2026-08-01 요청)
+
+    func testGenerateCardsThreadsExtraInstructionsIntoEveryChunkPrompt() async throws {
+        let dir = TempDataDirectory.make()
+        defer { TempDataDirectory.cleanup(dir) }
+        let scope = makeScope(dir: dir, name: "장.md", content: "# 하나\n교재 원문 발췌 내용")
+        let fake = ScriptedClaude([.success(validCardResponse(title: "핵심 개념", tag: "[[l1]]"))])
+        let service = StudyService(claude: fake, sourceLoader: StudySourceLoader(kordoc: KordocService()))
+
+        _ = try await service.generateCards(scope: scope, count: 5, chunkBudget: 1000,
+                                             extraInstructions: "쉬운 말로, 초등학생도 알아듣게")
+
+        let prompts = await fake.recordedPrompts()
+        XCTAssertTrue(prompts[0].contains("추가 지시(사용자 템플릿): 쉬운 말로, 초등학생도 알아듣게"))
+    }
+
+    func testGenerateQuestionsWithEmptyExtraInstructionsMatchesDefaultPrompt() async throws {
+        let dir = TempDataDirectory.make()
+        defer { TempDataDirectory.cleanup(dir) }
+        let scope = makeScope(dir: dir, name: "장.md", content: "# 하나\n교재 원문 발췌 내용")
+        let fake = ScriptedClaude([.success(validQuestionResponse(title: "문항", tag: "[[l1]]"))])
+        let service = StudyService(claude: fake, sourceLoader: StudySourceLoader(kordoc: KordocService()))
+
+        _ = try await service.generateQuestions(scope: scope, count: 3, chunkBudget: 1000)
+
+        let prompts = await fake.recordedPrompts()
+        XCTAssertFalse(prompts[0].contains("추가 지시(사용자 템플릿)"), "레고 '기본 설정은 그대로' — 지시 없으면 기존 프롬프트 그대로")
+    }
+
     // MARK: - O5: 유효 0건 → 정확히 1회 재요청
 
     func testEmptyParseRetriesOnceThenSucceeds() async throws {

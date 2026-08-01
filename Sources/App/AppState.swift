@@ -353,8 +353,19 @@ final class AppState {
     /// 학습 범위(§Q1) — 파일 하나 + 종류.
     var studyScopeFileURL: URL? = nil
     var studyScopeKind: DocumentKind? = nil
-    var studyGenerationKind: StudyItemKind = .card
+    /// 종류(카드/문제)가 바뀌면 선택돼 있던 템플릿이 다른 종류일 수 있어 "기본"으로 되돌린다.
+    var studyGenerationKind: StudyItemKind = .card {
+        didSet {
+            guard oldValue != studyGenerationKind else { return }
+            studySelectedTemplateID = nil
+        }
+    }
     var studyRequestedCount: Int = 5
+    /// 선택된 템플릿(레고 2026-08-01 요청 — "정리카드나 연습문제 템플릿을 만들거나 수정").
+    /// nil = "기본"(추가 지시 없음, 기존 동작 그대로). `settings.studyTemplates`에서 이 id로 찾는다.
+    var studySelectedTemplateID: UUID? = nil
+    /// 템플릿 관리 시트 표시 여부.
+    var showStudyTemplateManager: Bool = false
     /// 부분 범위 선택(레고 2026-08-01 피드백 — "교재 전체를 한 번에 넣는 건 비현실적") — 기본은
     /// 켜짐(전체 파일, 이전 동작과 호환), 끄면 종류별 범위 UI가 나타난다.
     var studyUseWholeFile: Bool = true

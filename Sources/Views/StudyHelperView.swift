@@ -29,6 +29,9 @@ struct StudyHelperView: View {
         }
         .padding(16)
         .frame(width: 640, height: 620)
+        .sheet(isPresented: $state.showStudyTemplateManager) {
+            StudyTemplateManagerView()
+        }
     }
 
     // MARK: - 파일 선택
@@ -187,23 +190,39 @@ struct StudyHelperView: View {
         }
         .font(.caption)
     }
-    // MARK: - 카드/문제 · 개수
+    // MARK: - 카드/문제 · 개수 · 템플릿(레고 2026-08-01 요청)
 
     private var optionsRow: some View {
         @Bindable var state = appState
-        return HStack {
-            Picker("만들 것", selection: $state.studyGenerationKind) {
-                Text("정리 카드").tag(StudyItemKind.card)
-                Text("연습 문제").tag(StudyItemKind.question)
+        return VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Picker("만들 것", selection: $state.studyGenerationKind) {
+                    Text("정리 카드").tag(StudyItemKind.card)
+                    Text("연습 문제").tag(StudyItemKind.question)
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 220)
+                .disabled(appState.studyBusy) // 종류 전환 시 템플릿 선택 초기화는 AppState.studyGenerationKind didSet이 처리.
+
+                Spacer()
+
+                Stepper("개수: \(appState.studyRequestedCount)", value: $state.studyRequestedCount, in: 1...50)
+                    .disabled(appState.studyBusy)
             }
-            .pickerStyle(.segmented)
-            .frame(width: 220)
-            .disabled(appState.studyBusy)
 
-            Spacer()
-
-            Stepper("개수: \(appState.studyRequestedCount)", value: $state.studyRequestedCount, in: 1...30)
+            HStack {
+                Picker("템플릿", selection: $state.studySelectedTemplateID) {
+                    Text("기본").tag(UUID?.none)
+                    ForEach(appState.studyTemplates(for: appState.studyGenerationKind)) { template in
+                        Text(template.name).tag(Optional(template.id))
+                    }
+                }
                 .disabled(appState.studyBusy)
+
+                Button("템플릿 관리…") { state.showStudyTemplateManager = true }
+                    .disabled(appState.studyBusy)
+            }
+            .font(.caption)
         }
     }
 

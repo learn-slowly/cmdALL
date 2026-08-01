@@ -44,6 +44,26 @@ final class SettingsAndEditorTests: XCTestCase {
         XCTAssertEqual(decoded.claudeModel, "")
     }
 
+    func testStudyTemplatesRoundTrip() throws {
+        var settings = AppSettings()
+        settings.studyTemplates = [
+            StudyTemplate(name: "쉬운 카드", kind: .card, instructions: "쉬운 말로, 초등학생도 알아듣게"),
+            StudyTemplate(name: "심화 문제", kind: .question, instructions: "실무 예시를 하나씩 넣어줘"),
+        ]
+
+        let data = try JSONEncoder().encode(settings)
+        let decoded = try JSONDecoder().decode(AppSettings.self, from: data)
+
+        XCTAssertEqual(decoded.studyTemplates, settings.studyTemplates)
+    }
+
+    func testStudyTemplatesDefaultsToEmptyForOldSettingsFile() throws {
+        // studyTemplates 키가 아예 없던 구 settings.json도 깨지지 않고 빈 배열로(레고 2026-08-01).
+        let old = Data(#"{"fontSize":14}"#.utf8)
+        let decoded = try JSONDecoder().decode(AppSettings.self, from: old)
+        XCTAssertEqual(decoded.studyTemplates, [])
+    }
+
     // MARK: Session state
 
     func testSessionStateRoundTrip() throws {

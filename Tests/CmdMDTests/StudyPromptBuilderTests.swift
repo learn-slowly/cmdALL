@@ -92,4 +92,30 @@ final class StudyPromptBuilderTests: XCTestCase {
     func testCardAndQuizPromptsAreDistinct() {
         XCTAssertNotEqual(StudyPromptBuilder.cardPrompt(count: 3), StudyPromptBuilder.quizPrompt(count: 3))
     }
+
+    // MARK: - 사용자 템플릿 추가 지시(레고 2026-08-01 요청)
+
+    func testCardPromptAppendsExtraInstructionsWhenPresent() {
+        let prompt = StudyPromptBuilder.cardPrompt(count: 5, extraInstructions: "쉬운 말로, 초등학생도 알아듣게")
+        XCTAssertTrue(prompt.contains("추가 지시(사용자 템플릿): 쉬운 말로, 초등학생도 알아듣게"))
+    }
+
+    func testQuizPromptAppendsExtraInstructionsWhenPresent() {
+        let prompt = StudyPromptBuilder.quizPrompt(count: 5, extraInstructions: "실무 예시를 하나씩 넣어줘")
+        XCTAssertTrue(prompt.contains("추가 지시(사용자 템플릿): 실무 예시를 하나씩 넣어줘"))
+    }
+
+    func testEmptyOrWhitespaceExtraInstructionsLeavesPromptUnchanged() {
+        let base = StudyPromptBuilder.cardPrompt(count: 5)
+        XCTAssertEqual(StudyPromptBuilder.cardPrompt(count: 5, extraInstructions: ""), base)
+        XCTAssertEqual(StudyPromptBuilder.cardPrompt(count: 5, extraInstructions: "   \n  "), base)
+    }
+
+    func testExtraInstructionsDoNotAlterFixedFormatContract() {
+        // §O1~O3 계약은 추가 지시와 무관하게 그대로 남아 있어야 한다(파서 의존).
+        let prompt = StudyPromptBuilder.cardPrompt(count: 5, extraInstructions: "표를 많이 써줘")
+        XCTAssertTrue(prompt.contains("### [카드] 제목"))
+        XCTAssertTrue(prompt.contains("불릿은 최대 3개까지만"))
+        XCTAssertTrue(prompt.contains("근거 발췌는 200자 이내"))
+    }
 }

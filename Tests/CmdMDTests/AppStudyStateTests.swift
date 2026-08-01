@@ -33,14 +33,17 @@ final class AppStudyStateTests: XCTestCase {
 
     private actor ScriptedClaude: ClaudeAsking {
         private var responses: [String]
+        private(set) var calls: [(prompt: String, context: String)] = []
         init(_ responses: [String]) { self.responses = responses }
         func ask(prompt: String, context: String) async throws -> String {
             try await ask(prompt: prompt, context: context, timeout: -1)
         }
         func ask(prompt: String, context: String, timeout: TimeInterval) async throws -> String {
+            calls.append((prompt, context))
             guard !responses.isEmpty else { return "" }
             return responses.removeFirst()
         }
+        func recordedPrompts() -> [String] { calls.map(\.prompt) }
     }
 
     private func makeSource(name: String = "자격증.md", content: String = "# 하나\n교재 원문 발췌 내용") -> URL {
@@ -307,5 +310,76 @@ final class AppStudyStateTests: XCTestCase {
         app.studyUseWholeFile = false
         await app.updateStudyPreviewPlan()
         XCTAssertLessThan(app.studyPreviewCharCount, wholeFileChars)
+    }
+
+    // MARK: - 템플릿(레고 2026-08-01 요청 — "정리카드나 연습문제 템플릿을 만들거나 수정")
+
+    func testStudyTemplatesForFiltersByKind() {
+        app.settings.studyTemplates = [
+            StudyTemplate(name: "쉬운 카드", kind: .card, instructions: "쉽게"),
+            StudyTemplate(name: "심화 문제", kind: .question, instructions: "어렵게"),
+        ]
+
+        XCTAssertEqual(app.studyTemplates(for: .card).map(\.name), ["쉬운 카드"])
+        XCTAssertEqual(app.studyTemplates(for: .question).map(\.name), ["심화 문제"])
+    }
+
+    func testChangingGenerationKindResetsSelectedTemplate() {
+        let template = StudyTemplate(name: "쉬운 카드", kind: .card, instructions: "쉽게")
+        app.settings.studyTemplates = [template]
+        app.studyGenerationKind = .card
+        app.studySelectedTemplateID = template.id
+
+        app.studyGenerationKind = .question
+
+        XCTAssertNil(app.studySelectedTemplateID, "종류가 바뀌면 다른 종류 템플릿 선택이 남아있으면 안 된다")
+    }
+
+    func testSettingSameGenerationKindDoesNotResetSelectedTemplate() {
+        let template = StudyTemplate(name: "쉬운 카드", kind: .card, instructions: "쉽게")
+        app.settings.studyTemplates = [template]
+        app.studyGenerationKind = .card
+        app.studySelectedTemplateID = template.id
+
+        app.studyGenerationKind = .card // 같은 값 재대입 — 초기화되면 안 됨.
+
+        XCTAssertEqual(app.studySelectedTemplateID, template.id)
+    }
+
+    func testSelectedTemplateInstructionsAreSentToClaude() async {
+        let content = "# 하나\n교재 원문 발췌 내용"
+        let url = makeSource(content: content)
+        app.studyScopeFileURL = url
+        app.studyScopeKind = .markdown
+        app.studyGenerationKind = .card
+
+        let template = StudyTemplate(name: "쉬운 카드", kind: .card, instructions: "쉬운 말로, 초등학생도 알아듣게")
+        app.settings.studyTemplates = [template]
+        app.studySelectedTemplateID = template.id
+
+        let fake = ScriptedClaude([validCardResponse()])
+        app.studyService = StudyService(claude: fake, sourceLoader: app.studySourceLoader)
+
+        await app.generateStudyItems()
+
+        let sentPrompts = await fake.recordedPrompts()
+        XCTAssertTrue(sentPrompts.first?.contains("쉬운 말로, 초등학생도 알아듣게") ?? false)
+    }
+
+    func testNoTemplateSelectedSendsDefaultPromptUnchanged() async {
+        let content = "# 하나\n교재 원문 발췌 내용"
+        let url = makeSource(content: content)
+        app.studyScopeFileURL = url
+        app.studyScopeKind = .markdown
+        app.studyGenerationKind = .card
+        app.studySelectedTemplateID = nil // "기본"
+
+        let fake = ScriptedClaude([validCardResponse()])
+        app.studyService = StudyService(claude: fake, sourceLoader: app.studySourceLoader)
+
+        await app.generateStudyItems()
+
+        let sentPrompts = await fake.recordedPrompts()
+        XCTAssertFalse(sentPrompts.first?.contains("추가 지시(사용자 템플릿)") ?? true)
     }
 }

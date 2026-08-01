@@ -36,10 +36,12 @@ actor StudyService {
         case allChunksFailed
     }
 
-    func generateCards(scope: StudyScope, count: Int, chunkBudget: Int) async throws -> Outcome<StudyCard> {
+    /// - Parameter extraInstructions: 사용자 템플릿의 추가 지시(레고 2026-08-01 요청) — 청크마다
+    ///   보내는 지시문 뒤에 그대로 덧붙는다(`StudyPromptBuilder.appendingExtraInstructions`).
+    func generateCards(scope: StudyScope, count: Int, chunkBudget: Int, extraInstructions: String = "") async throws -> Outcome<StudyCard> {
         try await run(
             scope: scope, count: count, chunkBudget: chunkBudget,
-            prompt: StudyPromptBuilder.cardPrompt,
+            prompt: { StudyPromptBuilder.cardPrompt(count: $0, extraInstructions: extraInstructions) },
             parse: { text, chunk, maxCount in
                 let result = StudyOutputParser.parseCards(text, chunk: chunk, maxCount: maxCount)
                 return (result.cards, result.invalidCitations)
@@ -48,10 +50,11 @@ actor StudyService {
         )
     }
 
-    func generateQuestions(scope: StudyScope, count: Int, chunkBudget: Int) async throws -> Outcome<StudyQuestion> {
+    /// - Parameter extraInstructions: 사용자 템플릿의 추가 지시(레고 2026-08-01 요청).
+    func generateQuestions(scope: StudyScope, count: Int, chunkBudget: Int, extraInstructions: String = "") async throws -> Outcome<StudyQuestion> {
         try await run(
             scope: scope, count: count, chunkBudget: chunkBudget,
-            prompt: StudyPromptBuilder.quizPrompt,
+            prompt: { StudyPromptBuilder.quizPrompt(count: $0, extraInstructions: extraInstructions) },
             parse: { text, chunk, maxCount in
                 let result = StudyOutputParser.parseQuestions(text, chunk: chunk, maxCount: maxCount)
                 return (result.questions, result.invalidCitations)

@@ -158,6 +158,19 @@ extension AppState {
         studyPreviewCharCount = chunks.reduce(0) { $0 + $1.charCount }
     }
 
+    // MARK: - 템플릿(레고 2026-08-01 요청 — "정리카드나 연습문제 템플릿을 만들거나 수정")
+
+    /// 지금 고른 종류(카드/문제)에 맞는 템플릿만 — 화면 Picker·선택 유효성 검사 공용.
+    func studyTemplates(for kind: StudyItemKind) -> [StudyTemplate] {
+        settings.studyTemplates.filter { $0.kind == kind }
+    }
+
+    /// 현재 선택된 템플릿의 추가 지시문 — 선택 없음("기본")이거나 다른 종류로 바뀌어 못 찾으면 "".
+    private var studySelectedTemplateInstructions: String {
+        guard let id = studySelectedTemplateID else { return "" }
+        return settings.studyTemplates.first(where: { $0.id == id })?.instructions ?? ""
+    }
+
     // MARK: - 생성(AI 실호출)
 
     @MainActor
@@ -174,18 +187,21 @@ extension AppState {
         studySavedNoteURL = nil
         defer { studyBusy = false }
 
+        let extraInstructions = studySelectedTemplateInstructions
         do {
             switch studyGenerationKind {
             case .card:
                 let outcome = try await studyService.generateCards(
-                    scope: scope, count: studyRequestedCount, chunkBudget: Self.studyChunkBudget)
+                    scope: scope, count: studyRequestedCount, chunkBudget: Self.studyChunkBudget,
+                    extraInstructions: extraInstructions)
                 studyPreviewCards = outcome.items
                 studyOutcomeSummary = Self.studyOutcomeSummary(chunkCount: outcome.chunkCount,
                                                                  succeeded: outcome.succeededChunkCount,
                                                                  invalidCitations: outcome.invalidCitations)
             case .question:
                 let outcome = try await studyService.generateQuestions(
-                    scope: scope, count: studyRequestedCount, chunkBudget: Self.studyChunkBudget)
+                    scope: scope, count: studyRequestedCount, chunkBudget: Self.studyChunkBudget,
+                    extraInstructions: extraInstructions)
                 studyPreviewQuestions = outcome.items
                 studyOutcomeSummary = Self.studyOutcomeSummary(chunkCount: outcome.chunkCount,
                                                                  succeeded: outcome.succeededChunkCount,

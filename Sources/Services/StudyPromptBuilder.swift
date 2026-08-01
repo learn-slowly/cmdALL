@@ -8,9 +8,11 @@ enum StudyPromptBuilder {
 
     /// - Parameter count: 이 청크에서 요청할 카드 개수 상한(`StudyService`가 §O6 `ceil(N/C)`로
     ///   계산해 넘긴다) — 내용이 부족하면 이보다 적게 나와도 된다.
-    static func cardPrompt(count: Int) -> String {
+    /// - Parameter extraInstructions: 사용자 템플릿의 추가 지시(레고 2026-08-01 요청) — 빈 값이면
+    ///   기존 지시문 그대로. 형식(O1~O3)은 이 값과 무관하게 항상 고정 — 뒤에 "추가 지시"로만 붙는다.
+    static func cardPrompt(count: Int, extraInstructions: String = "") -> String {
         let n = max(1, count)
-        return """
+        let base = """
         당신은 학습 자료로 한국어 정리 카드를 만드는 조수다.
         아래 stdin으로 주어진 교재 내용만 근거로 삼아라. 원문에 없는 내용은 절대 지어내지 마라.
         교재 각 부분 앞에는 [[p12]]([몇 쪽])·[[l345]]([몇 줄])·[[?]](위치 불명) 같은 위치 표시가 붙어 있다.
@@ -26,12 +28,15 @@ enum StudyPromptBuilder {
         규칙: 제목은 80자 이내, 불릿은 최대 3개까지만(그 이상은 새 카드로) 각 120자 이내,
         근거 발췌는 200자 이내로 원문 그대로 옮겨라. 근거는 카드마다 정확히 1개.
         """
+        return Self.appendingExtraInstructions(base, extraInstructions)
     }
 
     /// - Parameter count: 이 청크에서 요청할 문제 개수 상한(§O6). 내용이 부족하면 더 적어도 된다.
-    static func quizPrompt(count: Int) -> String {
+    /// - Parameter extraInstructions: 사용자 템플릿의 추가 지시(레고 2026-08-01 요청) — 빈 값이면
+    ///   기존 지시문 그대로. 형식(O1~O3)은 이 값과 무관하게 항상 고정 — 뒤에 "추가 지시"로만 붙는다.
+    static func quizPrompt(count: Int, extraInstructions: String = "") -> String {
         let n = max(1, count)
-        return """
+        let base = """
         당신은 학습 자료로 한국어 연습 문제를 만드는 조수다.
         아래 stdin으로 주어진 교재 내용만 근거로 삼아라. 원문에 없는 내용은 절대 지어내지 마라.
         교재 각 부분 앞에는 [[p12]]([몇 쪽])·[[l345]]([몇 줄])·[[?]](위치 불명) 같은 위치 표시가 붙어 있다.
@@ -54,5 +59,14 @@ enum StudyPromptBuilder {
         규칙: 제목은 80자 이내, 해설은 600자 이내, 근거 발췌는 200자 이내로 원문 그대로 옮겨라.
         근거는 문제마다 정확히 1개.
         """
+        return Self.appendingExtraInstructions(base, extraInstructions)
+    }
+
+    /// 사용자 템플릿(§StudyTemplate)의 자유 지시문을 고정 지시문 뒤에 덧붙인다. 빈 값(또는
+    /// 공백만)이면 그대로 — 기본 동작(레고 2026-08-01 "기본 설정은 그대로 두되")과 100% 동일.
+    private static func appendingExtraInstructions(_ base: String, _ extraInstructions: String) -> String {
+        let trimmed = extraInstructions.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return base }
+        return base + "\n\n추가 지시(사용자 템플릿): \(trimmed)"
     }
 }

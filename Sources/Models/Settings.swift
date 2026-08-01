@@ -136,6 +136,11 @@ struct AppSettings: Codable, Equatable {
     /// 관계도 화면에서 레고님이 직접 고른 폴더별 색(폴더 경로 → RRGGBB hex). 지정 안 한
     /// 폴더는 이름 기반 자동 색(WikiGraphView.folderColor)을 그대로 쓴다.
     var wikiGraphFolderColors: [String: String] = [:]
+    // MARK: 학습도우미 템플릿
+    /// 카드·문제 생성 시 기본 지시문에 덧붙일 사용자 템플릿(레고 2026-08-01 요청). 종류(카드/
+    /// 문제)별로 여러 개 만들 수 있고, 화면에서 고르지 않으면("기본") 지시문 추가 없이 기존
+    /// 동작 그대로다.
+    var studyTemplates: [StudyTemplate] = []
 
     // MARK: RAG 설정
     /// 자료에 묻기(RAG) 질의 확장 토글(동의어 recall 보완). 기본 ON.
@@ -214,6 +219,7 @@ struct AppSettings: Codable, Equatable {
         wikiRulesSummary = try c.decodeIfPresent(String.self, forKey: .wikiRulesSummary) ?? d.wikiRulesSummary
         wikiRulesCapturedAt = try c.decodeIfPresent(Date.self, forKey: .wikiRulesCapturedAt) ?? d.wikiRulesCapturedAt
         wikiGraphFolderColors = try c.decodeIfPresent([String: String].self, forKey: .wikiGraphFolderColors) ?? d.wikiGraphFolderColors
+        studyTemplates = try c.decodeIfPresent([StudyTemplate].self, forKey: .studyTemplates) ?? d.studyTemplates
         ragExpandQuery = try c.decodeIfPresent(Bool.self, forKey: .ragExpandQuery) ?? d.ragExpandQuery
         libraryLayouts = try c.decodeIfPresent([String: LibraryLayout].self, forKey: .libraryLayouts) ?? d.libraryLayouts
         librarySorts = try c.decodeIfPresent([String: LibrarySort].self, forKey: .librarySorts) ?? d.librarySorts
