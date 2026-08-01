@@ -443,3 +443,17 @@ ralplan 최종 계획(레고 실행 승인, S0만) 실행. 게이트 순서(S0 �
 - 계획서 순서(모델 → `StudySourceLoader` → …) 중 첫 단계로 순수 자료 모양 4개 파일만 신설(로직 없음, 화면 변화 없음): `Sources/Models/StudyLocator.swift`(`StudyLocator`·`StudySegment`·`StudyChunk`) · `Sources/Models/StudyItem.swift`(`StudyCard`·`StudyQuestion`·`StudyItemKind`·`StudyReviewState`) · `Sources/Models/StudyScope.swift`(`StudyScope`·`StudyScopeRange`, 기존 `DocumentKind` 재사용) · `Sources/Models/StudyChatDraft.swift`(`StudyChatDraft`·`StudyChatDraftTurn`, `Codable` — 설계 문서 §4.7.2 그대로).
 - 신규 테스트 10건(`Tests/CmdMDTests/StudyModelsTests.swift`) — locator 동등성·청크 커버리지·frontmatter 어휘 고정값(`card`/`question`)·카드 미검증 발췌 플래그 보존·문제 mcq 아닌 타입 보기 없이도 유효·복습 초기값이 §3.9 허용 범위 안·범위별 정확한 케이스(PDF=쪽 범위/마크다운=줄 범위/오피스=전체 파일)·초안 JSON 왕복(턴 순서·`truncated` 보존)·원본 경로 없어도(`nil`) 왕복 무사·스키마 버전 상수 고정. `swift test` 1,095개(기존 1,085 + 신규 10) 전량 통과, 회귀 0.
 - 다음 조각(계획서 순서): 파일 읽기(`StudySourceLoader`) → 잘라내기(`StudyChunker`) → AI 요청문(`StudyPromptBuilder`) → 결과 해석(`StudyOutputParser`) → 실제 생성(`StudyService`) → 노트 저장(`StudyNoteWriter`) → 전용 화면(`StudyHelperView`). 오늘은 화면·저장·생성 로직 전부 아직 없음.
+
+---
+
+## 2026-08-01 — 학습도우미 S1 둘째 조각(StudySourceLoader — 자료 읽어오기)
+
+- 계획서 순서의 둘째 단계 `Sources/Services/StudySourceLoader.swift` 신설(actor). `StudyScope`를 받아 종류별로 실제 글자를 읽고 위치표(`StudyLocator`)를 붙인 `StudySegment` 배열을 만든다 — 아직 AI 호출·화면·저장은 없다(재료만 준비).
+  - **PDF**: `PDFDocument`를 이 서비스가 직접 순회(색인용 `ContentExtractor`는 페이지 경계를 개행으로 이어붙여 잃어버리므로 재사용하지 않음, §5.4 각주). 쪽 번호는 PDFKit 인덱스+1. 글자 레이어가 없는 빈 쪽은 `OCRService.recognizeText(in: PDFPage)`로 한 번 더 시도하고, 그래도 비면 그 쪽만 건너뛴다. 범위(`.pageRange`)는 문서 쪽수 안으로 clamp, 범위가 문서를 완전히 벗어나면 조각 0개.
+  - **마크다운/텍스트**: 줄 단위로 읽고, 기존 `TOCBuilder.extractHeadings`(미리보기 목차와 같은 헤딩 추출기, 펜스 인지)를 재사용해 헤딩 줄에서 조각을 나눈다. 선택 범위 시작줄보다 앞에 있는 헤딩은 시작점으로 안 치고, 조각은 항상 범위의 첫 줄에서 시작한다(위치표=그 조각의 실제 첫 줄).
+  - **오피스**: 기존 `KordocService.markdown(for:)` 그대로 재사용, 위치는 항상 "위치 불명"(`.unknown`).
+  - **이미지**: `OCRService`로 글자 인식, 위치는 "위치 불명". 검색 색인의 "사진 속 글자도 읽기" 전역 설정과 무관하게 **항상** 시도한다 — 학습도우미는 사용자가 "이 사진으로 학습하겠다"고 직접 고른 것이라 그 설정과는 별개 판단(2026-08-01 코드 조사 결론, 위 항목 참고: 학습도우미는 범위 선택이 필수라 검색 색인의 속도 제한이 애초에 필요 없음).
+  - **미디어·QuickLook**: 이번엔 제외(조각 0개) — "짝꿍 노트가 있으면 마크다운 취급" 리다이렉트는 스코프를 만드는 화면(예정)의 몫으로 미룸.
+- 신규 테스트 14건(`Tests/CmdMDTests/StudySourceLoaderTests.swift`) — 헤딩 경계 분할·헤딩 없는 파일 한 조각·범위 시작줄 우선(앞선 헤딩 무시)·빈 파일/역방향 범위/없는 파일 빈 배열, PDF 인덱스+1·범위 clamp·범위가 문서 밖이면 빈 배열·OCR로도 못 건지는 빈 쪽 스킵·줄범위로 PDF 요청 시 빈 배열, 이미지 OCR 성공/실패, 미디어·QuickLook 빈 배열. PDF 텍스트 검증용으로 `CTLineDraw`로 진짜 글자 레이어가 있는 PDF를 만드는 테스트 헬퍼 신규 작성(기존 `PDFPage(image:)` 전례는 이미지뿐이라 텍스트 레이어 검증엔 못 씀). office(kordoc 실제 프로세스 필요)는 기존 관행(`ContentExtractorTests`도 그 갈래 미검증)대로 단위 테스트 대상에서 제외, 수동 스모크 몫.
+- `swift test` 1,109개(기존 1,095 + 신규 14) 전량 통과, 회귀 0. `swift build` 경고 없음.
+- 다음 조각(계획서 순서): 잘라내기(`StudyChunker`) → AI 요청문(`StudyPromptBuilder`) → 결과 해석(`StudyOutputParser`) → 실제 생성(`StudyService`) → 노트 저장(`StudyNoteWriter`) → 전용 화면(`StudyHelperView`). 화면·저장·AI 호출은 여전히 없음.
