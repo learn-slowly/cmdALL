@@ -86,6 +86,9 @@ struct OfficeReaderView: View {
                         scrollSyncEnabled: false,
                         onSelectedTextChange: { selected in
                             appState.currentSelectionText = selected
+                        },
+                        onAskAI: {
+                            appState.claudePanelVisible = true
                         }
                     )
                 }
@@ -151,6 +154,9 @@ private struct OfficeEditorPane: View {
             scrollSyncEnabled: false,
             onSelectedTextChange: { selected in
                 appState.currentSelectionText = selected
+            },
+            onAskAI: {
+                appState.claudePanelVisible = true
             }
         )
     }

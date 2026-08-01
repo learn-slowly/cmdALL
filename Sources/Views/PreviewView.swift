@@ -21,6 +21,33 @@ final class DropThroughWebView: WKWebView {
     override func registerForDraggedTypes(_ newTypes: [NSPasteboard.PasteboardType]) {
         // no-op — WebKit의 재등록을 차단해 파일 드래그가 창 레벨로 통과하도록 둔다.
     }
+
+    /// 선택 영역이 있는지 — WKWebView는 AppKit에 선택 상태를 직접 안 줘서 JS `selectionchange`
+    /// 브리지(`Coordinator.recordSelectionChange`)가 갱신한다. 우클릭 메뉴에 "Claude에게
+    /// 물어보기"를 넣을지 판정하는 데 쓴다(2026-08-01 — 블록 설정 후 오른쪽 버튼으로도 AI 호출).
+    var hasSelection = false
+    var onAskAI: (() -> Void)?
+
+    /// WKWebView도 NSView라 `menu(for:)`를 오버라이드하면 기본 컨텍스트 메뉴(복사·찾아보기 등)
+    /// 위에 항목을 더할 수 있다(CmdMDTextView·CmdMDPDFView와 같은 패턴) — WKUIDelegate엔
+    /// macOS용 컨텍스트 메뉴 커스터마이즈 API가 없어(iOS 전용 UIMenu 계열만 존재, SDK 헤더로
+    /// 확인) 이 경로를 대신 쓴다.
+    override func menu(for event: NSEvent) -> NSMenu? {
+        let base = super.menu(for: event)
+        guard hasSelection, onAskAI != nil else { return base }
+        let menu = base ?? NSMenu()
+        if !menu.items.isEmpty {
+            menu.insertItem(.separator(), at: 0)
+        }
+        let item = NSMenuItem(title: "Claude에게 물어보기", action: #selector(handleAskAI), keyEquivalent: "")
+        item.target = self
+        menu.insertItem(item, at: 0)
+        return menu
+    }
+
+    @objc private func handleAskAI() {
+        onAskAI?()
+    }
 }
 
 struct MarkdownPreviewView: NSViewRepresentable {
@@ -36,6 +63,9 @@ struct MarkdownPreviewView: NSViewRepresentable {
     /// PDFReaderView.onSelectedTextChange와 같은 목적). 기본값이라 다른 프리뷰(일반 마크다운
     /// 프리뷰·듀얼 페인 등)는 배선 안 해도 무해.
     var onSelectedTextChange: (String) -> Void = { _ in }
+    /// 선택 영역이 있을 때 우클릭 메뉴에 "Claude에게 물어보기"를 추가한다(2026-08-01 —
+    /// 마우스로 블록 설정 후 오른쪽 버튼으로도 AI 호출). 기본값(no-op)이라 배선 안 해도 무해.
+    var onAskAI: () -> Void = {}
 
     func makeNSView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
@@ -45,6 +75,7 @@ struct MarkdownPreviewView: NSViewRepresentable {
 
         let webView = DropThroughWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
+        webView.onAskAI = onAskAI
         context.coordinator.webView = webView
         context.coordinator.scrollSyncEnabled = scrollSyncEnabled
         context.coordinator.onSelectedTextChange = onSelectedTextChange
@@ -61,6 +92,7 @@ struct MarkdownPreviewView: NSViewRepresentable {
     }
 
     func updateNSView(_ webView: WKWebView, context: Context) {
+        (webView as? DropThroughWebView)?.onAskAI = onAskAI
         context.coordinator.scrollSyncEnabled = scrollSyncEnabled
         context.coordinator.onSelectedTextChange = onSelectedTextChange
 
@@ -102,6 +134,9 @@ struct MarkdownPreviewView: NSViewRepresentable {
         var scrollSyncEnabled: Bool = true
         var currentDocumentID: UUID?
         var onSelectedTextChange: (String) -> Void = { _ in }
+        /// 마지막으로 알려진 선택 글자(순수 테스트용 — 실제 우클릭 메뉴 판정은
+        /// `DropThroughWebView.hasSelection`이 한다, 아래 `recordSelectionChange` 참고).
+        private(set) var lastKnownSelection: String = ""
 
         // MARK: dataviewjs (스펙 §5·§7)
         var dataviewBlocks: [DataviewBlock] = []
@@ -239,8 +274,17 @@ struct MarkdownPreviewView: NSViewRepresentable {
             }
 
             if type == "selectionChanged" {
-                onSelectedTextChange(body["text"] as? String ?? "")
+                recordSelectionChange(body["text"] as? String ?? "")
             }
+        }
+
+        /// 메시지 핸들러가 부르는 실제 로직 — `WKScriptMessage`를 직접 만들 수 없어(공개
+        /// 이니셜라이저 없음) 테스트에서 이 메서드를 직접 호출해 순수하게 검증한다. 실제
+        /// 우클릭 메뉴 판정에 쓰는 값은 `webView`(`DropThroughWebView.hasSelection`)에도 반영한다.
+        func recordSelectionChange(_ text: String) {
+            lastKnownSelection = text
+            (webView as? DropThroughWebView)?.hasSelection = !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            onSelectedTextChange(text)
         }
 
         // MARK: dataviewjs 실행 배선 (스펙 §5·§7)

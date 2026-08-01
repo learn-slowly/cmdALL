@@ -28,6 +28,8 @@ struct MainEditorView: View {
             } else if appState.currentTabKind == .pdf, let url = appState.currentTabFileURL {
                 PDFReaderView(url: url, onSelectedTextChange: { selected in
                     appState.currentSelectionText = selected
+                }, onAskAI: {
+                    appState.claudePanelVisible = true
                 })
             } else if appState.currentTabKind == .office,
                       let url = appState.currentTabFileURL,
@@ -242,6 +244,9 @@ struct EditorPane: View {
             onSelectedTextChange: { selected in
                 appState.currentSelectionText = selected
             },
+            onAskAI: {
+                appState.claudePanelVisible = true
+            },
             completionsProvider: { context in
                 CompletionService.completions(
                     for: context,
@@ -343,7 +348,13 @@ struct PreviewPane: View {
             markdown: appState.currentDocument?.content ?? "",
             baseURL: appState.currentDocument?.fileURL?.deletingLastPathComponent(),
             options: appState.renderOptions(),
-            scrollSyncEnabled: appState.settings.scrollSyncEnabled && appState.viewMode == .split
+            scrollSyncEnabled: appState.settings.scrollSyncEnabled && appState.viewMode == .split,
+            onSelectedTextChange: { selected in
+                appState.currentSelectionText = selected
+            },
+            onAskAI: {
+                appState.claudePanelVisible = true
+            }
         )
     }
 }

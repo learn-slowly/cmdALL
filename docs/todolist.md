@@ -26,6 +26,12 @@
 - **볼 것**: 설정 > "사진 속 글자도 읽기 (OCR)" 켜기 → 글자 있는 사진이 든 폴더 색인 → 그 글자로 검색해서 사진이 잡히는지.
 - **어디**: `AppSettings.ocrImagesEnabled` · `ContentExtractor` 이미지 분기 · `OCRService.loadCGImage(from:)`.
 
+### 2.5. 선택 후 우클릭으로 Claude 호출
+
+- **왜**: 2026-08-01 레고 요청 — 마우스로 글자를 드래그해 선택한 다음 오른쪽 버튼을 눌러도 AI를 부를 수 있으면 좋겠다는 요청 반영. 자동 테스트로는 실제 마우스 우클릭·메뉴 표시 자체를 재현할 수 없는 종류라(헤드리스 검증만 가능) 실기 확인이 필요하다.
+- **볼 것**: 마크다운 편집 화면·마크다운 미리보기 화면(일반 노트 열기)·PDF 화면·한글/오피스 문서 화면(보기·편집 둘 다) 각각에서 글자를 드래그로 선택 → 오른쪽 버튼 → 메뉴 맨 위에 "Claude에게 물어보기"가 뜨는지 → 누르면 오른쪽 AI 패널이 열리고 선택한 글자가 컨텍스트로 잡히는지(패널에서 질문을 입력해 실제로 그 내용 기준으로 답이 오는지까지 1회). 선택 없이 우클릭했을 때는 항목이 안 뜨는지도 같이 확인.
+- **어디**: `Sources/Views/EditorTextView.swift`(`CmdMDTextView.menu(for:)`) · `Sources/Views/PDFReaderView.swift`(`CmdMDPDFView.menu(for:)`) · `Sources/Views/PreviewView.swift`(`DropThroughWebView.menu(for:)`) · 배선은 `MainEditorView.swift`·`OfficeReaderView.swift`.
+
 ### 3. 학습도우미 S1 착수 — 전용 화면 + 카드/문제 실제 생성·저장
 
 - **왜**: S0(프리셋 버튼) 실기 확인 완료 — 2026-08-01 레고 "쓸만한거 같아" 판정으로 게이트 통과. 승인된 계획(ralplan, 2026-07-31)의 다음 단계는 S1: 위키처럼 왼쪽 리본에 전용 자리를 갖는 학습 화면(`StudyHelperView`)을 만들고, 지금은 프롬프트만 채우는 카드·문제 생성을 실제로 청크 단위 생성 + 새 마크다운 노트로 저장하는 기능까지 완성하는 것. S2(복습)·S3(대화)는 S1 다음(레고가 순서 결정, 계획상 대화 먼저).

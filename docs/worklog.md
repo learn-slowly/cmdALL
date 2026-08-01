@@ -494,3 +494,18 @@ ralplan 최종 계획(레고 실행 승인, S0만) 실행. 게이트 순서(S0 �
 - 신규 테스트 12건(`Tests/CmdMDTests/StudyPromptBuilderTests.swift`) — 카드/문제 각각 O1 형식 표지·요청 개수 반영·개수 0 이하는 1로 clamp·"지어내지 마라"+위치 표시 복사 지시·O3 상한(80/120/200/600자) 문구 포함, 문제는 mcq 아닌 type도 보기 없이 허용된다는 문구, 같은 입력이면 항상 같은 문자열(결정성)·카드/문제 지시문이 서로 다름.
 - `swift test` 1,140개(기존 1,128 + 신규 12) 전량 통과, 회귀 0. `swift build` 경고 없음.
 - 다음 조각(계획서 순서): 결과 해석(`StudyOutputParser`) → 실제 생성(`StudyService`) → 노트 저장(`StudyNoteWriter`) → 전용 화면(`StudyHelperView`). AI 호출·화면·저장은 여전히 없음.
+
+---
+
+## 2026-08-01 — 선택 후 우클릭으로 Claude 호출(레고 요청, 학습도우미 밖 소품)
+
+레고 요청("마우스로 블록설정한 다음 오른쪽 버튼으로도 AI 호출되면 좋겠어") 반영. 마크다운 편집 화면·미리보기 화면·PDF 화면·한글/오피스 문서 화면에서 글자를 드래그로 선택한 뒤 오른쪽 버튼을 누르면 기본 컨텍스트 메뉴(복사 등) 위에 "Claude에게 물어보기"가 추가된다. 누르면 기존 "Ask Claude" 진입점과 동일하게 오른쪽 AI 패널이 열릴 뿐(자동 전송 아님, 선택한 글자는 이미 있던 배선으로 컨텍스트에 실림) — 제안→확인→실행 원칙 그대로.
+
+- **처음 접근이 막힘**: WKWebView(미리보기·오피스 화면)를 macOS에서 커스터마이즈하는 공식 API로 `WKUIDelegate`의 `webView(_:contextMenu:forElement:)`를 시도했으나, SDK 헤더 직접 확인(`WKUIDelegate.h`) 결과 그 메서드는 **iOS/Mac Catalyst 전용**(`API_AVAILABLE(ios(13.0))`)이고 macOS WKWebView엔 우클릭 메뉴를 공식적으로 편집하는 델리게이트가 없다(레거시 `WebView`/`WebUIDelegate`만 있고 이건 오늘날 안 씀) — 컴파일 에러로 확인 후 계획 수정.
+- **수정한 방식**: WKWebView도 결국 `NSView`라 `menu(for:)` 오버라이드가 통한다(기본 컨텍스트 메뉴를 얻어 항목만 더하는 방식) — 이미 파일 드래그 통과용으로 있던 `DropThroughWebView` 서브클래스에 그대로 추가. 마크다운 편집기(`CmdMDTextView`: NSTextView)·PDF(`CmdMDPDFView`: 신규 PDFView 서브클래스)도 같은 패턴으로 통일.
+- 세 표면 다 같은 모양: `onAskAI: (() -> Void)?` 클로저 + `menu(for:)` 오버라이드(선택 있고 클로저 있을 때만 메뉴 맨 위에 항목 추가, 구분선 포함). PDF는 `currentSelection`, 편집기는 `selectedRange()`, 웹뷰는 JS `selectionchange` 브리지가 갱신하는 `hasSelection` 플래그로 각각 선택 유무를 판정.
+- **테스트가 실제 버그 1건 포착**: 텍스트 편집기에서 "선택 없으면 메뉴 항목도 없어야 한다" 테스트가 실패 — AppKit이 `super.menu(for:)`를 호출할 때 **클릭 지점의 단어를 자동 선택하는 부수효과**가 있어, super 호출 뒤에 선택 여부를 판정하면 사용자가 실제로 드래그해 고른 게 없어도 항목이 뜨는 결함이 있었다. 선택 여부를 **super 호출 전에** 캡처하도록 수정(편집기·PDF 둘 다 — 사용자가 미리 드래그해 고른 것만 인정, 우클릭 자체가 만든 선택은 불인정).
+- 부수 수정: 미리보기(`PreviewPane`)는 지금까지 텍스트를 선택해도 `appState.currentSelectionText`에 안 실리던 빈틈이 있었는데(에디터·PDF·오피스는 이미 연결돼 있었음) 이번에 같이 연결 — Claude 컨텍스트 우선순위 로직(`claudeSelection`)이 markdown kind를 이미 허용하므로 별도 배선 불필요, 이 gap만 메우면 됨.
+- **이번엔 손 안 댐**: 미디어 짝꿍 노트 미리보기·두 폴더 나란히 보기(듀얼 페인) — 원래 선택→AI 연결 자체가 없던 화면이라 범위 밖. 우클릭 시 자동 전송(패널만 열림, 전송은 여전히 사용자가).
+- 신규 테스트 11건(`Tests/CmdMDTests/AskAIContextMenuTests.swift`) — 세 표면 각각 "선택+클로저 있으면 항목 뜨고 눌렀을 때 클로저 호출"·"선택 없으면 항목 없음"·"클로저 미배선이면 항목 없음"(헤드리스 `NSEvent.mouseEvent`+직접 인스턴스화, 기존 `responderYieldsFileKeys` 헤드리스 전례와 같은 패턴), `PreviewView.Coordinator.recordSelectionChange`(선택 텍스트 반영이 상태·전달·연결된 웹뷰의 `hasSelection` 플래그까지 정확히 갱신되는지) 3건. 실제 마우스 우클릭·메뉴 표시 자체는 자동 테스트 원리상 재현 불가 — `docs/todolist.md`에 레고 실기 확인 항목 추가.
+- `swift test` 1,151개(기존 1,140 + 신규 11) 전량 통과, 회귀 0. `swift build` 경고 없음.

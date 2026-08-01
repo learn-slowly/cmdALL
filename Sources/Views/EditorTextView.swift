@@ -61,6 +61,30 @@ final class LineIndex {
 final class CmdMDTextView: NSTextView {
     var highlightCurrentLine = false
     var currentLineColor: NSColor = .clear
+    /// 선택 영역이 있을 때 우클릭 메뉴에 "Claude에게 물어보기"를 추가한다(2026-08-01 —
+    /// 마우스로 블록 설정 후 오른쪽 버튼으로도 AI 호출).
+    var onAskAI: (() -> Void)?
+
+    override func menu(for event: NSEvent) -> NSMenu? {
+        // 선택 여부는 super 호출 전에 캡처한다 — AppKit 기본 메뉴 구성이 클릭 지점의 단어를
+        // 자동 선택하는 부수효과가 있어(우클릭=단어 선택), super 이후에 판정하면 사용자가
+        // 실제로 드래그해 고른 게 없어도 항목이 뜬다(2026-08-01 테스트로 실증).
+        let hasSelection = selectedRange().length > 0
+        let base = super.menu(for: event)
+        guard hasSelection, onAskAI != nil else { return base }
+        let menu = base ?? NSMenu()
+        if !menu.items.isEmpty {
+            menu.insertItem(.separator(), at: 0)
+        }
+        let item = NSMenuItem(title: "Claude에게 물어보기", action: #selector(handleAskAI), keyEquivalent: "")
+        item.target = self
+        menu.insertItem(item, at: 0)
+        return menu
+    }
+
+    @objc private func handleAskAI() {
+        onAskAI?()
+    }
 
     override func drawBackground(in rect: NSRect) {
         super.drawBackground(in: rect)
@@ -214,6 +238,8 @@ struct MarkdownTextEditor: NSViewRepresentable {
     var onImageDrop: ((URL) -> Void)?
     var onSelectionChange: ((Int, Int) -> Void)?
     var onSelectedTextChange: ((String) -> Void)?
+    /// 선택 영역이 있을 때 우클릭 메뉴에 "Claude에게 물어보기"를 추가한다(2026-08-01).
+    var onAskAI: (() -> Void)?
     var completionsProvider: ((CompletionContext) -> [CompletionItem])?
 
     /// Clamp previously-selected ranges to the current text, measuring in UTF-16
@@ -259,6 +285,7 @@ struct MarkdownTextEditor: NSViewRepresentable {
         textView.minSize = NSSize(width: 0, height: 0)
 
         context.coordinator.textView = textView
+        textView.onAskAI = onAskAI
         textView.delegate = context.coordinator
         textView.font = font
         textView.isRichText = true
@@ -307,6 +334,7 @@ struct MarkdownTextEditor: NSViewRepresentable {
         context.coordinator.parent = self
 
         applyTheme(to: textView, scrollView: nsView)
+        textView.onAskAI = onAskAI
         textView.font = font
         applyWrapMode(to: textView, scrollView: nsView)
 
