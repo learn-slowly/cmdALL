@@ -32,12 +32,12 @@
 - **볼 것**: 마크다운 편집 화면·마크다운 미리보기 화면(일반 노트 열기)·PDF 화면·한글/오피스 문서 화면(보기·편집 둘 다) 각각에서 글자를 드래그로 선택 → 오른쪽 버튼 → 메뉴 맨 위에 "Claude에게 물어보기"가 뜨는지 → 누르면 오른쪽 AI 패널이 열리고 선택한 글자가 컨텍스트로 잡히는지(패널에서 질문을 입력해 실제로 그 내용 기준으로 답이 오는지까지 1회). 선택 없이 우클릭했을 때는 항목이 안 뜨는지도 같이 확인.
 - **어디**: `Sources/Views/EditorTextView.swift`(`CmdMDTextView.menu(for:)`) · `Sources/Views/PDFReaderView.swift`(`CmdMDPDFView.menu(for:)`) · `Sources/Views/PreviewView.swift`(`DropThroughWebView.menu(for:)`) · 배선은 `MainEditorView.swift`·`OfficeReaderView.swift`.
 
-### 3. 학습도우미 S1 — 전용 화면 + 부분 범위 선택까지 완료
+### 3. 학습도우미 S1 — v0.9.427로 배포 완료, 레고 실사용 확인 대기
 
-- **왜**: S0(프리셋 버튼) 실기 확인 완료(2026-08-01, 레고 "쓸만한거 같아" 판정)로 게이트 통과 후 진행한 S1(코어+카드+퀴즈+저장) 구현이 끝났다. 첫 실기 확인에서 레고님이 "교재 하나를 한 번에 정리카드/문제로 만드는 게 비현실적"이라고 지적 — 원인은 부분 범위(챕터·쪽 단위) 선택 기능이 없던 것이었고, 같은 날 바로 반영해 지금은 "전체 파일 사용" 토글을 끄면 PDF는 쪽수 범위, 마크다운/오피스는 제목(헤딩) 목록에서 시작~끝을 고를 수 있다.
-- **볼 것**: 왼쪽 리본 학습도우미(졸업모자) 아이콘 클릭 → 교재 파일 선택(PDF·한글/워드·이미지·마크다운 아무거나) → "정리 카드" 또는 "연습 문제" 고르고 개수 정하기 → **"전체 파일 사용" 토글을 꺼서 일부만 골라보기**(PDF는 쪽 범위 스테퍼, 한글/워드·마크다운은 제목 목록에서 시작~끝 선택) → 범위를 좁힐수록 "보낼 분량 약 N자 · 조각 C개"가 줄어드는지 → 만들기 → 미리보기가 그 범위 내용으로만 나오는지(제목·내용·근거 발췌) → "노트로 저장" → "노트 열기"로 파일 내용 확인. 로그인 안 된 상태·글자 없는 사진·헤딩 없는 파일(부분 선택 자동으로 막힘) 등 예외 상황도 겸사겸사.
-- **어디**: 설계 `docs/superpowers/specs/2026-07-31-study-helper-design.md`·계획 `docs/superpowers/plans/2026-07-31-study-helper.md`. 화면 `Sources/Views/StudyHelperView.swift`·배선 `Sources/App/AppState+Study.swift`. S1 로직 산출물: `Sources/Models/StudyLocator.swift`·`StudyItem.swift`·`StudyScope.swift`·`StudyChatDraft.swift`·`StudyRangeChoice.swift`·`Sources/Services/StudySourceLoader.swift`·`StudyChunker.swift`·`StudyPromptBuilder.swift`·`StudyOutputParser.swift`·`StudyService.swift`·`StudyNoteWriter.swift`.
-- **다음**: 이 실기 확인이 끝나면(레고 판정) S3(대화, 레고 확정 우선순위) 또는 S1 피드백 반영으로 이어간다.
+- **왜**: S0(프리셋 버튼) 실기 확인 완료(2026-08-01, 레고 "쓸만한거 같아" 판정)로 게이트 통과 후 진행한 S1(코어+카드+퀴즈+저장) 구현이 끝났다. 실기 확인 중 나온 레고 피드백 3건(부분 범위 선택 필요·쪽 번호 직접입력·개수 상한 50개+템플릿 기능)까지 같은 날 전부 반영해 **v0.9.427로 GitHub 릴리스 발행 완료**(`/Applications`도 같은 빌드로 교체 설치됨).
+- **볼 것**: 왼쪽 리본 학습도우미(졸업모자) 아이콘 클릭 → 교재 파일 선택(PDF·한글/워드·이미지·마크다운 아무거나) → "정리 카드"/"연습 문제" 고르고 개수 정하기(최대 50개) → "전체 파일 사용" 토글을 꺼서 일부만 골라보기(PDF는 쪽 번호 직접 입력, 한글/워드·마크다운은 제목 목록에서 시작~끝 선택) → 필요하면 "템플릿 관리…"에서 나만의 지시문 템플릿 만들어 골라보기 → 만들기 → 미리보기 확인 → "노트로 저장" → "노트 열기"로 내용 확인. 실사용(실제 자격증 교재 등)으로 며칠 써보고 "쓸 만하다" 판정이 나오면 다음 단계로.
+- **어디**: 설계 `docs/superpowers/specs/2026-07-31-study-helper-design.md`·계획 `docs/superpowers/plans/2026-07-31-study-helper.md`. 화면 `Sources/Views/StudyHelperView.swift`·`StudyTemplateManagerView.swift`·배선 `Sources/App/AppState+Study.swift`. S1 로직 산출물: `Sources/Models/StudyLocator.swift`·`StudyItem.swift`·`StudyScope.swift`·`StudyChatDraft.swift`·`StudyRangeChoice.swift`·`StudyTemplate.swift`·`Sources/Services/StudySourceLoader.swift`·`StudyChunker.swift`·`StudyPromptBuilder.swift`·`StudyOutputParser.swift`·`StudyService.swift`·`StudyNoteWriter.swift`.
+- **다음**: 실사용 확인이 끝나면(레고 판정) S3(대화, 레고 확정 우선순위) 또는 이번 실사용에서 나온 추가 피드백 반영으로 이어간다.
 
 ---
 
