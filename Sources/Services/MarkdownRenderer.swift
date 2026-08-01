@@ -600,6 +600,11 @@ class MarkdownRenderer {
         // 위한 다리(2026-07-31, PDF의 onSelectedTextChange와 같은 목적). 항상 켠다(옵션 무관) —
         // interactiveTasks와 달리 체크박스가 없는 문서에도 필요하다. selectionchange는 타이핑 중에도
         // 계속 발화하므로 120ms 디바운스로 postMessage 폭주를 막는다.
+        // 빈 선택은 보내지 않는다(2026-07-31 수정) — "Ask Claude" 버튼을 누르려고 웹뷰 밖을
+        // 클릭하는 순간 브라우저가 선택을 지워 selectionchange가 빈 문자열로 다시 발화하는데,
+        // 그걸 그대로 보내면 방금 고른 선택이 질문 직전에 지워져 매번 전체 문서로 되돌아갔다
+        // (레고 실기로 재현). 문서를 새로 열 때의 리셋은 Swift 쪽에서 onSelectedTextChange("")를
+        // 직접 호출하므로(이 JS 경로를 안 거침) 별개로 계속 동작한다.
         let selectionScript = """
             <script>
                 (function() {
@@ -607,8 +612,9 @@ class MarkdownRenderer {
                     document.addEventListener('selectionchange', function() {
                         if (timer) clearTimeout(timer);
                         timer = setTimeout(function() {
+                            var text = (window.getSelection() || {}).toString() || '';
+                            if (text.length === 0) return;
                             if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.cmdmd) {
-                                var text = (window.getSelection() || {}).toString() || '';
                                 window.webkit.messageHandlers.cmdmd.postMessage({ type: 'selectionChanged', text: text });
                             }
                         }, 120);

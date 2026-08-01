@@ -142,17 +142,27 @@ struct GeneralSettingsView: View {
                 }
                 .disabled(appState.claudeAuthBusy)
                 LabeledContent("모델") {
-                    TextField("모델", text: $state.settings.claudeModel, prompt: Text("비우면 자동(기본값)"))
-                        .textFieldStyle(.roundedBorder)
+                    VStack(alignment: .trailing, spacing: 6) {
+                        Picker("빠른 선택", selection: $state.settings.claudeModel) {
+                            Text("자동(기본값)").tag("")
+                            Text("opus").tag("opus")
+                            Text("sonnet").tag("sonnet")
+                            Text("fable(최신)").tag("fable")
+                        }
                         .labelsHidden()
                         .frame(maxWidth: 220)
+                        TextField("직접 입력", text: $state.settings.claudeModel, prompt: Text("직접 입력(예: claude-opus-5)"))
+                            .textFieldStyle(.roundedBorder)
+                            .labelsHidden()
+                            .frame(maxWidth: 220)
+                    }
                 }
             } header: {
                 Text("Claude")
             } footer: {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("폴더 정리·라우팅·질의는 로컬 claude CLI를 씁니다. ‘브라우저로 로그인’을 누르면 claude auth login이 실행돼 브라우저 로그인 페이지가 열립니다. 별도 API 키는 필요 없습니다.")
-                    Text("모델은 비워두면 claude 프로그램 자체 기본값을 씁니다. 원하는 모델이 있으면 별칭(예: opus, sonnet)이나 정확한 모델 이름을 적어 주세요 — 잘못 적으면 질문할 때 오류가 납니다.")
+                    Text("모델은 비워두면 claude 프로그램 자체 기본값을 씁니다. 위 드롭다운에서 골라도 되고, 목록에 없는 모델(예: 정확한 이름)은 아래 칸에 직접 적으면 됩니다 — 둘은 같은 값이라 하나를 바꾸면 다른 쪽도 같이 바뀝니다. 잘못 적으면 질문할 때 오류가 납니다.")
                 }
                 .font(.caption)
             }
