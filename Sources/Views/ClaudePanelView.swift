@@ -57,7 +57,7 @@ struct ClaudePanelView: View {
                                     Text("작성 중…").foregroundStyle(.secondary).font(.caption)
                                 }
                             }
-                            Text(resp)
+                            ChatMarkdownView(text: resp)
                                 .textSelection(.enabled)
                         }
                     } else if appState.claudeBusy {
