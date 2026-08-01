@@ -52,19 +52,23 @@ final class AppTaskListStateTests: XCTestCase {
 
     // MARK: - 진입점·목록 불러오기
 
-    func testOpenTaskListViewLoadsTodoistTasks() async {
+    /// 진입은 팝업이 아니라 메인 모드 전환이다(레고 2026-08-01 "파일 화면 보듯이").
+    func testOpenTaskListViewSwitchesToTasksMode() {
+        app.openTaskListView()
+        XCTAssertEqual(app.mainMode, .tasks)
+    }
+
+    func testLoadTaskListDataFillsBothTabs() async {
         app.todoistService = TodoistService(transport: FakeTransport())
         app.settings.todoistAPIToken = "가짜토큰"
-        app.openTaskListView()
+        let record = SentTaskRecord(id: UUID(), text: "보낸 것", sourceFileName: "메모.md",
+                                     sourcePath: "/tmp/메모.md", sentAt: Date(), todoistTaskId: "9")
+        await app.sentTaskLogStore.append(record)
 
-        var tries = 0
-        while app.todoistTasks.isEmpty && app.todoistTasksError == nil && tries < 500 {
-            try? await Task.sleep(nanoseconds: 10_000_000)
-            tries += 1
-        }
+        await app.loadTaskListData()
 
-        XCTAssertTrue(app.showTaskListView)
         XCTAssertEqual(app.todoistTasks.map(\.content), ["할일 하나", "할일 둘"])
+        XCTAssertEqual(app.sentTaskRecords, [record])
     }
 
     func testRefreshTodoistTasksWithoutTokenSetsError() async {
@@ -73,10 +77,15 @@ final class AppTaskListStateTests: XCTestCase {
         XCTAssertTrue(app.todoistTasks.isEmpty)
     }
 
-    func testCloseTaskListViewHidesSheet() {
-        app.showTaskListView = true
-        app.closeTaskListView()
-        XCTAssertFalse(app.showTaskListView)
+    /// 다른 모드로 나갔다가 돌아와도 동작해야 한다 — 모드 전환은 상태를 지우지 않는다.
+    func testSwitchingAwayAndBackKeepsLoadedTasks() async {
+        app.todoistService = TodoistService(transport: FakeTransport())
+        app.settings.todoistAPIToken = "가짜토큰"
+        await app.loadTaskListData()
+        app.mainMode = .reader
+        app.openTaskListView()
+        XCTAssertEqual(app.mainMode, .tasks)
+        XCTAssertEqual(app.todoistTasks.count, 2)
     }
 
     // MARK: - 완료 처리(양방향 — 레고 결정)

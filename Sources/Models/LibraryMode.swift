@@ -2,10 +2,13 @@ import Foundation
 
 // MARK: - MainMode
 
-/// 메인 에디터 영역의 모드. reader = 파일 리더, library = 폴더 라이브러리 뷰.
+/// 메인 에디터 영역의 모드. reader = 파일 리더, library = 폴더 라이브러리 뷰,
+/// tasks = 할일 목록(간트차트). 레고 요청(2026-08-01) — 할일 화면을 팝업 시트가 아니라
+/// 파일 화면처럼 메인 창 전체를 쓰는 정식 모드로 승격.
 enum MainMode: String, Codable, CaseIterable {
     case reader
     case library
+    case tasks
 }
 
 // MARK: - LibraryLayout

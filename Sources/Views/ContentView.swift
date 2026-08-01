@@ -50,11 +50,15 @@ struct ContentView: View {
             ToolbarItemGroup(placement: .navigation) {
                 MainModePicker()
                 DualPaneToggleButton()
-                if appState.mainMode == .reader {
+                switch appState.mainMode {
+                case .reader:
                     ViewModePicker()
-                } else {
+                case .library:
                     LibraryLayoutPicker()
                     LibrarySortMenu()
+                case .tasks:
+                    // 할일 모드는 자체 탭(할일/보낸 기록)만 쓰고 보기·정렬 옵션이 없다.
+                    EmptyView()
                 }
             }
 
@@ -99,9 +103,6 @@ struct ContentView: View {
         }
         .sheet(isPresented: $state.showTaskFinder) {
             TaskFinderView()
-        }
-        .sheet(isPresented: $state.showTaskListView) {
-            TaskListView()
         }
         .sheet(isPresented: $state.showQuickCapture) {
             // The ⇧⌘M quick-capture panel — previously the hotkey set a flag
@@ -211,7 +212,7 @@ struct ContentView: View {
     }
 }
 
-/// 메인 모드 토글(리더 ↔ 라이브러리).
+/// 메인 모드 토글(리더 ↔ 라이브러리 ↔ 할일).
 struct MainModePicker: View {
     @Environment(AppState.self) private var appState
 
@@ -225,6 +226,9 @@ struct MainModePicker: View {
             Label("라이브러리", systemImage: "square.grid.2x2")
                 .help("라이브러리 모드 — 폴더 훑어보기")
                 .tag(MainMode.library)
+            Label("할일", systemImage: "chart.bar.xaxis")
+                .help("할일 모드 — Todoist 할일 간트차트")
+                .tag(MainMode.tasks)
         }
         .pickerStyle(.segmented)
         .labelStyle(.iconOnly)

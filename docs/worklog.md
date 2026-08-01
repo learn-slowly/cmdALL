@@ -720,3 +720,16 @@ todolist.md의 "지금" 절 삭제(항목 4개 전부 제거) — 남은 건 "�
 - 그동안 `openTaskListView()`가 같이 부르던 `loadTodoistProjects()`(행에 프로젝트 이름 표시용)는 이제 화면에서 안 쓰여 제거 — 설정 화면 쪽 프로젝트 선택은 그쪽 자체 "연결 확인" 버튼으로 여전히 동작.
 - 신규 테스트 16건 — `GanttLayoutTests` 13건(범위 계산·막대 비율 경계값·지난 마감·0으로 나누기 방어·클램프), `TodoistServiceTests`에 `parsedDate` 3건(날짜만·ISO8601·깨진 값). `AppTaskListStateTests`의 진입점 테스트 이름을 `testOpenTaskListViewLoadsTodoistTasks`로 정정(더 이상 프로젝트를 같이 안 불러오므로). `swift test` **1,409개** 전량 통과, 회귀 0. `swift build` 경고 없음. `scripts/test_package_app.sh` 패키징 가드 통과.
 - **로컬 재패키징·`/Applications` 교체 설치 완료**(레고 "앱을 닫음" 확인 후 — `cmdALL.app.bak-20260801-182436`로 백업, 서명 재검증·재실행 확인).
+
+---
+
+## 2026-08-01 — 할일 화면을 팝업에서 "파일 화면처럼" 메인 모드로 승격(레고 피드백)
+
+레고님 요청: "이걸 파일 화면 보듯이 해줘" — 간트차트가 팝업 시트(620×520 고정)로 뜨는 게 아니라 파일 화면처럼 메인 창 전체를 쓰길 원함.
+
+- **`MainMode`에 `tasks` 추가** — 기존 `reader`(문서 하나 읽기)·`library`(폴더 훑기)와 나란한 정식 3번째 모드. `MainEditorView`가 `if/else`에서 `switch`로 바뀌며 `.tasks`일 때 `TaskListView`를 창 전체에 그린다.
+- **툴바 모드 선택기에 "할일"(막대그래프 아이콘) 추가** — 리더/라이브러리와 같은 세그먼트 컨트롤에서 바로 전환. 할일 모드에선 보기(리더용)·레이아웃/정렬(라이브러리용) 옵션을 숨긴다.
+- **`TaskListView`에서 시트 흔적 제거** — 고정 크기 `frame(width:height:)` → `maxWidth/maxHeight: .infinity`, "닫기" 버튼 삭제(모드 전환으로 나가면 됨). 데이터 로드는 `.task { loadTaskListData() }`로 화면이 뜰 때마다 최신화.
+- **`openTaskListView()`가 시트 플래그 대신 `mainMode = .tasks`로 전환**, `showTaskListView` 상태·`closeTaskListView()`·`ContentView`의 `.sheet` 배선 전부 제거(죽은 코드 남기지 않음). `loadTaskListData()`(두 탭 한 번에)를 새로 뽑아 진입·재진입 공용으로.
+- `showFileInfoForCurrentContext()`의 `switch mainMode`에 `.tasks` 분기 추가(정보 볼 파일·폴더 대상이 없어 무동작) — 컴파일러가 잡아준 누락.
+- 테스트 조정 — 시트 기반 2건(`testOpenTaskListViewLoadsTodoistTasks`·`testCloseTaskListViewHidesSheet`)을 모드 기반 3건(`testOpenTaskListViewSwitchesToTasksMode`·`testLoadTaskListDataFillsBothTabs`·`testSwitchingAwayAndBackKeepsLoadedTasks`)으로 교체. `swift test` **1,410개** 전량 통과, 회귀 0. `swift build` 경고 없음. `scripts/test_package_app.sh` 패키징 가드 통과.

@@ -4,14 +4,18 @@ import Foundation
 /// 채운다. 실제 API 호출은 `TodoistService`, 이력 저장은 `SentTaskLogStore`에 있다.
 extension AppState {
 
+    /// 할일 화면으로 전환한다 — 팝업이 아니라 파일 화면(리더·라이브러리)과 같은 메인 모드
+    /// 전환이다(레고 2026-08-01 "이걸 파일 화면 보듯이 해줘"). 데이터 로드는 화면이 뜨면서
+    /// `TaskListView.task`가 `loadTaskListData()`로 부른다.
     func openTaskListView() {
-        showTaskListView = true
-        Task { @MainActor in await refreshTodoistTasks() }
-        Task { @MainActor in await loadSentTaskRecords() }
+        mainMode = .tasks
     }
 
-    func closeTaskListView() {
-        showTaskListView = false
+    /// 두 탭에 필요한 데이터를 한 번에 채운다(진입·재진입 공용).
+    @MainActor
+    func loadTaskListData() async {
+        await refreshTodoistTasks()
+        await loadSentTaskRecords()
     }
 
     /// 등록한 프로젝트 구분 없이 통틀어 가져온다(레고 결정 — "모든 프로젝트 통틀어 다 보기").

@@ -434,8 +434,7 @@ final class AppState {
     var todoistProjects: [TodoistProject] = []
     var todoistProjectsLoading: Bool = false
     var todoistProjectsError: String? = nil
-    // MARK: - 할일 목록 보기(Todoist 실시간 + 보낸 기록)
-    var showTaskListView: Bool = false
+    // MARK: - 할일 목록(Todoist 실시간 + 보낸 기록) — 팝업이 아니라 `MainMode.tasks` 화면
     var taskListSelectedTab: TaskListTab = .todoist
     var todoistTasks: [TodoistTask] = []
     var todoistTasksLoading: Bool = false

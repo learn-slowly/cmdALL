@@ -5,9 +5,12 @@ struct MainEditorView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            if appState.mainMode == .library {
+            switch appState.mainMode {
+            case .library:
                 LibraryView()
-            } else {
+            case .tasks:
+                TaskListView()
+            case .reader:
                 readerLayout
             }
         }

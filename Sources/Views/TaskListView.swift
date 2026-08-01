@@ -1,8 +1,10 @@
 import SwiftUI
 
-/// "할일 목록 보기" — Todoist 실시간 할일(모든 프로젝트 통틀어) + 이 앱이 문서에서 찾아
-/// Todoist로 보낸 기록, 두 탭. 실제 로직은 `AppState+TaskList.swift`/`TodoistService`/
-/// `SentTaskLogStore`에 있고, 이 화면은 배선만 부른다.
+/// "할일 목록" — Todoist 실시간 할일(간트차트) + 이 앱이 문서에서 찾아 Todoist로 보낸 기록,
+/// 두 탭. 레고 요청(2026-08-01 "이걸 파일 화면 보듯이 해줘")으로 팝업 시트가 아니라
+/// 파일 화면(리더·라이브러리)과 같은 **메인 창 전체 모드**(`MainMode.tasks`)로 들어간다.
+/// 실제 로직은 `AppState+TaskList.swift`/`TodoistService`/`SentTaskLogStore`에 있고,
+/// 이 화면은 배선만 부른다.
 struct TaskListView: View {
     @Environment(AppState.self) private var appState
 
@@ -16,6 +18,7 @@ struct TaskListView: View {
             }
             .pickerStyle(.segmented)
             .labelsHidden()
+            .frame(maxWidth: 320, alignment: .leading)
 
             if appState.taskListSelectedTab == .todoist {
                 todoistTab
@@ -24,14 +27,15 @@ struct TaskListView: View {
             }
         }
         .padding(16)
-        .frame(width: 620, height: 520)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        // 파일 화면과 같은 진입 감각 — 모드로 들어올 때마다 최신 상태를 한 번 불러온다.
+        .task { await appState.loadTaskListData() }
     }
 
     private var header: some View {
         HStack {
             Text("할일 목록").font(.headline)
             Spacer()
-            Button("닫기") { appState.closeTaskListView() }
         }
     }
 
