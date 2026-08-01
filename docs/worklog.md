@@ -786,3 +786,7 @@ todolist.md의 "지금" 절 삭제(항목 4개 전부 제거) — 남은 건 "�
   글자라 링크를 누를 수 없어서, 같은 헬퍼로 원본 그 위치를 여는 버튼을 뒀다.
 - 테스트 19건 추가(`StudySourceLinkTests` 13 + `AppStudyReviewStateTests` 6). `swift test`
   **1,440개** 전량 통과.
+
+**릴리스 0.9.429(2026-08-01)** — 위 세 건(간트 6개월 상한·가로축 눈금선·근거 태그 원본 점프)을
+묶어 배포. `scripts/package_app.sh` Info.plist·`AppInfo.version` 폴백 동기화, `test_package_app.sh`
+패키징 가드 통과, 태그 `v0.9.429` 푸시로 GitHub Actions 릴리스.

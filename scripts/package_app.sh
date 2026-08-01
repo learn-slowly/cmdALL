@@ -204,7 +204,7 @@ cat > "$PLIST" <<'PLIST'
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>CFBundleShortVersionString</key>
-  <string>0.9.428</string>
+  <string>0.9.429</string>
   <key>CFBundleURLTypes</key>
   <array>
     <dict>

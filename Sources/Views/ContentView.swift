@@ -542,7 +542,7 @@ struct WindowAccessor: NSViewRepresentable {
 
 enum AppInfo {
     static var version: String {
-        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.428"
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.429"
     }
     static var build: String {
         Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? ""
