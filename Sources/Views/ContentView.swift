@@ -56,8 +56,8 @@ struct ContentView: View {
                 case .library:
                     LibraryLayoutPicker()
                     LibrarySortMenu()
-                case .tasks:
-                    // 할일 모드는 자체 탭(할일/보낸 기록)만 쓰고 보기·정렬 옵션이 없다.
+                case .tasks, .progress:
+                    // 할일·진도 모드는 자체 화면 안에서만 조작하고 보기·정렬 옵션이 없다.
                     EmptyView()
                 }
             }
@@ -212,7 +212,7 @@ struct ContentView: View {
     }
 }
 
-/// 메인 모드 토글(리더 ↔ 라이브러리 ↔ 할일).
+/// 메인 모드 토글(리더 ↔ 라이브러리 ↔ 할일 ↔ 진도).
 struct MainModePicker: View {
     @Environment(AppState.self) private var appState
 
@@ -229,6 +229,9 @@ struct MainModePicker: View {
             Label("할일", systemImage: "chart.bar.xaxis")
                 .help("할일 모드 — Todoist 할일 간트차트")
                 .tag(MainMode.tasks)
+            Label("진도", systemImage: "books.vertical")
+                .help("진도 모드 — 교재 목차 대비 읽음·만듦·익힘")
+                .tag(MainMode.progress)
         }
         .pickerStyle(.segmented)
         .labelStyle(.iconOnly)

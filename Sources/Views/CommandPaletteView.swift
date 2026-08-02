@@ -333,6 +333,15 @@ struct Command: Identifiable {
             ) {
                 appState.openTaskListView()
             },
+            Command(
+                title: "교재 진도 보기",
+                subtitle: "교재 목차 대비 읽음·만듦·익힘을 한 화면에서",
+                icon: "books.vertical",
+                shortcut: nil,
+                keywords: ["진도", "교재", "목차", "progress", "학습", "공부", "책"]
+            ) {
+                appState.openStudyProgressView()
+            },
 
             Command(
                 title: "폴더 정리 (배치)",

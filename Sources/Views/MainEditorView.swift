@@ -10,6 +10,8 @@ struct MainEditorView: View {
                 LibraryView()
             case .tasks:
                 TaskListView()
+            case .progress:
+                StudyProgressView()
             case .reader:
                 readerLayout
             }

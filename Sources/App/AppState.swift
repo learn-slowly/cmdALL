@@ -419,6 +419,23 @@ final class AppState {
     var studyReviewRebuildNotice: String? = nil
     /// 사이드바 리본/메뉴 배지용 — 재빌드·채점 때마다 갱신(§3.9 "신호는 앱 내 배지만").
     var studyDueCount: Int = 0
+    // MARK: - 교재 진도 관리(2026-08-02)
+    /// 등록된 교재 + 각각의 진도(진도 노트 파일에서 읽어 계산한 값).
+    var studyProgressBooks: [StudyProgressBook] = []
+    var studyProgressSelectedID: UUID? = nil
+    var studyProgressBusy: Bool = false
+    var studyProgressError: String? = nil
+    /// 카드·문제를 만든 적 있는데 아직 진도 관리에 등록 안 된 교재(원클릭 등록 후보).
+    var studyProgressSuggestions: [URL] = []
+    /// 교재 등록 미리보기 — "등록"을 누르기 전까지는 파일이 하나도 생기지 않는다.
+    var studyProgressPendingOutline: StudyOutline? = nil
+    var studyProgressPendingSource: URL? = nil
+    var studyProgressPendingKind: DocumentKind? = nil
+    /// 글자 목차 원본(쪽번호 보정을 바꾸면 이걸로 목차를 다시 조립한다).
+    var studyProgressPendingTOC: [StudyTOCTextParser.Entry] = []
+    var studyProgressPendingOffset: Int = 0
+    /// "목차를 어디서 읽었는지" 한 줄 안내.
+    var studyProgressPendingSourceLabel: String = ""
     // MARK: - 문서에서 할일 찾기 → Todoist
     var showTaskFinder: Bool = false
     var taskFinderSourceURL: URL? = nil
