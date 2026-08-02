@@ -153,13 +153,14 @@ enum StudyNoteWriter {
         return "<!-- study " + tokens.joined(separator: " ") + " -->"
     }
 
-    // MARK: - 위치 표기 변환(앵커용 `p12`/`l345`/`-` · 본문 인용용 `[[p12]]`, §3.3·O1)
+    // MARK: - 위치 표기 변환(앵커용 `p12`/`l345`/`s3`/`-` · 본문 인용용 `[[p12]]`, §3.3·O1)
 
     static func anchorLoc(_ locator: StudyLocator) -> String {
         switch locator {
         case .page(let n): return "p\(n)"
         case .pageRange(let a, let b): return "p\(a)-\(b)"
         case .line(let n): return "l\(n)"
+        case .section(let n): return "s\(n)"
         case .unknown: return "-"
         }
     }
@@ -181,6 +182,10 @@ enum StudyNoteWriter {
             guard let n = Int(s.dropFirst()) else { return nil }
             return .line(n)
         }
+        if s.hasPrefix("s") {
+            guard let n = Int(s.dropFirst()) else { return nil }
+            return .section(n)
+        }
         return nil
     }
 
@@ -189,6 +194,7 @@ enum StudyNoteWriter {
         case .page(let n): return "[[p\(n)]]"
         case .pageRange(let a, let b): return "[[p\(a)-\(b)]]"
         case .line(let n): return "[[l\(n)]]"
+        case .section(let n): return "[[s\(n)]]"
         case .unknown: return "[[?]]"
         }
     }

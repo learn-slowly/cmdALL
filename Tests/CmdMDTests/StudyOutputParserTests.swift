@@ -32,6 +32,36 @@ final class StudyOutputParserTests: XCTestCase {
         XCTAssertEqual(result.invalidCitations, 0)
     }
 
+    /// 한글·워드 교재는 "몇 번째 구간"이 위치다(2026-08-02) — `[[s3]]` 인용도 그대로 살아야 한다.
+    func testParsesSectionCitationFromOfficeChunk() {
+        let body = "[[s3]] 변환된 글 발췌"
+        let text = """
+        ### [카드] 구간 카드
+        - 핵심
+        > 근거: [[s3]] "변환된 글 발췌"
+        """
+
+        let result = StudyOutputParser.parseCards(text, chunk: chunk(body: body, covering: [.section(3)]), maxCount: 10)
+
+        XCTAssertEqual(result.cards.count, 1)
+        XCTAssertEqual(result.cards[0].locator, .section(3))
+        XCTAssertEqual(result.invalidCitations, 0)
+    }
+
+    func testSectionCitationOutsideChunkIsDemotedToUnknown() {
+        let body = "[[s3]] 변환된 글 발췌"
+        let text = """
+        ### [카드] 엉뚱한 구간
+        - 핵심
+        > 근거: [[s9]] "변환된 글 발췌"
+        """
+
+        let result = StudyOutputParser.parseCards(text, chunk: chunk(body: body, covering: [.section(3)]), maxCount: 10)
+
+        XCTAssertEqual(result.cards[0].locator, .unknown, "청크 밖 구간 인용은 위치를 지운다(O4)")
+        XCTAssertEqual(result.invalidCitations, 1)
+    }
+
     func testOnlyExtractsHashHashHashBlocksIgnoringPreambleChatter() {
         let body = "[[p1]] 발췌"
         let text = """

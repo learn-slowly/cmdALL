@@ -78,6 +78,8 @@ enum StudyChunker {
             return "[[p\(a)-\(b)]]"
         case .line(let n):
             return "[[l\(n)]]"
+        case .section(let n):
+            return "[[s\(n)]]"
         case .unknown:
             return "[[?]]"
         }

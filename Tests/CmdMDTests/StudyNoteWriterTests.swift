@@ -91,7 +91,7 @@ final class StudyNoteWriterTests: XCTestCase {
         let scope = StudyScope(fileURL: makeSource(), kind: .pdf, range: .wholeFile)
         let cases: [(StudyLocator, String)] = [
             (.page(12), "loc=p12"), (.pageRange(3, 5), "loc=p3-5"),
-            (.line(345), "loc=l345"), (.unknown, "loc=- "),
+            (.line(345), "loc=l345"), (.section(3), "loc=s3"), (.unknown, "loc=- "),
         ]
         for (locator, expectedFragment) in cases {
             let result = StudyNoteWriter.buildCardNote(
@@ -99,6 +99,15 @@ final class StudyNoteWriterTests: XCTestCase {
                 title: "제목", now: fixedDate, makeUUID: sequentialUUIDGenerator()
             )
             XCTAssertTrue(result.body.contains(expectedFragment), "\(locator) → \(expectedFragment) 없음")
+        }
+    }
+
+    /// 앵커 위치 표기는 왕복(쓰기 → 읽기)이 정확해야 한다 — 구간(s)은 2026-08-02에 추가.
+    func testParseAnchorLocRoundTripsEveryLocatorKind() {
+        let locators: [StudyLocator] = [.page(12), .pageRange(3, 5), .line(345), .section(3), .unknown]
+        for locator in locators {
+            let text = StudyNoteWriter.anchorLoc(locator)
+            XCTAssertEqual(StudyNoteWriter.parseAnchorLoc(text), locator, "\(text) 왕복 실패")
         }
     }
 

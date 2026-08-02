@@ -103,13 +103,14 @@ final class StudySourceLoaderTests: XCTestCase {
 
     // MARK: - 오피스: 제목(헤딩) 구간 부분 선택(§5.2 I3) — kordoc 없이 순수 함수만 검증
 
-    func testOfficeSegmentsSplitAtHeadingBoundariesAllUnknownLocator() {
+    func testOfficeSegmentsSplitAtHeadingBoundariesWithSectionLocators() {
         let body = "머리말\n\n# 1장\n1장 본문\n\n# 2장\n2장 본문\n"
 
         let segments = StudySourceLoader.officeSegments(body: body, range: .wholeFile)
 
         XCTAssertEqual(segments.count, 3)
-        XCTAssertTrue(segments.allSatisfy { $0.locator == .unknown })
+        // 2026-08-02: 원본 쪽수는 몰라도 "몇 번째 구간"은 남긴다(진도의 만듦·익힘 연결).
+        XCTAssertEqual(segments.map(\.locator), [.section(1), .section(2), .section(3)])
         XCTAssertTrue(segments[0].text.contains("머리말"))
         XCTAssertTrue(segments[1].text.contains("1장 본문"))
         XCTAssertTrue(segments[2].text.contains("2장 본문"))
@@ -121,7 +122,7 @@ final class StudySourceLoaderTests: XCTestCase {
         let segments = StudySourceLoader.officeSegments(body: body, range: .wholeFile)
 
         XCTAssertEqual(segments.count, 1)
-        XCTAssertEqual(segments[0].locator, .unknown)
+        XCTAssertEqual(segments[0].locator, .section(1))
         XCTAssertTrue(segments[0].text.contains("표만 있는 문서"))
     }
 
@@ -131,6 +132,7 @@ final class StudySourceLoaderTests: XCTestCase {
         let segments = StudySourceLoader.officeSegments(body: body, range: .sectionRange(2, 2))
 
         XCTAssertEqual(segments.count, 1)
+        XCTAssertEqual(segments[0].locator, .section(2), "고른 구간의 실제 번호가 붙어야 한다")
         XCTAssertTrue(segments[0].text.contains("2장 내용"))
         XCTAssertFalse(segments[0].text.contains("1장 내용"))
         XCTAssertFalse(segments[0].text.contains("3장 내용"))

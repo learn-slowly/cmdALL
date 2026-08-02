@@ -134,4 +134,49 @@ final class StudyProgressCalculatorTests: XCTestCase {
         XCTAssertEqual(summary.madeRatio, 1.0, accuracy: 0.0001)
         XCTAssertEqual(summary.masteredRatio, 1.0, accuracy: 0.0001)
     }
+
+    // MARK: - 한글·워드(구간 단위) 진도 연결(2026-08-02)
+
+    /// 구간 3개짜리 오피스 교재(장 = 구간 하나).
+    private func officeOutline(read: [Bool] = [false, false, false]) -> StudyOutline {
+        StudyOutline(unit: .section, total: 3, chapters: [
+            StudyOutlineChapter(no: 1, title: "머리말", start: 1, end: 1, read: read[0]),
+            StudyOutlineChapter(no: 2, title: "1장", start: 2, end: 2, read: read[1]),
+            StudyOutlineChapter(no: 3, title: "2장", start: 3, end: 3, read: read[2]),
+        ])
+    }
+
+    private func sectionItem(section: Int, interval: Int) -> StudyIndexItem {
+        StudyIndexItem(uid: UUID(), studyID: UUID(), notePath: "/n.md", kind: .card,
+                       loc: .section(section), title: "t", body: "b",
+                       state: StudyReviewState(due: Date(), interval: interval, ease: 2.5,
+                                                reps: interval > 0 ? 1 : 0, lapses: 0),
+                       lineText: "", srcPath: "/교재.hwp")
+    }
+
+    func testSectionLocatorAttachesItemToMatchingChapter() {
+        let summary = StudyProgressCalculator.summarize(
+            outline: officeOutline(), items: [sectionItem(section: 2, interval: 0)])
+
+        XCTAssertEqual(summary.unplacedItemCount, 0, "한글·워드도 이제 장에 붙는다")
+        XCTAssertEqual(summary.madeLength, 1, "카드를 만든 구간 하나만 '만듦'")
+        XCTAssertEqual(summary.chapters[1].itemCount, 1)
+        XCTAssertEqual(summary.chapters[0].itemCount, 0)
+    }
+
+    func testSectionMasteryCountsTowardMasteredLength() {
+        let summary = StudyProgressCalculator.summarize(
+            outline: officeOutline(),
+            items: [sectionItem(section: 3, interval: 30), sectionItem(section: 3, interval: 1)])
+
+        XCTAssertEqual(summary.masteredItemCount, 1)
+        XCTAssertEqual(summary.masteredLength, 0.5, accuracy: 0.001, "3구간 2개 중 1개 익힘 → 1 × 0.5")
+    }
+
+    func testSectionLocatorNeedsSectionUnit() {
+        XCTAssertEqual(StudyProgressCalculator.position(of: .section(2), unit: .section), 2)
+        XCTAssertNil(StudyProgressCalculator.position(of: .section(2), unit: .page),
+                     "쪽 단위 교재에 구간 위치를 섞으면 붙이지 않는다")
+        XCTAssertNil(StudyProgressCalculator.position(of: .page(2), unit: .section))
+    }
 }

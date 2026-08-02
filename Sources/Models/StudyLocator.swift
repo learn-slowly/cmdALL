@@ -1,12 +1,15 @@
 import Foundation
 
 /// 학습도우미가 만든 카드·문제·발췌가 원본 문서의 어디를 가리키는지.
-/// PDF는 쪽(page), 마크다운·텍스트는 줄(line), 위치를 알 수 없는 종류(오피스·이미지)는
-/// `.unknown`. 모두 1-based(설계 문서 §5.1) — PDFKit 인덱스는 +1해서 담는다.
+/// PDF는 쪽(page), 마크다운·텍스트는 줄(line), 오피스(한글·워드)는 kordoc이 변환한 글의
+/// **몇 번째 구간**(section) — 원본 쪽수는 끝내 알 수 없지만 구간 번호는 셀 수 있다
+/// (2026-08-02 진도 연결). 그래도 알 수 없으면 `.unknown`.
+/// 모두 1-based(설계 문서 §5.1) — PDFKit 인덱스는 +1해서 담는다.
 enum StudyLocator: Equatable, Hashable {
     case page(Int)
     case pageRange(Int, Int)
     case line(Int)
+    case section(Int)
     case unknown
 }
 

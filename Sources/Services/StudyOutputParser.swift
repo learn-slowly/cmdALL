@@ -214,6 +214,9 @@ enum StudyOutputParser {
         if inner.hasPrefix("l"), let n = Int(inner.dropFirst()) {
             return .line(n)
         }
+        if inner.hasPrefix("s"), let n = Int(inner.dropFirst()) {
+            return .section(n)
+        }
         return nil
     }
 }

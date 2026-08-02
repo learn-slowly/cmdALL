@@ -85,12 +85,15 @@ actor StudySourceLoader {
     /// office는 원본 파일 안에서의 위치(쪽·줄)를 알 방법이 없다 — kordoc이 그 정보를
     /// 주지 않는다. 대신 변환된 글 자체를 마크다운/텍스트와 같은 방식으로 제목(헤딩)
     /// 경계에서 나눠 "N번째 구간"이라는 단위를 만들고, 그 구간 단위로 부분 선택을 받는다.
-    /// 위치는 여전히 `.unknown`(원본 몇 쪽인지는 끝내 모른다).
+    /// 위치는 그 **구간 번호**(`.section(n)`)로 남긴다 — 원본 몇 쪽인지는 끝내 모르지만
+    /// 구간 번호만 있어도 진도 관리가 "몇 번째 장에서 만든 카드인지"를 안다(2026-08-02).
     static func officeSegments(body: String, range: StudyScopeRange) -> [StudySegment] {
         let sections = headingSections(from: body)
         guard !sections.isEmpty else { return [] }
         guard let (lo, hi) = sectionBounds(range: range, sectionCount: sections.count) else { return [] }
-        return sections[(lo - 1)...(hi - 1)].map { StudySegment(text: $0, locator: .unknown) }
+        return sections[(lo - 1)...(hi - 1)].enumerated().map {
+            StudySegment(text: $0.element, locator: .section(lo + $0.offset))
+        }
     }
 
     /// 헤딩 경계로 나눈 구간 본문 목록(순서대로, 빈 구간은 제외) — 텍스트 파일 세그먼트

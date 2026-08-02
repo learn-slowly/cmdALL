@@ -55,12 +55,13 @@ enum StudySourceLink {
         return URL(fileURLWithPath: decoded, relativeTo: base).standardizedFileURL
     }
 
-    /// 위치에서 "몇 쪽"(PDF 점프용). 쪽 범위는 첫 쪽, 줄·불명은 nil.
+    /// 위치에서 "몇 쪽"(PDF 점프용). 쪽 범위는 첫 쪽, 줄·구간·불명은 nil
+    /// (구간은 한글·워드 변환본 기준이라 원본 파일에서 그 자리로 뛸 수 없다).
     static func page(of locator: StudyLocator) -> Int? {
         switch locator {
         case .page(let n): return n
         case .pageRange(let a, _): return a
-        case .line, .unknown: return nil
+        case .line, .section, .unknown: return nil
         }
     }
 

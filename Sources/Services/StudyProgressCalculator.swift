@@ -91,9 +91,10 @@ enum StudyProgressCalculator {
 
     /// 항목의 위치가 어느 장에 속하는지(장 번호). 위치를 알 수 없거나 어느 장에도 안 들면 nil.
     ///
-    /// 오피스(한글·워드) 교재는 원본 위치를 알 방법이 없어 `loc`이 항상 `.unknown`이다(§5.2) —
-    /// 그래서 오피스 교재는 지금 "읽음"만 잡히고 만듦·익힘은 0으로 나온다. 화면이 그 이유를
-    /// 안내하고, 후속 조각에서 노트 frontmatter에 만든 범위를 남기는 방식으로 푼다.
+    /// 오피스(한글·워드) 교재는 원본 쪽수를 알 방법이 없지만, kordoc이 변환한 글의
+    /// **구간 번호**(`.section`)는 남아 있어 그 번호로 장을 찾는다(2026-08-02 — 그전에는
+    /// 오피스 교재가 "읽음"만 잡혔다). 2026-08-02 이전에 만든 노트는 위치가 `-`로만 적혀
+    /// 있어 여전히 어느 장에도 안 붙는다 — 그 교재는 카드·문제를 다시 만들면 붙는다.
     static func chapterNumber(for loc: StudyLocator, unit: StudyOutlineUnit,
                               chapters: [StudyOutlineChapter]) -> Int? {
         guard let position = position(of: loc, unit: unit) else { return nil }
@@ -106,6 +107,7 @@ enum StudyProgressCalculator {
         case (.page(let n), .page): return n
         case (.pageRange(let a, _), .page): return a
         case (.line(let n), .line): return n
+        case (.section(let n), .section): return n
         default: return nil
         }
     }

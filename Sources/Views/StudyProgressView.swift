@@ -213,7 +213,7 @@ struct StudyProgressView: View {
             summaryBars(book.summary)
 
             if book.summary.unplacedItemCount > 0 {
-                Text("카드·문제 \(book.summary.unplacedItemCount)개는 원본 위치를 알 수 없어 어느 장에도 붙지 않았습니다(한글·워드 문서는 쪽 번호가 없습니다).")
+                Text("카드·문제 \(book.summary.unplacedItemCount)개는 만든 위치가 적혀 있지 않아 어느 장에도 붙지 않았습니다(2026-08-02 이전에 만든 한글·워드 카드·문제 — 다시 만들면 장에 붙습니다).")
                     .font(.caption).foregroundStyle(.orange)
             }
             if !book.sourceExists {

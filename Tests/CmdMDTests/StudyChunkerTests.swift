@@ -46,10 +46,11 @@ final class StudyChunkerTests: XCTestCase {
         XCTAssertEqual(chunks[0].charCount, chunks[0].body.count)
     }
 
-    func testLineAndUnknownLocatorsUseExpectedTagFormat() {
+    func testLineSectionAndUnknownLocatorsUseExpectedTagFormat() {
         let segments = [
             StudySegment(text: "글", locator: .line(345)),
             StudySegment(text: "글2", locator: .unknown),
+            StudySegment(text: "글3", locator: .section(3)),
         ]
 
         let chunks = StudyChunker.chunks(from: segments, budget: 1000)
@@ -57,6 +58,7 @@ final class StudyChunkerTests: XCTestCase {
         XCTAssertEqual(chunks.count, 1)
         XCTAssertTrue(chunks[0].body.contains("[[l345]] 글"))
         XCTAssertTrue(chunks[0].body.contains("[[?]] 글2"))
+        XCTAssertTrue(chunks[0].body.contains("[[s3]] 글3"), "한글·워드 구간도 태그가 붙는다(2026-08-02)")
     }
 
     // MARK: - 경계 보존(헤딩·페이지) — 예산이 넉넉하면 한 청크로 합치되 태그는 각자 유지
