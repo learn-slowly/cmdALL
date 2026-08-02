@@ -20,7 +20,7 @@ struct StudyReviewView: View {
             Spacer(minLength: 0)
         }
         .padding(16)
-        .frame(width: 520, height: 480)
+        .frame(minWidth: 600, idealWidth: 760, minHeight: 520, idealHeight: 680)
         .task { await appState.openStudyReview() }
     }
 
@@ -33,6 +33,10 @@ struct StudyReviewView: View {
                 Text(progressLabel).font(.caption).foregroundStyle(.secondary)
             }
             Spacer()
+            Button("되돌리기") { Task { await appState.undoLastStudyReviewGrade() } }
+                .disabled(appState.studyReviewBusy || appState.studyReviewUndo == nil)
+                .keyboardShortcut("z", modifiers: .command)
+                .help("방금 매긴 채점을 되돌립니다 (⌘Z)")
             Button("다시 훑기") { Task { await appState.refreshStudyReview() } }
                 .disabled(appState.studyReviewBusy)
             Button("닫기") { appState.closeStudyReview() }
@@ -93,9 +97,10 @@ struct StudyReviewView: View {
                 gradingRow
             } else {
                 Spacer()
-                Button("정답/전체 보기") { appState.revealStudyReviewAnswer() }
+                Button("정답/전체 보기  (스페이스)") { appState.revealStudyReviewAnswer() }
                     .buttonStyle(.borderedProminent)
                     .frame(maxWidth: .infinity)
+                    .keyboardShortcut(.space, modifiers: [])
                 Spacer()
             }
         }
@@ -103,17 +108,26 @@ struct StudyReviewView: View {
     }
 
     private var gradingRow: some View {
-        HStack(spacing: 8) {
-            gradeButton("모름", outcome: .forgot, tint: .red)
-            gradeButton("애매", outcome: .unsure, tint: .orange)
-            gradeButton("앎", outcome: .knew, tint: .green)
+        VStack(spacing: 6) {
+            HStack(spacing: 8) {
+                gradeButton("모름", outcome: .forgot, tint: .red, key: "1")
+                gradeButton("애매", outcome: .unsure, tint: .orange, key: "2")
+                gradeButton("앎", outcome: .knew, tint: .green, key: "3")
+            }
+            Text("키보드: 1 모름 · 2 애매 · 3 앎 · ⌘Z 되돌리기")
+                .font(.caption2).foregroundStyle(.secondary)
         }
     }
 
-    private func gradeButton(_ title: String, outcome: ReviewOutcome, tint: Color) -> some View {
-        Button(title) { Task { await appState.gradeCurrentStudyReviewItem(outcome) } }
-            .buttonStyle(.bordered)
-            .tint(tint)
-            .frame(maxWidth: .infinity)
+    /// 채점 버튼 — 숫자키 하나로도 눌린다(다듬기 A, 레고 2026-08-02 "키보드로 채점").
+    private func gradeButton(_ title: String, outcome: ReviewOutcome, tint: Color,
+                             key: KeyEquivalent) -> some View {
+        Button("\(title) (\(String(key.character)))") {
+            Task { await appState.gradeCurrentStudyReviewItem(outcome) }
+        }
+        .buttonStyle(.bordered)
+        .tint(tint)
+        .frame(maxWidth: .infinity)
+        .keyboardShortcut(key, modifiers: [])
     }
 }

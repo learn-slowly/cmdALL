@@ -165,6 +165,72 @@ final class AppStudyReviewStateTests: XCTestCase {
         XCTAssertNil(app.studyReviewError)
     }
 
+    // MARK: - 채점 되돌리기(다듬기 A, 2026-08-02)
+
+    func testUndoLastStudyReviewGradeRestoresNoteAndPosition() async {
+        let url = writeDueCardNote(title: "되돌릴 대상")
+        await app.rebuildStudyIndex()
+        await app.openStudyReview()
+        let originalContent = try! String(contentsOf: url, encoding: .utf8)
+
+        await app.gradeCurrentStudyReviewItem(.knew)
+        XCTAssertNotNil(app.studyReviewUndo, "채점하면 되돌릴 거리가 생긴다")
+
+        await app.undoLastStudyReviewGrade()
+
+        XCTAssertNil(app.studyReviewError)
+        XCTAssertEqual(app.studyReviewIndex, 0, "되돌리면 그 항목으로 돌아온다")
+        XCTAssertTrue(app.studyReviewRevealAnswer, "돌아온 항목은 정답이 펼쳐진 상태")
+        XCTAssertEqual(app.studyDueCount, 1, "오늘 볼 것 개수도 되돌아온다")
+        XCTAssertNil(app.studyReviewUndo, "되돌리기는 직전 1건뿐 — 연속으로 되돌릴 수 없다")
+
+        let restored = try! String(contentsOf: url, encoding: .utf8)
+        XCTAssertEqual(restored, originalContent, "노트가 채점 전 원문으로 돌아와야 한다")
+        XCTAssertEqual(app.currentStudyReviewItem?.state.reps, 0)
+    }
+
+    func testUndoLastStudyReviewGradeNoOpWhenNothingGraded() async {
+        writeDueCardNote()
+        await app.rebuildStudyIndex()
+        await app.openStudyReview()
+
+        await app.undoLastStudyReviewGrade()
+
+        XCTAssertNil(app.studyReviewError)
+        XCTAssertEqual(app.studyReviewIndex, 0)
+        XCTAssertNil(app.studyReviewUndo)
+    }
+
+    func testUndoLastStudyReviewGradeAbortsWhenNoteChangedExternally() async {
+        let url = writeDueCardNote(title: "되돌리기 충돌")
+        await app.rebuildStudyIndex()
+        await app.openStudyReview()
+
+        await app.gradeCurrentStudyReviewItem(.knew)
+        let gradedContent = try! String(contentsOf: url, encoding: .utf8)
+        // 채점 뒤 앵커 줄을 밖에서 또 고친 상황 — 되돌리기는 그 변경을 덮지 않고 포기해야 한다.
+        let tampered = gradedContent.replacingOccurrences(of: "ivl=1", with: "ivl=7")
+        XCTAssertNotEqual(tampered, gradedContent, "치환이 실제로 일어났는지 먼저 확인")
+        try! tampered.write(to: url, atomically: true, encoding: .utf8)
+
+        await app.undoLastStudyReviewGrade()
+
+        XCTAssertNotNil(app.studyReviewError, "되돌리지 못했으면 안내가 떠야 한다")
+        XCTAssertNil(app.studyReviewUndo)
+        XCTAssertEqual(try! String(contentsOf: url, encoding: .utf8), tampered, "밖에서 바꾼 내용은 그대로 둔다")
+    }
+
+    func testCloseStudyReviewClearsUndo() async {
+        writeDueCardNote()
+        await app.rebuildStudyIndex()
+        await app.openStudyReview()
+        await app.gradeCurrentStudyReviewItem(.knew)
+        XCTAssertNotNil(app.studyReviewUndo)
+
+        app.closeStudyReview()
+        XCTAssertNil(app.studyReviewUndo)
+    }
+
     // MARK: - 노트 열기
 
     func testOpenCurrentStudyReviewNoteSwitchesToReader() async {

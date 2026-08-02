@@ -67,6 +67,7 @@ extension AppState {
         studyReviewQueue = await studyIndex.dueItems()
         studyReviewIndex = 0
         studyReviewRevealAnswer = false
+        studyReviewUndo = nil
         studyReviewBusy = false
     }
 
@@ -78,6 +79,7 @@ extension AppState {
         studyReviewQueue = await studyIndex.dueItems()
         studyReviewIndex = 0
         studyReviewRevealAnswer = false
+        studyReviewUndo = nil
         studyReviewBusy = false
     }
 
@@ -87,6 +89,7 @@ extension AppState {
         studyReviewQueue = []
         studyReviewIndex = 0
         studyReviewRevealAnswer = false
+        studyReviewUndo = nil
         studyReviewError = nil
     }
 
@@ -197,8 +200,64 @@ extension AppState {
         studyReviewQueue[studyReviewIndex] = StudyIndexItem(
             uid: item.uid, studyID: item.studyID, notePath: item.notePath, kind: item.kind,
             loc: item.loc, title: item.title, body: item.body, state: newState, lineText: newLineText)
+        studyReviewUndo = StudyReviewUndo(itemUID: item.uid, queueIndex: studyReviewIndex,
+                                          previousState: item.state, previousLineText: item.lineText,
+                                          gradedLineText: newLineText)
         studyReviewIndex += 1
         studyReviewRevealAnswer = false
         studyDueCount = max(0, studyDueCount - 1)
+    }
+
+    /// "되돌리기"(다듬기 A) — 방금 채점한 **직전 1건**만 원래 상태로 되돌린다. 채점과 같은 방식으로
+    /// 앵커 줄만 치환하고 백업 1부를 남기며, 쓰기 직전 재확인이 어긋나면(그 사이 노트가 바뀌면)
+    /// 포기한다. 되돌린 뒤 화면은 그 항목으로 돌아가고 정답이 펼쳐진 상태가 된다.
+    @MainActor
+    func undoLastStudyReviewGrade() async {
+        guard let undo = studyReviewUndo,
+              undo.queueIndex >= 0, undo.queueIndex < studyReviewQueue.count else {
+            studyReviewUndo = nil
+            return
+        }
+        let item = studyReviewQueue[undo.queueIndex]
+        studyReviewBusy = true
+        studyReviewError = nil
+        defer { studyReviewBusy = false }
+
+        let url = URL(fileURLWithPath: item.notePath)
+        guard let content = try? String(contentsOf: url, encoding: .utf8) else {
+            studyReviewError = "노트 파일을 읽지 못했습니다: \(url.lastPathComponent)"
+            return
+        }
+        guard let newContent = StudyNoteParser.replacingAnchorLine(
+            in: content, itemUID: undo.itemUID, expectedLineText: undo.gradedLineText,
+            newState: undo.previousState
+        ) else {
+            studyReviewError = "이 노트가 그 사이 바뀌어서 되돌리지 못했습니다."
+            studyReviewUndo = nil
+            return
+        }
+
+        do {
+            let backupURL = URL(fileURLWithPath: url.path + ".bak")
+            try? content.write(to: backupURL, atomically: true, encoding: .utf8)
+            try newContent.write(to: url, atomically: true, encoding: .utf8)
+        } catch {
+            studyReviewError = "되돌리기 저장 실패: \(error.localizedDescription)"
+            return
+        }
+
+        let restoredLineText = StudyNoteParser.parse(newContent).items.first(where: { $0.uid == undo.itemUID })?.lineText
+            ?? undo.previousLineText
+        await studyIndex.updateAfterGrading(itemUID: undo.itemUID, newState: undo.previousState,
+                                            newLineText: restoredLineText)
+
+        studyReviewQueue[undo.queueIndex] = StudyIndexItem(
+            uid: item.uid, studyID: item.studyID, notePath: item.notePath, kind: item.kind,
+            loc: item.loc, title: item.title, body: item.body,
+            state: undo.previousState, lineText: restoredLineText)
+        studyReviewIndex = undo.queueIndex
+        studyReviewRevealAnswer = true
+        studyDueCount += 1
+        studyReviewUndo = nil
     }
 }

@@ -419,6 +419,8 @@ final class AppState {
     var studyReviewRebuildNotice: String? = nil
     /// 사이드바 리본/메뉴 배지용 — 재빌드·채점 때마다 갱신(§3.9 "신호는 앱 내 배지만").
     var studyDueCount: Int = 0
+    /// 방금 채점한 한 건을 되돌리기 위한 스냅숏(직전 1건만, 앱을 닫으면 사라진다).
+    var studyReviewUndo: StudyReviewUndo? = nil
     // MARK: - 교재 진도 관리(2026-08-02)
     /// 등록된 교재 + 각각의 진도(진도 노트 파일에서 읽어 계산한 값).
     var studyProgressBooks: [StudyProgressBook] = []
