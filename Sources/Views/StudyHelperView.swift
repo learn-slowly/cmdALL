@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// 학습도우미(Study Helper) S1 전용 화면 — 파일 선택 → 미리 분량 표시 → 카드/문제 생성 →
-/// 미리보기 → 저장까지 한 시트에서 이어 붙인다(계획서 File-level changes 참고). 실제 로직은
+/// 미리보기 → 저장까지 한 화면에서 이어 붙인다(계획서 File-level changes 참고). 팝업 시트가
+/// 아니라 파일 화면처럼 메인 창 전체를 쓰는 모드다(다듬기 C, 2026-08-02). 실제 로직은
 /// `StudySourceLoader`/`StudyChunker`/`StudyService`/`StudyNoteWriter`(순수·actor)에 있고
 /// 이 화면은 `AppState+Study.swift` 배선만 부른다.
 struct StudyHelperView: View {
@@ -13,11 +14,7 @@ struct StudyHelperView: View {
             HStack {
                 Text("학습도우미").font(.headline)
                 Spacer()
-                Button("닫기") {
-                    // 만들던 중에 닫으면 claude 호출도 같이 끊는다(유휴면 무동작).
-                    appState.cancelStudyGeneration()
-                    state.showStudyHelper = false
-                }
+                Button("닫기") { appState.closeStudyHelper() }
             }
             Text("교재 파일 하나를 골라 정리 카드나 연습 문제를 만듭니다. 만들기 전에는 아무 파일도 생기지 않고, 저장을 눌러야만 노트가 생깁니다.")
                 .font(.caption).foregroundStyle(.secondary)
@@ -32,7 +29,7 @@ struct StudyHelperView: View {
             Spacer()
         }
         .padding(16)
-        .frame(width: 640, height: 620)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .sheet(isPresented: $state.showStudyTemplateManager) {
             StudyTemplateManagerView()
         }

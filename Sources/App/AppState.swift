@@ -349,7 +349,7 @@ final class AppState {
     /// 로드 완료 시 1회 결정되는 시작 안내 문구(계획 §관계도 시작 규칙).
     var wikiGraphFocusNotice: String? = nil
     // MARK: - 학습도우미(Study Helper) S1
-    var showStudyHelper: Bool = false
+    /// (다듬기 C, 2026-08-02) 학습도우미는 `mainMode == .study`로 들어간다.
     /// 학습 범위(§Q1) — 파일 하나 + 종류.
     var studyScopeFileURL: URL? = nil
     var studyScopeKind: DocumentKind? = nil
@@ -413,8 +413,7 @@ final class AppState {
     var studyChatNotice: String? = nil
     var studyChatSavedNoteURL: URL? = nil
     // MARK: - 학습도우미 복습(S2)
-    /// 오늘 복습 화면 표시 여부.
-    var showStudyReview: Bool = false
+    /// (다듬기 C, 2026-08-02) 오늘 복습·학습도우미는 `mainMode`로 옮겨서 표시 여부 플래그가 없다.
     /// 오늘 복습 대기열(§3.9 하루 상한 적용 완료 상태, 기한 오름차순) — 화면은 이 배열만 훑는다.
     var studyReviewQueue: [StudyIndexItem] = []
     var studyReviewIndex: Int = 0

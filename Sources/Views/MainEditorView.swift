@@ -12,6 +12,10 @@ struct MainEditorView: View {
                 TaskListView()
             case .progress:
                 StudyProgressView()
+            case .study:
+                StudyHelperView()
+            case .review:
+                StudyReviewView()
             case .reader:
                 readerLayout
             }

@@ -60,7 +60,7 @@ struct SidebarRibbon: View {
             }
             ZStack(alignment: .topTrailing) {
                 RibbonButton(icon: "checkmark.circle", help: "오늘 복습" + (appState.studyDueCount > 0 ? " (\(appState.studyDueCount)개)" : "")) {
-                    appState.openStudyReviewSheet()
+                    appState.openStudyReviewView()
                 }
                 if appState.studyDueCount > 0 {
                     Text("\(min(appState.studyDueCount, 99))")

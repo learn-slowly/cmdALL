@@ -94,11 +94,18 @@ final class AppStudyReviewStateTests: XCTestCase {
 
     // MARK: - 오늘 복습 화면
 
+    /// 다듬기 C — 복습도 파일 화면처럼 메인 모드로 들어간다(데이터 로드는 화면이 뜨며 한다).
+    func testOpenStudyReviewViewSwitchesToReviewMode() {
+        app.mainMode = .library
+        app.openStudyReviewView()
+        XCTAssertEqual(app.mainMode, .review)
+    }
+
     func testOpenStudyReviewLoadsQueue() async {
         writeDueCardNote()
         await app.rebuildStudyIndex()
         await app.openStudyReview()
-        XCTAssertTrue(app.showStudyReview)
+        XCTAssertEqual(app.mainMode, .review, "복습은 파일 화면처럼 메인 모드로 들어간다")
         XCTAssertEqual(app.studyReviewQueue.count, 1)
         XCTAssertEqual(app.studyReviewIndex, 0)
         XCTAssertNotNil(app.currentStudyReviewItem)
@@ -109,7 +116,7 @@ final class AppStudyReviewStateTests: XCTestCase {
         await app.rebuildStudyIndex()
         await app.openStudyReview()
         app.closeStudyReview()
-        XCTAssertFalse(app.showStudyReview)
+        XCTAssertEqual(app.mainMode, .reader, "닫으면 파일 화면으로 돌아간다")
         XCTAssertTrue(app.studyReviewQueue.isEmpty)
     }
 
@@ -259,8 +266,7 @@ final class AppStudyReviewStateTests: XCTestCase {
 
         XCTAssertTrue(app.openCurrentStudyReviewSource())
         XCTAssertNil(app.studyReviewError)
-        XCTAssertFalse(app.showStudyReview, "원본을 열었으면 복습 시트는 닫힌다")
-        XCTAssertEqual(app.mainMode, .reader)
+        XCTAssertEqual(app.mainMode, .reader, "원본을 열었으면 파일 화면으로 간다")
         XCTAssertNotNil(sourceURL)
     }
 
@@ -271,7 +277,7 @@ final class AppStudyReviewStateTests: XCTestCase {
 
         XCTAssertFalse(app.openCurrentStudyReviewSource())
         XCTAssertNotNil(app.studyReviewError)
-        XCTAssertTrue(app.showStudyReview, "열지 못했으면 복습 화면을 닫지 않는다")
+        XCTAssertEqual(app.mainMode, .review, "열지 못했으면 복습 화면에 그대로 머문다")
     }
 
     func testOpenStudyEvidenceJumpsToSourceFromOpenNote() async {

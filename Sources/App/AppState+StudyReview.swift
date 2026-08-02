@@ -53,15 +53,16 @@ extension AppState {
 
     // MARK: - 오늘 복습 화면
 
-    /// 진입점(사이드바 리본·메뉴·커맨드 팔레트) 공용 — 시트를 연다. 실제 데이터 로드는
-    /// `StudyReviewView`의 `.task`(→ `openStudyReview()`)가 맡는다.
-    func openStudyReviewSheet() {
-        showStudyReview = true
+    /// 진입점(사이드바 리본·메뉴·커맨드 팔레트) 공용 — 팝업이 아니라 파일 화면처럼 메인 모드로
+    /// 들어간다(다듬기 C, 2026-08-02). 실제 데이터 로드는 `StudyReviewView`의 `.task`
+    /// (→ `openStudyReview()`)가 맡는다.
+    func openStudyReviewView() {
+        mainMode = .review
     }
 
     @MainActor
     func openStudyReview() async {
-        showStudyReview = true
+        mainMode = .review
         studyReviewBusy = true
         studyReviewError = nil
         studyReviewQueue = await studyIndex.dueItems()
@@ -85,7 +86,7 @@ extension AppState {
 
     @MainActor
     func closeStudyReview() {
-        showStudyReview = false
+        mainMode = .reader
         studyReviewQueue = []
         studyReviewIndex = 0
         studyReviewRevealAnswer = false
@@ -145,7 +146,7 @@ extension AppState {
             studyReviewError = "원본 자료 파일을 찾지 못했습니다(옮겼거나 지웠을 수 있어요)."
             return false
         }
-        showStudyReview = false
+        // 원본을 새 탭으로 열면 `openDocument`가 이미 파일 화면(reader)으로 바꿔놓는다.
         return true
     }
 

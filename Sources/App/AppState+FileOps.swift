@@ -413,8 +413,8 @@ extension AppState {
         case .library:
             guard let folder = selectedFolder ?? currentFolder else { return }
             fileInfoRequest = FileInfoRequest(url: folder)
-        case .tasks, .progress:
-            // 할일·진도 모드에는 정보를 볼 파일·폴더 대상이 없다 — 무동작.
+        case .tasks, .progress, .study, .review:
+            // 할일·진도·학습도우미·복습 모드에는 정보를 볼 파일·폴더 대상이 없다 — 무동작.
             return
         }
     }

@@ -20,7 +20,7 @@ struct StudyReviewView: View {
             Spacer(minLength: 0)
         }
         .padding(16)
-        .frame(minWidth: 600, idealWidth: 760, minHeight: 520, idealHeight: 680)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .task { await appState.openStudyReview() }
     }
 

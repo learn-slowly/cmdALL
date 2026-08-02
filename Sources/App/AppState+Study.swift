@@ -21,13 +21,20 @@ extension AppState {
     /// "파일을 선택하세요" 빈 상태로 열릴 뿐 에러를 띄우지 않는다(사용자가 시작한 동작이 아니라
     /// 편의 복원이라 실패가 눈에 띄면 오히려 방해된다).
     func openStudyHelper() {
-        showStudyHelper = true
+        mainMode = .study
         guard studyScopeFileURL == nil,
               let path = settings.lastStudySourcePath else { return }
         let url = URL(fileURLWithPath: path)
         guard FileManager.default.fileExists(atPath: url.path),
               let kind = Self.studyDocumentKind(for: url) else { return }
         applyStudySelection(url: url, kind: kind)
+    }
+
+    /// 학습도우미 화면 닫기(다듬기 C) — 만들던 중이면 claude 호출도 끊고 파일 화면으로 돌아간다.
+    @MainActor
+    func closeStudyHelper() {
+        cancelStudyGeneration()
+        mainMode = .reader
     }
 
     /// 학습할 파일 선택 — 학습도우미가 지원하는 종류만(PDF·마크다운/텍스트·오피스·이미지,
@@ -352,6 +359,5 @@ extension AppState {
     func openSavedStudyNote() {
         guard let url = studySavedNoteURL else { return }
         openDocument(at: url, inNewTab: true)
-        showStudyHelper = false
     }
 }

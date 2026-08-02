@@ -70,7 +70,7 @@ final class AppStudyStateTests: XCTestCase {
 
         app.openStudyHelper()
 
-        XCTAssertTrue(app.showStudyHelper)
+        XCTAssertEqual(app.mainMode, .study)
         XCTAssertEqual(app.studyScopeFileURL, src)
         XCTAssertEqual(app.studyScopeKind, .markdown)
     }
@@ -81,7 +81,7 @@ final class AppStudyStateTests: XCTestCase {
 
         app.openStudyHelper()
 
-        XCTAssertTrue(app.showStudyHelper)
+        XCTAssertEqual(app.mainMode, .study)
         XCTAssertNil(app.studyScopeFileURL, "실존하지 않는 파일은 조용히 무시돼야 함")
         XCTAssertNil(app.studyError, "복원 실패는 에러로 띄우지 않는다(사용자가 시작한 동작이 아님)")
     }
@@ -91,8 +91,19 @@ final class AppStudyStateTests: XCTestCase {
 
         app.openStudyHelper()
 
-        XCTAssertTrue(app.showStudyHelper)
+        XCTAssertEqual(app.mainMode, .study)
         XCTAssertNil(app.studyScopeFileURL)
+    }
+
+    /// 다듬기 C — 학습도우미는 팝업이 아니라 메인 화면 모드다. 닫으면 파일 화면으로 돌아간다.
+    func testCloseStudyHelperReturnsToReaderMode() {
+        app.openStudyHelper()
+        XCTAssertEqual(app.mainMode, .study)
+
+        app.closeStudyHelper()
+
+        XCTAssertEqual(app.mainMode, .reader)
+        XCTAssertNil(app.studyGenerateTask, "닫으면 만들던 것도 멈춘다")
     }
 
     func testOpenStudyHelperDoesNotOverrideAlreadySelectedFile() {

@@ -206,7 +206,7 @@ struct CmdMDApp: App {
                     appState.openStudyHelper()
                 }
                 Button("오늘 복습") {
-                    appState.openStudyReviewSheet()
+                    appState.openStudyReviewView()
                 }
                 Button("교재 진도 보기") {
                     appState.openStudyProgressView()

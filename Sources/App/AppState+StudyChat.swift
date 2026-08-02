@@ -30,7 +30,7 @@ extension AppState {
         studyChatNotice = nil
         studyChatSavedNoteURL = nil
         studyChatBusy = true
-        showStudyHelper = false
+        // 학습도우미는 이제 메인 화면 모드라 따로 닫지 않는다 — 대화 시트가 그 위에 뜬다.
         showStudyChat = true
 
         Task { @MainActor in

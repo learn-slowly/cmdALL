@@ -84,7 +84,7 @@ final class AppStudyChatStateTests: XCTestCase {
         let url = makeSource()
         app.studyScopeFileURL = url
         app.studyScopeKind = .markdown
-        app.showStudyHelper = true
+        app.mainMode = .study
 
         app.startStudyChat()
         var tries = 0
@@ -99,7 +99,7 @@ final class AppStudyChatStateTests: XCTestCase {
         XCTAssertTrue(app.studyChatSession?.pinnedExcerpt.contains("[[l") ?? false, "위치 태그가 붙어야 함")
         XCTAssertTrue(app.studyChatSession?.turns.isEmpty ?? false)
         XCTAssertTrue(app.showStudyChat)
-        XCTAssertFalse(app.showStudyHelper, "대화 화면을 열면서 S1 시트는 닫혀야 함")
+        XCTAssertEqual(app.mainMode, .study, "대화 시트는 학습도우미 화면 위에 뜬다")
     }
 
     // MARK: - 전송

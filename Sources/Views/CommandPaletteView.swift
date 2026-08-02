@@ -313,7 +313,7 @@ struct Command: Identifiable {
                 shortcut: nil,
                 keywords: ["복습", "리뷰", "review", "spaced", "간격반복", "flashcard"]
             ) {
-                appState.openStudyReviewSheet()
+                appState.openStudyReviewView()
             },
             Command(
                 title: "문서에서 할일 찾기",
