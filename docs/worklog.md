@@ -930,4 +930,11 @@ todolist에는 "노트 앞머리에 구간을 적어두자"고 적혀 있었는�
 - 커밋 5개(A / B / D / 구간 위치 / C)로 나눠 기록.
 - **로컬 재패키징(고정 로컬 인증서)·`/Applications` 교체 설치 완료**(레고 "앱 닫았다" 확인 후 —
   백업 `cmdALL.app.bak-20260802-120835`, 서명 재검증(`valid on disk`·DR 충족)·재실행 확인).
-  버전 문자열은 0.9.429 그대로 — 레고 실기 확인 전까지 GitHub 배포는 보류.
+  버전 문자열은 이때 0.9.429였고, 곧바로 아래 0.9.430으로 올려 배포했다.
+
+**v0.9.430 GitHub 릴리스 발행 완료(2026-08-02).** 레고님 승인("배포해줘") 후 버전 문자열
+동기화(`scripts/package_app.sh` Info.plist·`AppInfo.version` 폴백 둘 다 0.9.430) →
+`scripts/test_package_app.sh` 패키징 가드 통과 → `swift test` 1,531개 재확인 → main 푸시(ca00ea0)
++ annotated 태그 v0.9.430 푸시 → release.yml CI 성공 — cmdALL-0.9.430.dmg·cmdALL-macos.zip·
+SHA256SUMS.txt 발행. 오늘 작업(교재 진도 관리 + 다듬기 A~D + 한글·워드 진도 연결)이 이 버전에
+전부 포함. `/Applications` 설치본은 같은 코드의 로컬 서명 빌드(위 참고).
