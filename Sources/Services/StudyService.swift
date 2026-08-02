@@ -38,7 +38,10 @@ actor StudyService {
 
     /// - Parameter extraInstructions: 사용자 템플릿의 추가 지시(레고 2026-08-01 요청) — 청크마다
     ///   보내는 지시문 뒤에 그대로 덧붙는다(`StudyPromptBuilder.appendingExtraInstructions`).
-    func generateCards(scope: StudyScope, count: Int, chunkBudget: Int, extraInstructions: String = "") async throws -> Outcome<StudyCard> {
+    /// - Parameter onProgress: 조각 하나를 시작할 때마다 (몇 번째, 전체 개수)를 알린다(다듬기 B,
+    ///   2026-08-02 화면 진행 표시용 — `CleanupService.assign` 전례).
+    func generateCards(scope: StudyScope, count: Int, chunkBudget: Int, extraInstructions: String = "",
+                       onProgress: (@Sendable (_ done: Int, _ total: Int) -> Void)? = nil) async throws -> Outcome<StudyCard> {
         try await run(
             scope: scope, count: count, chunkBudget: chunkBudget,
             prompt: { StudyPromptBuilder.cardPrompt(count: $0, extraInstructions: extraInstructions) },
@@ -46,12 +49,15 @@ actor StudyService {
                 let result = StudyOutputParser.parseCards(text, chunk: chunk, maxCount: maxCount)
                 return (result.cards, result.invalidCitations)
             },
-            title: \.title
+            title: \.title,
+            onProgress: onProgress
         )
     }
 
     /// - Parameter extraInstructions: 사용자 템플릿의 추가 지시(레고 2026-08-01 요청).
-    func generateQuestions(scope: StudyScope, count: Int, chunkBudget: Int, extraInstructions: String = "") async throws -> Outcome<StudyQuestion> {
+    /// - Parameter onProgress: 조각 하나를 시작할 때마다 (몇 번째, 전체 개수)를 알린다(다듬기 B).
+    func generateQuestions(scope: StudyScope, count: Int, chunkBudget: Int, extraInstructions: String = "",
+                           onProgress: (@Sendable (_ done: Int, _ total: Int) -> Void)? = nil) async throws -> Outcome<StudyQuestion> {
         try await run(
             scope: scope, count: count, chunkBudget: chunkBudget,
             prompt: { StudyPromptBuilder.quizPrompt(count: $0, extraInstructions: extraInstructions) },
@@ -59,7 +65,8 @@ actor StudyService {
                 let result = StudyOutputParser.parseQuestions(text, chunk: chunk, maxCount: maxCount)
                 return (result.questions, result.invalidCitations)
             },
-            title: \.title
+            title: \.title,
+            onProgress: onProgress
         )
     }
 
@@ -69,7 +76,8 @@ actor StudyService {
         scope: StudyScope, count: Int, chunkBudget: Int,
         prompt: (Int) -> String,
         parse: (_ text: String, _ chunk: StudyChunk, _ maxCount: Int) -> (items: [Item], invalidCitations: Int),
-        title: (Item) -> String
+        title: (Item) -> String,
+        onProgress: (@Sendable (_ done: Int, _ total: Int) -> Void)? = nil
     ) async throws -> Outcome<Item> {
         let segments = await sourceLoader.segments(for: scope)
         let chunks = StudyChunker.chunks(from: segments, budget: chunkBudget)
@@ -83,7 +91,11 @@ actor StudyService {
         var invalidCitations = 0
         var failedBodies: [String] = []
 
-        for chunk in chunks {
+        for (index, chunk) in chunks.enumerated() {
+            // 취소(사용자가 "취소"를 누름)는 조각 경계에서 확인 — 진행 중이던 claude 호출 자체는
+            // `ClaudeService`의 폴링 루프가 프로세스를 종료해 즉시 끊는다.
+            try Task.checkCancellation()
+            onProgress?(index + 1, chunks.count)
             let promptText = prompt(perChunkCount)
             var raw = try await askWithTimeoutRetry(prompt: promptText, context: chunk.body)
             var result = parse(raw, chunk, perChunkCount)

@@ -13,7 +13,11 @@ struct StudyHelperView: View {
             HStack {
                 Text("학습도우미").font(.headline)
                 Spacer()
-                Button("닫기") { state.showStudyHelper = false }
+                Button("닫기") {
+                    // 만들던 중에 닫으면 claude 호출도 같이 끊는다(유휴면 무동작).
+                    appState.cancelStudyGeneration()
+                    state.showStudyHelper = false
+                }
             }
             Text("교재 파일 하나를 골라 정리 카드나 연습 문제를 만듭니다. 만들기 전에는 아무 파일도 생기지 않고, 저장을 눌러야만 노트가 생깁니다.")
                 .font(.caption).foregroundStyle(.secondary)
@@ -238,9 +242,14 @@ struct StudyHelperView: View {
                 Text("보낼 분량 약 \(appState.studyPreviewCharCount)자 · 조각 \(appState.studyPreviewChunkCount)개")
                     .font(.caption).foregroundStyle(.secondary)
                 Spacer()
-                Button("만들기") { Task { await appState.generateStudyItems() } }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(appState.studyBusy || appState.studyPreviewChunkCount == 0)
+                if appState.studyBusy {
+                    Button("취소") { appState.cancelStudyGeneration() }
+                        .help("만들던 것을 멈춥니다. 지금까지 만든 건 저장되지 않습니다.")
+                } else {
+                    Button("만들기") { appState.startStudyGeneration() }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(appState.studyPreviewChunkCount == 0)
+                }
             }
         }
     }
@@ -249,9 +258,16 @@ struct StudyHelperView: View {
 
     @ViewBuilder private var content: some View {
         if appState.studyBusy {
-            HStack(spacing: 8) {
-                ProgressView().controlSize(.small)
-                Text("Claude가 만드는 중… 몇 분 걸릴 수 있습니다.").foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 8) {
+                    ProgressView().controlSize(.small)
+                    Text("Claude가 만드는 중… 몇 분 걸릴 수 있습니다.").foregroundStyle(.secondary)
+                }
+                if let progress = appState.studyProgress {
+                    ProgressView(value: appState.studyProgressFraction)
+                        .progressViewStyle(.linear)
+                    Text(progress).font(.caption).foregroundStyle(.secondary)
+                }
             }
         } else if let error = appState.studyError {
             Text(error).foregroundStyle(.red)

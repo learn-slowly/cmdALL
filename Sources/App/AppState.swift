@@ -389,6 +389,13 @@ final class AppState {
     var studyPreviewChunkCount: Int = 0
     var studyBusy: Bool = false
     var studyError: String? = nil
+    /// 만드는 중 진행 상황 한 줄("조각 2/5 만드는 중…") — 조각이 2개 이상일 때만 채운다.
+    var studyProgress: String? = nil
+    /// 진행 막대용 — 지금까지 시작한 조각 수 / 전체 조각 수.
+    var studyProgressDone: Int = 0
+    var studyProgressTotal: Int = 0
+    /// 진행 중인 만들기 태스크 — "취소"가 실제로 중단할 수 있게 핸들을 쥔다(위키 병합 전례).
+    var studyGenerateTask: Task<Void, Never>? = nil
     var studyPreviewCards: [StudyCard] = []
     var studyPreviewQuestions: [StudyQuestion] = []
     /// AC #24 "청크 C개 중 k개 성공" + O4 "유효 인용 k/n" 요약 문구.

@@ -199,6 +199,24 @@ extension AppState {
 
     // MARK: - 생성(AI 실호출)
 
+    /// "만들기" 진입점 — 취소 가능한 태스크로 감싼다(다듬기 B, `startWikiMerge` 전례).
+    @MainActor
+    func startStudyGeneration() {
+        studyGenerateTask?.cancel()
+        studyGenerateTask = Task { @MainActor [weak self] in
+            await self?.generateStudyItems()
+            self?.studyGenerateTask = nil
+        }
+    }
+
+    /// "취소" — 진행 중이던 claude 호출을 끊는다(ClaudeService 폴링 루프가 프로세스를 종료).
+    /// 유휴 상태면 무동작이라 창을 닫을 때 무조건 불러도 안전하다.
+    @MainActor
+    func cancelStudyGeneration() {
+        studyGenerateTask?.cancel()
+        studyGenerateTask = nil
+    }
+
     @MainActor
     func generateStudyItems() async {
         guard let scope = currentStudyScope() else {
@@ -211,7 +229,10 @@ extension AppState {
         studyPreviewQuestions = []
         studyOutcomeSummary = nil
         studySavedNoteURL = nil
-        defer { studyBusy = false }
+        studyProgress = nil
+        studyProgressDone = 0
+        studyProgressTotal = 0
+        defer { studyBusy = false; studyProgress = nil }
 
         let extraInstructions = studySelectedTemplateInstructions
         do {
@@ -219,7 +240,10 @@ extension AppState {
             case .card:
                 let outcome = try await studyService.generateCards(
                     scope: scope, count: studyRequestedCount, chunkBudget: Self.studyChunkBudget,
-                    extraInstructions: extraInstructions)
+                    extraInstructions: extraInstructions,
+                    onProgress: { [weak self] done, total in
+                        Task { @MainActor in self?.applyStudyProgress(done: done, total: total) }
+                    })
                 studyPreviewCards = outcome.items
                 studyOutcomeSummary = Self.studyOutcomeSummary(chunkCount: outcome.chunkCount,
                                                                  succeeded: outcome.succeededChunkCount,
@@ -227,7 +251,10 @@ extension AppState {
             case .question:
                 let outcome = try await studyService.generateQuestions(
                     scope: scope, count: studyRequestedCount, chunkBudget: Self.studyChunkBudget,
-                    extraInstructions: extraInstructions)
+                    extraInstructions: extraInstructions,
+                    onProgress: { [weak self] done, total in
+                        Task { @MainActor in self?.applyStudyProgress(done: done, total: total) }
+                    })
                 studyPreviewQuestions = outcome.items
                 studyOutcomeSummary = Self.studyOutcomeSummary(chunkCount: outcome.chunkCount,
                                                                  succeeded: outcome.succeededChunkCount,
@@ -245,9 +272,27 @@ extension AppState {
             studyError = "응답이 너무 오래 걸려 중단했습니다. 잠시 후 다시 시도해 주세요."
         } catch ClaudeError.toolNotFound {
             studyError = "claude 명령을 찾지 못했습니다. 설정 > Tools에서 설치 경로를 확인하세요."
+        } catch is CancellationError {
+            // 사용자가 스스로 멈춘 것 — 오류가 아니므로 빨간 글씨를 띄우지 않는다.
+            studyOutcomeSummary = "만들기를 취소했습니다."
         } catch {
             studyError = "생성에 실패했습니다: \(error.localizedDescription)"
         }
+    }
+
+    /// 진행 표시 문구·막대 — 조각이 하나뿐이면 "몇/몇"이 의미가 없어 기본 문구를 그대로 둔다.
+    @MainActor
+    func applyStudyProgress(done: Int, total: Int) {
+        guard studyBusy, total > 1 else { return }
+        studyProgressDone = done
+        studyProgressTotal = total
+        studyProgress = "조각 \(done)/\(total) 만드는 중…"
+    }
+
+    /// 진행 막대 값(0~1) — 지금 조각을 시작한 시점이라 "done-1개 완료"로 본다.
+    var studyProgressFraction: Double {
+        guard studyProgressTotal > 0 else { return 0 }
+        return min(1, max(0, Double(studyProgressDone - 1) / Double(studyProgressTotal)))
     }
 
     /// AC #24 "청크 C개 중 k개 성공" 요약 — 무효 인용이 있으면 한 줄 덧붙인다(O4).

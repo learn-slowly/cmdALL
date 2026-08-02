@@ -428,4 +428,49 @@ final class AppStudyStateTests: XCTestCase {
         let sentPrompts = await fake.recordedPrompts()
         XCTAssertFalse(sentPrompts.first?.contains("추가 지시(사용자 템플릿)") ?? true)
     }
+
+    // MARK: - 진행 표시·취소(다듬기 B, 2026-08-02)
+
+    func testApplyStudyProgressFillsLabelAndFractionOnlyWhileBusy() {
+        app.studyBusy = true
+        app.applyStudyProgress(done: 2, total: 4)
+
+        XCTAssertEqual(app.studyProgress, "조각 2/4 만드는 중…")
+        XCTAssertEqual(app.studyProgressFraction, 0.25, accuracy: 0.001, "2번째를 시작했으면 1개 완료")
+
+        app.studyBusy = false
+        app.applyStudyProgress(done: 3, total: 4)
+        XCTAssertEqual(app.studyProgress, "조각 2/4 만드는 중…", "만들기가 끝난 뒤 늦게 온 알림은 무시한다")
+    }
+
+    func testApplyStudyProgressIgnoresSingleChunk() {
+        app.studyBusy = true
+        app.applyStudyProgress(done: 1, total: 1)
+        XCTAssertNil(app.studyProgress, "조각이 하나면 '1/1'을 띄우지 않는다")
+        XCTAssertEqual(app.studyProgressFraction, 0)
+    }
+
+    func testCancelStudyGenerationIsSafeWhenIdle() {
+        XCTAssertNil(app.studyGenerateTask)
+        app.cancelStudyGeneration()   // 유휴 상태에서 눌러도(창 닫기) 아무 일도 없어야 한다.
+        XCTAssertNil(app.studyGenerateTask)
+        XCTAssertNil(app.studyError)
+    }
+
+    func testGenerateClearsProgressWhenFinished() async {
+        let src = makeSource()
+        app.studyScopeFileURL = src
+        app.studyScopeKind = .markdown
+        app.studyBusy = true
+        app.applyStudyProgress(done: 1, total: 3)
+        app.studyBusy = false
+
+        app.studyGenerationKind = .card
+        app.studyService = StudyService(claude: ScriptedClaude([validCardResponse()]),
+                                        sourceLoader: app.studySourceLoader)
+        await app.generateStudyItems()
+
+        XCTAssertNil(app.studyProgress, "만들기가 끝나면 진행 문구는 지운다")
+        XCTAssertFalse(app.studyBusy)
+    }
 }

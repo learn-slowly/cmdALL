@@ -35,6 +35,38 @@ final class StudyServiceTests: XCTestCase {
         func recordedContexts() -> [String] { calls.map(\.context) }
     }
 
+    /// 진행 알림(onProgress)은 actor 밖 스레드에서도 불릴 수 있어 잠금으로 모은다.
+    private final class ProgressRecorder: @unchecked Sendable {
+        private let lock = NSLock()
+        private var items: [(done: Int, total: Int)] = []
+
+        func append(_ done: Int, _ total: Int) {
+            lock.lock(); defer { lock.unlock() }
+            items.append((done, total))
+        }
+
+        func snapshot() -> [(done: Int, total: Int)] {
+            lock.lock(); defer { lock.unlock() }
+            return items
+        }
+    }
+
+    /// 취소 시험용 — 응답을 주기 전에 한참 기다린다(`Task.sleep`은 취소되면 스스로 던진다).
+    private actor SlowClaude: ClaudeAsking {
+        private let response: String
+
+        init(response: String) { self.response = response }
+
+        func ask(prompt: String, context: String) async throws -> String {
+            try await ask(prompt: prompt, context: context, timeout: -1)
+        }
+
+        func ask(prompt: String, context: String, timeout: TimeInterval) async throws -> String {
+            try await Task.sleep(nanoseconds: 5_000_000_000)
+            return response
+        }
+    }
+
     // MARK: - 헬퍼
 
     private func makeScope(dir: URL, name: String, content: String) -> StudyScope {
@@ -218,6 +250,45 @@ final class StudyServiceTests: XCTestCase {
         XCTAssertEqual(outcome.items.map(\.title), ["첫 청크 카드"])
         XCTAssertEqual(outcome.failedChunkBodies.count, 1)
         XCTAssertTrue(outcome.failedChunkBodies[0].contains("내용"), "실패한 청크의 원문이 보관돼야 한다(O5)")
+    }
+
+    // MARK: - 진행 표시·취소(다듬기 B, 2026-08-02)
+
+    func testOnProgressReportsEveryChunk() async throws {
+        let dir = TempDataDirectory.make()
+        defer { TempDataDirectory.cleanup(dir) }
+        let scope = twoChunkScope(dir: dir)
+        let fake = ScriptedClaude([
+            .success(validCardResponse(title: "첫 카드", tag: "[[l1]]")),
+            .success(validCardResponse(title: "둘째 카드", tag: "[[l1]]")),
+        ])
+        let service = StudyService(claude: fake, sourceLoader: StudySourceLoader(kordoc: KordocService()))
+        let reports = ProgressRecorder()
+
+        _ = try await service.generateCards(scope: scope, count: 5, chunkBudget: 260,
+                                            onProgress: { done, total in reports.append(done, total) })
+
+        XCTAssertEqual(reports.snapshot().map(\.done), [1, 2], "조각마다 한 번씩 알려야 한다")
+        XCTAssertEqual(reports.snapshot().map(\.total), [2, 2])
+    }
+
+    func testCancellationStopsGenerationWithoutCrash() async throws {
+        let dir = TempDataDirectory.make()
+        defer { TempDataDirectory.cleanup(dir) }
+        let scope = makeScope(dir: dir, name: "장.md", content: "# 하나\n교재 원문 발췌 내용")
+        let slow = SlowClaude(response: validCardResponse(title: "느린 카드", tag: "[[l1]]"))
+        let service = StudyService(claude: slow, sourceLoader: StudySourceLoader(kordoc: KordocService()))
+
+        let task = Task { try await service.generateCards(scope: scope, count: 3, chunkBudget: 1000) }
+        try await Task.sleep(nanoseconds: 80_000_000)   // 첫 호출이 진행 중일 때 취소.
+        task.cancel()
+
+        do {
+            _ = try await task.value
+            XCTFail("취소하면 CancellationError로 끝나야 한다")
+        } catch is CancellationError {
+            // 기대대로 — AC10: 크래시 없이 멈추기만.
+        }
     }
 
     func testGlobalCapAndDedupeLimitsAcrossChunksToRequestedCount() async throws {
