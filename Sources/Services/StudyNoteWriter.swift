@@ -228,4 +228,7 @@ enum StudyNoteWriter {
 
     /// 앵커 `due=` 값 파싱(`StudyNoteParser` 전용) — `dayFormatter`와 동일 규칙.
     static func parseDay(_ s: String) -> Date? { dayFormatter.date(from: s) }
+
+    /// `parseDay(_:)`의 짝 — 진도 노트의 `done=`(읽은 날)처럼 하루 단위 값을 적을 때 쓴다.
+    static func formatDay(_ date: Date) -> String { dayFormatter.string(from: date) }
 }
