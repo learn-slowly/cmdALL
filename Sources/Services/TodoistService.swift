@@ -194,6 +194,23 @@ actor TodoistService {
         }
     }
 
+    /// 완료 처리를 되돌린다(다듬기 D, 2026-08-02 — 실수로 체크했을 때). Todoist의 `reopen`은
+    /// 완료된 할일을 다시 활성 상태로 돌린다.
+    @discardableResult
+    func reopenTask(taskId: String, token: String) async throws -> Bool {
+        guard !token.trimmingCharacters(in: .whitespaces).isEmpty else { throw TodoistError.noToken }
+        let request = makeRequest("tasks/\(taskId)/reopen", method: "POST", token: token)
+        do {
+            let (_, response) = try await transport.send(request)
+            try Self.checkStatus(response)
+            return true
+        } catch let error as TodoistError {
+            throw error
+        } catch {
+            throw TodoistError.network(error.localizedDescription)
+        }
+    }
+
     private static func checkStatus(_ response: URLResponse) throws {
         guard let http = response as? HTTPURLResponse else { return }
         if http.statusCode == 401 || http.statusCode == 403 { throw TodoistError.invalidToken }

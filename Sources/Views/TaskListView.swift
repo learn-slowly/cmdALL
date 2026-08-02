@@ -45,6 +45,10 @@ struct TaskListView: View {
     private var todoistTab: some View {
         HStack {
             Spacer()
+            if let done = appState.lastCompletedTodoistTask {
+                Button("방금 완료한 것 되돌리기") { Task { await appState.undoLastTodoistCompletion() } }
+                    .help("\"\(done.content)\"을(를) 다시 할일로 되돌립니다.")
+            }
             Button("새로고침") { Task { await appState.refreshTodoistTasks() } }
                 .disabled(appState.todoistTasksLoading)
         }
@@ -115,6 +119,7 @@ struct TaskListView: View {
             .buttonStyle(.plain)
 
             Text(task.content).font(.caption).lineLimit(1)
+                .help(task.content)   // 긴 제목은 마우스를 올려야 전체가 보인다(다듬기 D).
             Spacer()
             if showsDate, let string = task.due?.string {
                 Text(string).font(.caption2).foregroundStyle(.secondary)

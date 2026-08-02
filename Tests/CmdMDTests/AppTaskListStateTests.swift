@@ -22,14 +22,24 @@ final class AppTaskListStateTests: XCTestCase {
 
     private actor FakeTransport: TodoistTransport {
         private(set) var closedTaskIds: [String] = []
+        private(set) var reopenedTaskIds: [String] = []
         private let closeStatusCode: Int
-        init(closeStatusCode: Int = 200) { self.closeStatusCode = closeStatusCode }
+        private let reopenStatusCode: Int
+        init(closeStatusCode: Int = 200, reopenStatusCode: Int = 200) {
+            self.closeStatusCode = closeStatusCode
+            self.reopenStatusCode = reopenStatusCode
+        }
 
         func send(_ request: URLRequest) async throws -> (Data, URLResponse) {
             let path = request.url!.path
             if path.hasSuffix("/close") {
                 closedTaskIds.append(String(path.split(separator: "/").dropLast().last ?? ""))
                 let response = HTTPURLResponse(url: request.url!, statusCode: closeStatusCode, httpVersion: nil, headerFields: nil)!
+                return (Data(), response)
+            }
+            if path.hasSuffix("/reopen") {
+                reopenedTaskIds.append(String(path.split(separator: "/").dropLast().last ?? ""))
+                let response = HTTPURLResponse(url: request.url!, statusCode: reopenStatusCode, httpVersion: nil, headerFields: nil)!
                 return (Data(), response)
             }
             let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
@@ -123,6 +133,61 @@ final class AppTaskListStateTests: XCTestCase {
         await app.completeTodoistTask(task)
         XCTAssertNotNil(app.todoistTasksError)
         XCTAssertEqual(app.todoistTasks, [task])
+    }
+
+    // MARK: - 완료 되돌리기(다듬기 D, 2026-08-02)
+
+    func testCompleteRemembersLastTaskForUndo() async {
+        app.todoistService = TodoistService(transport: FakeTransport())
+        app.settings.todoistAPIToken = "가짜토큰"
+        let task = TodoistTask(id: "1", content: "실수로 체크", projectId: "10", priority: 1, due: nil, checked: false)
+        app.todoistTasks = [task]
+
+        await app.completeTodoistTask(task)
+
+        XCTAssertEqual(app.lastCompletedTodoistTask, task, "되돌릴 거리가 남아야 한다")
+    }
+
+    func testUndoLastCompletionReopensAndRestoresTask() async {
+        let transport = FakeTransport()
+        app.todoistService = TodoistService(transport: transport)
+        app.settings.todoistAPIToken = "가짜토큰"
+        let task = TodoistTask(id: "1", content: "실수로 체크", projectId: "10", priority: 1, due: nil, checked: false)
+        app.todoistTasks = [task]
+        await app.completeTodoistTask(task)
+
+        await app.undoLastTodoistCompletion()
+
+        XCTAssertEqual(app.todoistTasks, [task], "되돌리면 목록에 다시 나타난다")
+        let reopened = await transport.reopenedTaskIds
+        XCTAssertEqual(reopened, ["1"], "Todoist 쪽도 실제로 되살려야 한다")
+        XCTAssertNil(app.lastCompletedTodoistTask, "되돌리기는 직전 1건뿐")
+        XCTAssertNil(app.todoistTasksError)
+    }
+
+    func testUndoLastCompletionKeepsSnapshotWhenServerFails() async {
+        let transport = FakeTransport(reopenStatusCode: 500)
+        app.todoistService = TodoistService(transport: transport)
+        app.settings.todoistAPIToken = "가짜토큰"
+        let task = TodoistTask(id: "1", content: "실수로 체크", projectId: "10", priority: 1, due: nil, checked: false)
+        app.todoistTasks = [task]
+        await app.completeTodoistTask(task)
+
+        await app.undoLastTodoistCompletion()
+
+        XCTAssertTrue(app.todoistTasks.isEmpty, "되살리지 못했으면 목록에 넣지 않는다")
+        XCTAssertEqual(app.lastCompletedTodoistTask, task, "다시 시도할 수 있게 되돌릴 거리는 남긴다")
+        XCTAssertNotNil(app.todoistTasksError)
+    }
+
+    func testUndoLastCompletionIsNoOpWhenNothingCompleted() async {
+        app.todoistService = TodoistService(transport: FakeTransport())
+        app.settings.todoistAPIToken = "가짜토큰"
+
+        await app.undoLastTodoistCompletion()
+
+        XCTAssertNil(app.todoistTasksError)
+        XCTAssertTrue(app.todoistTasks.isEmpty)
     }
 
     // MARK: - 보낸 기록 탭

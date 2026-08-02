@@ -465,6 +465,8 @@ final class AppState {
     var todoistTasks: [TodoistTask] = []
     var todoistTasksLoading: Bool = false
     var todoistTasksError: String? = nil
+    /// 방금 완료 처리한 할일 — "되돌리기"(다듬기 D)로 다시 살릴 수 있게 직전 1건만 기억한다.
+    var lastCompletedTodoistTask: TodoistTask? = nil
     var sentTaskRecords: [SentTaskRecord] = []
 
     // MARK: - 파일 작업(F1a) 상태

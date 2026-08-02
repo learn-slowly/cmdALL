@@ -52,6 +52,27 @@ extension AppState {
         do {
             try await todoistService.closeTask(taskId: task.id, token: token)
             todoistTasks.removeAll { $0.id == task.id }
+            lastCompletedTodoistTask = task   // 실수로 체크했을 때 되돌릴 수 있게(다듬기 D).
+        } catch {
+            todoistTasksError = TodoistService.errorMessage(error)
+        }
+    }
+
+    /// "방금 완료 되돌리기"(다듬기 D) — 직전에 체크한 할일 1건만 Todoist에서 다시 살린다.
+    /// 유휴 상태(되돌릴 게 없음)면 무동작.
+    @MainActor
+    func undoLastTodoistCompletion() async {
+        guard let task = lastCompletedTodoistTask else { return }
+        guard let token = settings.todoistAPIToken, !token.trimmingCharacters(in: .whitespaces).isEmpty else {
+            todoistTasksError = TodoistService.errorMessage(TodoistError.noToken)
+            return
+        }
+        do {
+            try await todoistService.reopenTask(taskId: task.id, token: token)
+            if !todoistTasks.contains(where: { $0.id == task.id }) {
+                todoistTasks.append(task)
+            }
+            lastCompletedTodoistTask = nil
         } catch {
             todoistTasksError = TodoistService.errorMessage(error)
         }

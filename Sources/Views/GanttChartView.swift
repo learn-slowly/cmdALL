@@ -37,6 +37,48 @@ struct GanttChartView: View {
             ForEach(tasks) { task in
                 row(for: task)
             }
+            legend
+        }
+    }
+
+    // MARK: - 색 안내(다듬기 D, 2026-08-02)
+
+    /// 막대 색이 무슨 뜻인지 한 줄로 — 색만 바꿔놓고 설명이 없으면 알 수가 없다.
+    private var legend: some View {
+        HStack(spacing: 10) {
+            legendChip(color: .red, text: "기한 지남")
+            legendChip(color: Self.priorityColor(4), text: "긴급")
+            legendChip(color: Self.priorityColor(3), text: "높음")
+            legendChip(color: Self.priorityColor(2), text: "보통")
+            legendChip(color: Self.priorityColor(1), text: "낮음")
+        }
+        .padding(.horizontal, Metrics.horizontalPadding)
+        .padding(.top, 2)
+    }
+
+    private func legendChip(color: Color, text: String) -> some View {
+        HStack(spacing: 4) {
+            RoundedRectangle(cornerRadius: 2).fill(color).frame(width: 10, height: 6)
+            Text(text).font(.caption2).foregroundStyle(.secondary)
+        }
+    }
+
+    /// Todoist 중요도(4=긴급 … 1=낮음) → 막대 색. 빨강은 "기한 지남"이 이미 쓰고 있어 피한다.
+    static func priorityColor(_ priority: Int) -> Color {
+        switch priority {
+        case 4: return .orange
+        case 3: return .accentColor
+        case 2: return .teal
+        default: return .gray
+        }
+    }
+
+    static func priorityLabel(_ priority: Int) -> String {
+        switch priority {
+        case 4: return "중요도 긴급"
+        case 3: return "중요도 높음"
+        case 2: return "중요도 보통"
+        default: return "중요도 낮음"
         }
     }
 
@@ -107,13 +149,17 @@ struct GanttChartView: View {
                 .font(.caption)
                 .lineLimit(1)
                 .frame(width: Metrics.titleColumn, alignment: .leading)
+                // 제목이 길어 잘렸을 때 마우스를 올리면 전체가 보인다(다듬기 D, 2026-08-02).
+                .help(task.content)
 
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     gridLines(ticks: ticks, width: geo.size.width)
                     RoundedRectangle(cornerRadius: 3)
-                        .fill(overdue ? Color.red : Color.accentColor)
+                        .fill(overdue ? Color.red : Self.priorityColor(task.priority))
                         .frame(width: max(geo.size.width * fraction, 6), height: Metrics.barHeight)
+                        .help(overdue ? "기한이 지났습니다 · \(Self.priorityLabel(task.priority))"
+                                      : Self.priorityLabel(task.priority))
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }

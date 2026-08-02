@@ -192,6 +192,29 @@ final class TodoistServiceTests: XCTestCase {
         }
     }
 
+    // MARK: - reopenTask(완료 되돌리기, 다듬기 D)
+
+    func testReopenTaskSendsCorrectPath() async throws {
+        let transport = FakeTransport(.success(Data(), 200))
+        let service = TodoistService(transport: transport)
+        let ok = try await service.reopenTask(taskId: "123", token: "토큰")
+        XCTAssertTrue(ok)
+        let request = await transport.lastRequest
+        XCTAssertTrue(request?.url?.path.hasSuffix("/tasks/123/reopen") ?? false)
+        XCTAssertEqual(request?.httpMethod, "POST")
+    }
+
+    func testReopenTaskWithoutTokenThrowsNoToken() async {
+        let transport = FakeTransport(.success(Data(), 200))
+        let service = TodoistService(transport: transport)
+        do {
+            _ = try await service.reopenTask(taskId: "123", token: "   ")
+            XCTFail("토큰이 비면 부르기 전에 막아야 한다")
+        } catch {
+            XCTAssertEqual(error as? TodoistError, .noToken)
+        }
+    }
+
     // MARK: - TodoistDue.parsedDate(간트차트 막대 계산용)
 
     func testParsedDateHandlesPlainDayFormat() {
