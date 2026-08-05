@@ -15,9 +15,9 @@
 | 타겟 사용자 | 레고 1인 개발 시작 → **2026-07-30 방향 결정: 계속 깃허브 공개 배포로 감**(각자 자기 Claude 계정 필요, 구독 공유 아님) |
 | 기술 스택 | Swift/SwiftUI (앱) · Node 18+ (kordoc CLI) · SQLite FTS5 (검색 인덱스) · macOS 14+ |
 | 배포 환경 | GitHub Releases 공개 배포(다운로드 링크·`install_latest.sh` curl 설치) + 앱 내 자동 업데이트(Phase 11). ad-hoc 서명(비공증) — 로컬 빌드도 여전히 가능 |
-| 상태 | 현재 상태는 `CLAUDE.md`, 다음에 할 것은 `docs/todolist.md`, 날짜별 이력은 `docs/worklog.md` |
+| 상태 | **현재 상태(최신 버전·직전 작업)는 `docs/worklog.md` 마지막 항목**, 다음에 할 것은 `docs/todolist.md`, 규칙은 `CLAUDE.md` |
 
-원본 리포: https://github.com/johnfkoo951/CmdMD (MIT, 최신 v1.4.6) 엔진: kordoc https://github.com/chrisryugj/kordoc (MIT) 아이디어 참고: Docufinder https://github.com/chrisryugj/Docufinder (BSL 1.1 — 코드 차용 금지, 아이디어만)
+원본 리포: https://github.com/johnfkoo951/CmdMD (MIT, 포크 기준 v1.4.8) 엔진: kordoc https://github.com/chrisryugj/kordoc (MIT) 아이디어 참고: Docufinder https://github.com/chrisryugj/Docufinder (BSL 1.1 — 코드 차용 금지, 아이디어만)
 
 ## 2. 배경 및 문제 정의
 
@@ -169,7 +169,7 @@ CmdMD는 "리뷰 우선" 마크다운 리더이자 Obsidian 볼트 라우터다.
 CmdMD/
 ├── Package.swift          # SPM 매니페스트
 ├── Sources/               # Swift/SwiftUI 소스 (앱 본체)
-├── Tests/CmdMDTests/      # 테스트 57개
+├── Tests/CmdMDTests/      # 테스트 (포크 시점 57개 — 현재 개수는 docs/worklog.md 마지막 항목)
 ├── Resources/  docs/  landing/  scripts/
 └── LICENSE (MIT)
 ```
@@ -199,15 +199,19 @@ UpdateInstallError: 쓰기권한없음 | 다운로드실패 | 체크섬불일치
 
 ## 6. 개발 단계 (우선순위 3티어)
 
+> **요구사항과 그 순서만 둔다.** 진행 상태·완료 날짜·테스트 개수는 여기서 찾지 말 것 —
+> 끝난 일은 `docs/worklog.md`, 남은 일은 `docs/todolist.md`가 근거다.
+> (본문에 남은 "완료(날짜)" 표기는 그 결정이 왜 그렇게 굳었는지 설명하는 맥락이다.)
+
 ### 티어 1 — 당장 (리더 코어)
 
 **Phase 0: 포크 준비 & 아키텍처 파악**
 
-- [x] 포크·클론, `swift build`/`swift run` 빌드 확인, `swift test`로 기존 테스트 57개 기준선 확보
+- 포크·클론, `swift build`/`swift run` 빌드 확인, `swift test`로 포크 시점 테스트 57개 기준선 확보
 
-- [x] 소스 읽기 — 파일 열기/탭/프리뷰 디스패치 위치 특정. 프리뷰가 WebView 기반인지 코드로 검증(추정 금지)
+- 소스 읽기 — 파일 열기/탭/프리뷰 디스패치 위치 특정. 프리뷰가 WebView 기반인지 코드로 검증(추정 금지)
 
-- [x] 표시명 cmdALL로 교체, 번들 ID는 역도메인 형식(예: work.cmdspace.cmddocu — 하이픈 회피). LICENSE·원작자 고지 유지
+- 표시명 cmdALL로 교체, 번들 ID는 역도메인 형식(예: work.cmdspace.cmddocu — 하이픈 회피). LICENSE·원작자 고지 유지
 
 **Phase 1: 이미지 리더** — 디스패치에 image 분기, 뷰 구현, 줌/팬, 최소 테스트
 
@@ -215,47 +219,47 @@ UpdateInstallError: 쓰기권한없음 | 다운로드실패 | 체크섬불일치
 
 **Phase 3: 한글·오피스 읽기 (kordoc)**
 
-- [x] Node/kordoc 존재 확인(`npx kordoc` 경로 탐지), 미설치 안내
+- Node/kordoc 존재 확인(`npx kordoc` 경로 탐지), 미설치 안내
 
-- [x] 디스패치에 office 분기 — `npx kordoc <파일> --format json` 호출 → markdown 수신 → 기존 렌더러로 표시
+- 디스패치에 office 분기 — `npx kordoc <파일> --format json` 호출 → markdown 수신 → 기존 렌더러로 표시
 
-- [x] HWP3/5·HWPX·HWPML·XLS/XLSX·DOCX 열기 확인, 표/이미지 렌더 점검
+- HWP3/5·HWPX·HWPML·XLS/XLSX·DOCX 열기 확인, 표/이미지 렌더 점검
 
 ### 티어 2 — 다음 (Claude + 생성)
 
 **Phase 4: Claude 연동 (claude -p)**
 
-- [x] `claude` 바이너리 경로 탐지, 미설치/미로그인/크레딧소진 메시지 분기
+- `claude` 바이너리 경로 탐지, 미설치/미로그인/크레딧소진 메시지 분기
 
-- [x] 커맨드 팔레트 + 단축키로 "Claude에게 질문" 진입점, 문서 본문 동봉 전달, 응답 패널 표시
+- 커맨드 팔레트 + 단축키로 "Claude에게 질문" 진입점, 문서 본문 동봉 전달, 응답 패널 표시
 
-- [x] 응답을 노트에 마크다운으로 삽입/볼트 저장(보관은 볼트로)
+- 응답을 노트에 마크다운으로 삽입/볼트 저장(보관은 볼트로)
 
 **Phase 5: 한글·오피스 쓰기 (kordoc)**
 
-- [ ] ~~md → HWPX 생성(kordoc generate, 공문서 프리셋/글꼴/크기 옵션)~~ — kordoc에 generate 없음(Phase 5a 실측)으로 취소
+- ~~md → HWPX 생성(kordoc generate, 공문서 프리셋/글꼴/크기 옵션)~~ — kordoc에 generate 없음(Phase 5a 실측)으로 취소
 
-- [x] 무손실 패치(`kordoc patch`) — 원본 서식 보존 텍스트 교체
+- 무손실 패치(`kordoc patch`) — 원본 서식 보존 텍스트 교체
 
-- [x] 양식 자동 채우기(`kordoc fill`) — 라벨-값 매칭, 서식 보존
+- 양식 자동 채우기(`kordoc fill`) — 라벨-값 매칭, 서식 보존
 
 **Phase 6: 스마트 라우팅 (PARA 분류)**
 
-- [x] 설정에 PARA 목적지 목록(레고 구조 시드)
+- 설정에 PARA 목적지 목록(레고 구조 시드)
 
-- [x] 보내기에 "Claude에게 맡기기" 분기 → `RouteSuggestion` 수신 → 확인 → 기존 이동 로직
+- 보내기에 "Claude에게 맡기기" 분기 → `RouteSuggestion` 수신 → 확인 → 기존 이동 로직
 
-- [x] 자동 라우팅에 Claude 끼우기 옵션(기본 OFF)
+- 자동 라우팅에 Claude 끼우기 옵션(기본 OFF)
 
 ### 티어 3 — 나중/선택 (검색·정리·시맨틱)
 
 **Phase 7: 내용 검색 (Docufinder식, 키워드)**
 
-- [x] 폴더 등록 → kordoc 파싱 → SQLite FTS5 인덱싱(본문 마크다운)
+- 폴더 등록 → kordoc 파싱 → SQLite FTS5 인덱싱(본문 마크다운)
 
-- [x] 키워드 검색 + Everything식 파일명 검색, 결과 미리보기/열기
+- 키워드 검색 + Everything식 파일명 검색, 결과 미리보기/열기
 
-- [x] 파일 감시로 추가/수정 자동 재인덱싱
+- 파일 감시로 추가/수정 자동 재인덱싱
 
 **Phase 8: 폴더 정리 (배치)** — 폴더 선택 → 메타데이터(+모호 파일만 내용) → `CleanupPlan` → 미리보기·승인 → `FileManager` 이동, 로그·undo
 
@@ -265,15 +269,15 @@ UpdateInstallError: 쓰기권한없음 | 다운로드실패 | 체크섬불일치
 
 **Phase 8.7: 미리보기 속도 다듬기** — 코드 검증(2026-06-30, 5렌즈)으로 확정된 것만. **8.5 다음·9 앞**, 작업 전후 `swift test` 통과 확인. 신규 분은 별도 파일/모듈로 분리.
 
-- [x] **highlight.js 로컬화(최우선·거의 공짜)** — `MarkdownRenderer.hljsIncludes()`(`MarkdownRenderer.swift:657`)가 매 렌더 `cdn.jsdelivr.net/gh/highlightjs/cdn-release@11`을 로드. **highlight.js는 이미 `Highlightr_Highlightr.bundle`(1MB JS + github/github-dark CSS)로 동봉**돼 있으니 CDN 대신 그 번들을 읽어 `<script>` 인라인 주입(lazy static 캐시로 매 렌더 I/O 방지). `loadHTMLString` baseURL 유지. `SyntaxHighlighter.highlightrResourceBundleIsPresent()`의 번들 탐색 로직 재사용(`swift run`·패키지 경로 둘 다).
+- **highlight.js 로컬화(최우선·거의 공짜)** — `MarkdownRenderer.hljsIncludes()`(`MarkdownRenderer.swift:657`)가 매 렌더 `cdn.jsdelivr.net/gh/highlightjs/cdn-release@11`을 로드. **highlight.js는 이미 `Highlightr_Highlightr.bundle`(1MB JS + github/github-dark CSS)로 동봉**돼 있으니 CDN 대신 그 번들을 읽어 `<script>` 인라인 주입(lazy static 캐시로 매 렌더 I/O 방지). `loadHTMLString` baseURL 유지. `SyntaxHighlighter.highlightrResourceBundleIsPresent()`의 번들 탐색 로직 재사용(`swift run`·패키지 경로 둘 다).
 
-- [x] **THIRD-PARTY-NOTICES.md 정정** — highlight.js가 현재 §1·§2·§3 어디에도 **누락**(CDN 상태인 지금도 고지 의무 미이행). highlight.js(Ivan Sagalaev, MIT) 항목 추가. 로컬화 후 §2→§1 이동 + MIT 저작권 줄. Highlightr(기저=highlight.js) 비고로 중복 혼동 방지.
+- **THIRD-PARTY-NOTICES.md 정정** — highlight.js가 현재 §1·§2·§3 어디에도 **누락**(CDN 상태인 지금도 고지 의무 미이행). highlight.js(Ivan Sagalaev, MIT) 항목 추가. 로컬화 후 §2→§1 이동 + MIT 저작권 줄. Highlightr(기저=highlight.js) 비고로 중복 혼동 방지.
 
-- [x] **파일 트리 백그라운드화** — `AppState.buildFileTree`(`AppState.swift:1110`)가 `contentsOfDirectory`를 메인 스레드 동기 재귀(depth 10, 펼친 폴더만). 스캔을 `Task.detached`(이미 `AppState:702` 패턴 존재)로 옮기고 `await MainActor.run`으로 `fileTree`만 반영. **선행 task `.cancel()`로 연타 레이스 방지**, `expandedFolders` 스냅샷 캡처, Sendable·@Observable 메인스레드 대입 주의.
+- **파일 트리 백그라운드화** — `AppState.buildFileTree`(`AppState.swift:1110`)가 `contentsOfDirectory`를 메인 스레드 동기 재귀(depth 10, 펼친 폴더만). 스캔을 `Task.detached`(이미 `AppState:702` 패턴 존재)로 옮기고 `await MainActor.run`으로 `fileTree`만 반영. **선행 task `.cancel()`로 연타 레이스 방지**, `expandedFolders` 스냅샷 캡처, Sendable·@Observable 메인스레드 대입 주의.
 
-- [ ] ~~(보류) 미리보기 DOM 부분 갱신(A-3)~~ — 검증 결과 **이미 250ms 디바운스 존재**(`PreviewView.swift:139`)·스크롤 보존. 통째 reload는 맞으나 실익은 깜빡임 제거뿐이고 JS 재초기화·체크박스 리스너·evaluateJavaScript 레이스 리스크가 커 **보류**. (실제 병목이 Swift측 `renderToHTML` 전처리라면 별도 검토.)
+- ~~(보류) 미리보기 DOM 부분 갱신(A-3)~~ — 검증 결과 **이미 250ms 디바운스 존재**(`PreviewView.swift:139`)·스크롤 보존. 통째 reload는 맞으나 실익은 깜빡임 제거뿐이고 JS 재초기화·체크박스 리스너·evaluateJavaScript 레이스 리스크가 커 **보류**. (실제 병목이 Swift측 `renderToHTML` 전처리라면 별도 검토.)
 
-- [x] KaTeX/Mermaid 로컬화 — 완료(2026-07-02) — vendoring 스크립트+SPM 리소스, katex 0.16.47·mermaid 11.16.0 인라인 주입+CDN 폴백, KaTeX 폰트 woff2 data-URI.
+- KaTeX/Mermaid 로컬화 — 완료(2026-07-02) — vendoring 스크립트+SPM 리소스, katex 0.16.47·mermaid 11.16.0 인라인 주입+CDN 폴백, KaTeX 폰트 woff2 data-URI.
 
 **Phase 9: 자료에 묻기 — 가벼운 RAG (LLM-Wiki 질의층)** — **완료(2026-07-01, §3.11)**. 원안(임베딩·벡터·하이브리드)을 **B안(임베딩 없이 FTS5 근거 + Claude 답변)** 으로 재정의해 구현 — 질의 확장 OR 재검색 → 근거 회수 → 패시지 추출 → Claude 답변(`[n]` 출처, 클릭 시 문서 위치 점프), 근거 0건이면 답변용 Claude 호출 생략. 후속으로 **한국어 검색 근본 수정**(FTS5 `unicode61`→`trigram` 전환 + ≤2글자 `LIKE` 폴백 + 구 인덱스 자동 마이그레이션·등록 폴더 재인덱싱 — Phase 7 키워드검색·Phase 9 RAG 공통 개선)까지 반영. 시맨틱·임베딩(A안)은 선택 후속(§3.11 후속 참고).
 
@@ -281,31 +285,31 @@ UpdateInstallError: 쓰기권한없음 | 다운로드실패 | 체크섬불일치
 
 **Phase 11: 앱 내 자동 업데이트** — **완료(2026-07-25, §3.12)**. 순수 헬퍼(진행 상태·오류·자산 URL·체크섬 파싱) → 원자적 교체기(실패 시 원복·휴지통) → 오케스트레이터(actor, 네트워크·서명 검증 프로토콜 주입) → `AppState` 배선·UI 순으로 4태스크 TDD. 실제 릴리스를 상대로 전 과정 실측(진행률 8%→100%·체크섬·codesign·교체·잔여물 0), 실행 중 앱의 이름 변경·휴지통 이동도 실측. v0.9.404→409로 실기 검증.
 
-- [x] 릴리스 자산 URL·`SHA256SUMS.txt` 파싱·한국어 오류 문구(순수)
-- [x] 원자적 번들 교체 — 백업→교체, 2단계 실패 시 즉시 원복, 옛 번들 휴지통
-- [x] 다운로드(진행률 델리게이트)·SHA-256 대조·`ditto` 해제·번들 검증(버전+codesign)
-- [x] 상태 표시줄 알약·About 버튼 배선, 재시작 예약(`applicationWillTerminate`에서만 실행)
-- [x] **실사용 사고 수정** — 떠 있는 시트가 `NSApp.terminate`를 막는 것을 최소 재현·변이 시험으로 확정 → 시트를 먼저 닫고 종료, 2초 내 미종료 시 안내 + 예약 해제. 버튼이 링크 색을 잃어 평범한 글씨로 보이던 것도 수정
-- [x] 배포 안내 정정 — 패키징에 번들 리소스 쓰기 권한 부여(`xattr -dr`이 실제로 듣게), README에 curl 설치(`install_latest.sh`) 최우선 안내 신설
+- 릴리스 자산 URL·`SHA256SUMS.txt` 파싱·한국어 오류 문구(순수)
+- 원자적 번들 교체 — 백업→교체, 2단계 실패 시 즉시 원복, 옛 번들 휴지통
+- 다운로드(진행률 델리게이트)·SHA-256 대조·`ditto` 해제·번들 검증(버전+codesign)
+- 상태 표시줄 알약·About 버튼 배선, 재시작 예약(`applicationWillTerminate`에서만 실행)
+- **실사용 사고 수정** — 떠 있는 시트가 `NSApp.terminate`를 막는 것을 최소 재현·변이 시험으로 확정 → 시트를 먼저 닫고 종료, 2초 내 미종료 시 안내 + 예약 해제. 버튼이 링크 색을 잃어 평범한 글씨로 보이던 것도 수정
+- 배포 안내 정정 — 패키징에 번들 리소스 쓰기 권한 부여(`xattr -dr`이 실제로 듣게), README에 curl 설치(`install_latest.sh`) 최우선 안내 신설
 
 **Phase 12: 빠른 파인더 — 못 여는 파일 미리보기(조각 A)** — **완료(2026-07-25, §3.14)**. 계획 7단계를 순서대로 — ①`QuickLookRouting`(단일 판정 규칙)+`DocumentKind.quickLook` ②목록 허용 목록 제거(전부 표시)+숨김 파일 옵션 ③탭용 미리보기 화면(`QLPreviewView`+기본 앱 열기) ④"글로 열기" 전환 ⑤스페이스바 키 라우팅 ⑥빠른 보기 오버레이(시트 아님) ⑦글자 파일 검색 확장. 단계마다 구현→별도 검토→테스트→커밋, 마지막에 전체 재점검. v0.9.410으로 GitHub 릴리스 발행 완료, 재설치 후 사용자 실기 확인 완료.
 
-- [x] 목록 필터·검색 색인·"여는 방식" 판정을 `QuickLookRouting` 하나로 통일(전엔 각자 다른 확장자 목록을 따로 갖고 있어 서로 어긋났었다)
-- [x] 재점검에서 이어붙임 결함 3건 발견·수정 — 미리보기 화면 안에서 단축키가 잘못 가로채질 수 있던 것(`responderYieldsFileKeys`에 QLPreviewView 추가), 검색이 폴더 자기 자신까지 문서처럼 색인하던 것(실제 파일만 걸러내게 수정), 숨김 파일 설정이 사이드바 트리엔 안 반영되던 것
-- [x] 872개 테스트 전부 통과, 빌드 경고 0
-- [x] **수동 스모크 완료** — 재설치 후 pptx/zip/psd 열기·"OO으로 열기" 버튼·`.mdx` 글로 열기·스페이스바 열고닫기+←→ 넘기기·검색창 타이핑 중 스페이스 정상 동작(키 강탈 회귀 없음)·숨김 파일 토글·json 내용 검색 — 전부 사용자 실기 확인
-- [x] 원격(GitHub)에 v0.9.410으로 릴리스 발행 완료
+- 목록 필터·검색 색인·"여는 방식" 판정을 `QuickLookRouting` 하나로 통일(전엔 각자 다른 확장자 목록을 따로 갖고 있어 서로 어긋났었다)
+- 재점검에서 이어붙임 결함 3건 발견·수정 — 미리보기 화면 안에서 단축키가 잘못 가로채질 수 있던 것(`responderYieldsFileKeys`에 QLPreviewView 추가), 검색이 폴더 자기 자신까지 문서처럼 색인하던 것(실제 파일만 걸러내게 수정), 숨김 파일 설정이 사이드바 트리엔 안 반영되던 것
+- 872개 테스트 전부 통과, 빌드 경고 0
+- **수동 스모크 완료** — 재설치 후 pptx/zip/psd 열기·"OO으로 열기" 버튼·`.mdx` 글로 열기·스페이스바 열고닫기+←→ 넘기기·검색창 타이핑 중 스페이스 정상 동작(키 강탈 회귀 없음)·숨김 파일 토글·json 내용 검색 — 전부 사용자 실기 확인
+- 원격(GitHub)에 v0.9.410으로 릴리스 발행 완료
 
 **Phase 13: 빠른 파인더 — 기본 위치 + 빠른 이동(D+B)** — **완료(2026-07-25, §10)**. 계획 4단계 — ①`QuickMoveFolder` 모델+`AppState` 등록/해제/저장 ②단축키 `⌥⌘M` ③사이드바에 홈·데스크탑·다운로드·문서 고정 표시(D) ④폴더 우클릭 "빠른 이동 목록에 추가" 등록 토글+`QuickMoveSheet`+File 메뉴·단축키·우클릭 메뉴 배선(B). 이동 실행은 F1b가 만든 `performBatchMove`(로그+되돌리기)를 그대로 재사용 — 새 이동 로직 없음. 즐겨찾기와는 별개 저장소로 분리(2026-07-25 사용자 결정 — 자동 병합 대신 직접 등록 방식). v0.9.411로 GitHub 릴리스 발행 완료.
 
-- [x] `QuickMoveFolder` 등록·해제·중복 방지·재시작 후 유지·존재하지 않는 경로 필터링(10개 테스트)
-- [x] 사이드바 Favorites 탭에 기본 위치 4개 고정 표시, 클릭 시 폴더 전환
-- [x] 폴더 우클릭(트리·라이브러리·즐겨찾기·기본 위치 전부)에서 빠른 이동 목록 등록/해제 토글
-- [x] `⌥⌘M`·File 메뉴·우클릭 메뉴 "빠른 이동…"으로 시트 호출, 목적지 클릭 시 즉시 이동, 목록 비었을 때 "다른 폴더로 이동…"으로 대체 가능
-- [x] 864개(XCTest) + 18개(Swift Testing) 테스트 전부 통과, 빌드 경고 0
-- [x] 재점검(설계 §7 4항목) 완료 — 이동 후 목록 자동 갱신(`performBatchMove` 기존 경로 재사용 확인), 제자리 이동 skip 시 조용히 닫히는 것은 기존 "폴더로 이동…"과 동일한 기존 동작(신규 이슈 아님), 등록 목록과 즐겨찾기가 저장소째 분리돼 안 섞임(코드 확인), 다중 선택 시 `fileSelection` 전체가 대상(테스트로 확인)
-- [x] **수동 스모크 완료(2026-07-27, 사용자 실기 확인)** — ⌥⌘M 빠른 이동 정상 동작 확인.
-- [x] 원격(GitHub)에 v0.9.411로 릴리스 발행 완료(dmg·zip·SHA256SUMS.txt).
+- `QuickMoveFolder` 등록·해제·중복 방지·재시작 후 유지·존재하지 않는 경로 필터링(10개 테스트)
+- 사이드바 Favorites 탭에 기본 위치 4개 고정 표시, 클릭 시 폴더 전환
+- 폴더 우클릭(트리·라이브러리·즐겨찾기·기본 위치 전부)에서 빠른 이동 목록 등록/해제 토글
+- `⌥⌘M`·File 메뉴·우클릭 메뉴 "빠른 이동…"으로 시트 호출, 목적지 클릭 시 즉시 이동, 목록 비었을 때 "다른 폴더로 이동…"으로 대체 가능
+- 864개(XCTest) + 18개(Swift Testing) 테스트 전부 통과, 빌드 경고 0
+- 재점검(설계 §7 4항목) 완료 — 이동 후 목록 자동 갱신(`performBatchMove` 기존 경로 재사용 확인), 제자리 이동 skip 시 조용히 닫히는 것은 기존 "폴더로 이동…"과 동일한 기존 동작(신규 이슈 아님), 등록 목록과 즐겨찾기가 저장소째 분리돼 안 섞임(코드 확인), 다중 선택 시 `fileSelection` 전체가 대상(테스트로 확인)
+- **수동 스모크 완료(2026-07-27, 사용자 실기 확인)** — ⌥⌘M 빠른 이동 정상 동작 확인.
+- 원격(GitHub)에 v0.9.411로 릴리스 발행 완료(dmg·zip·SHA256SUMS.txt).
 
 ## 7. UI/UX 가이드
 
