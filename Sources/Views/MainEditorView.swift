@@ -16,6 +16,8 @@ struct MainEditorView: View {
                 StudyHelperView()
             case .review:
                 StudyReviewView()
+            case .quiz:
+                StudyQuizView()
             case .reader:
                 readerLayout
             }

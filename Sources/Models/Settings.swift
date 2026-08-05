@@ -158,6 +158,10 @@ struct AppSettings: Codable, Equatable {
     /// 기본값(코드에서 계산, `AppState.effectiveStudyFolders()`) — 설정 화면에서 직접 추가한
     /// 폴더가 있으면 그것만 쓴다.
     var studyFolders: [String] = []
+    // MARK: 문제 풀기(이미 만들어 둔 문제집)
+    /// 문제집 마크다운을 찾을 폴더(절대경로). 학습 폴더와 별개로 더 볼 곳이 있을 때 쓴다 —
+    /// 예: 옵시디언 볼트 안 "100제" 폴더. 비어 있으면 학습 폴더만 훑는다.
+    var quizFolders: [String] = []
     // MARK: 문서에서 할일 찾기 → Todoist 연동
     /// Todoist 개인 API 토큰(Todoist 설정 화면에서 복사). **평문 저장**(다른 설정값과 같은
     /// 파일) — Keychain 연동은 아직 없다. nil/빈 문자열이면 연동 미설정.

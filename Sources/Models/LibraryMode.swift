@@ -14,6 +14,8 @@ enum MainMode: String, Codable, CaseIterable {
     case progress
     case study
     case review
+    /// 이미 만들어 둔 문제집(100제 등)을 눌러서 푸는 화면(2026-08-05).
+    case quiz
 }
 
 // MARK: - LibraryLayout

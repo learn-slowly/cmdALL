@@ -56,8 +56,8 @@ struct ContentView: View {
                 case .library:
                     LibraryLayoutPicker()
                     LibrarySortMenu()
-                case .tasks, .progress, .study, .review:
-                    // 할일·진도·학습도우미·복습 모드는 자체 화면 안에서만 조작하고 보기·정렬 옵션이 없다.
+                case .tasks, .progress, .study, .review, .quiz:
+                    // 할일·진도·학습도우미·복습·문제풀기 모드는 자체 화면 안에서만 조작하고 보기·정렬 옵션이 없다.
                     EmptyView()
                 }
             }
@@ -206,7 +206,7 @@ struct ContentView: View {
     }
 }
 
-/// 메인 모드 토글(리더 ↔ 라이브러리 ↔ 할일 ↔ 진도 ↔ 학습도우미 ↔ 복습).
+/// 메인 모드 토글(리더 ↔ 라이브러리 ↔ 할일 ↔ 진도 ↔ 학습도우미 ↔ 복습 ↔ 문제풀기).
 struct MainModePicker: View {
     @Environment(AppState.self) private var appState
 
@@ -232,6 +232,9 @@ struct MainModePicker: View {
             Label("복습", systemImage: "checkmark.circle")
                 .help("복습 모드 — 오늘 볼 카드·문제")
                 .tag(MainMode.review)
+            Label("문제풀기", systemImage: "list.bullet.rectangle")
+                .help("문제풀기 모드 — 이미 만들어 둔 문제집을 눌러서 풀기")
+                .tag(MainMode.quiz)
         }
         .pickerStyle(.segmented)
         .labelStyle(.iconOnly)

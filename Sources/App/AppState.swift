@@ -444,6 +444,21 @@ final class AppState {
     var studyProgressPendingOffset: Int = 0
     /// "목차를 어디서 읽었는지" 한 줄 안내.
     var studyProgressPendingSourceLabel: String = ""
+    // MARK: - 문제 풀기(100제 등 이미 있는 문제집, 2026-08-05)
+    /// 문제집 고르는 화면의 목록.
+    var quizBooks: [QuizBook] = []
+    /// 지금 풀고 있는 문제집(원본 md). nil이면 목록 화면.
+    var quizOpenSource: URL? = nil
+    /// 지금 풀고 있는 문제집의 기록장 파일.
+    var quizRecordURL: URL? = nil
+    /// 원본에서 읽은 문항 + 이번 판의 정오.
+    var quizItems: [QuizItem] = []
+    var quizFilter: QuizFilter = .all
+    var quizBusy: Bool = false
+    var quizError: String? = nil
+    /// 문제집에 나오는 형식 이름(탭 만들 때 쓴다, 나온 차례 유지).
+    var quizTypes: [String] = []
+
     // MARK: - 문서에서 할일 찾기 → Todoist
     var showTaskFinder: Bool = false
     var taskFinderSourceURL: URL? = nil
