@@ -381,6 +381,27 @@ final class AppStudyQuizStateTests: XCTestCase {
         XCTAssertTrue(app.quizBooks.isEmpty)
     }
 
+    /// 목록이 비었을 때 안내가 상황에 맞아야 한다 — 폴더를 아직 안 골랐는지, 골랐는데 없는지.
+    func testEmptyListNoticeTellsWhatToDo() async throws {
+        app.settings.quizFolders = []
+        app.vaults = []                                  // 학습 폴더도 없는 상태
+        await app.loadQuizBooks()
+        XCTAssertTrue(try XCTUnwrap(app.quizError).contains("볼트"))
+
+        app.vaults = [Vault(name: "테스트볼트", rootPath: vaultRoot)]
+        await app.loadQuizBooks()
+        XCTAssertTrue(try XCTUnwrap(app.quizError).contains("문제집 폴더 추가"),
+                      "아직 등록 안 했으면 어디를 누르라고 알려야 한다")
+
+        app.settings.quizFolders = [quizFolder.path]     // 등록했는데 문제집이 없는 폴더
+        await app.loadQuizBooks()
+        XCTAssertTrue(try XCTUnwrap(app.quizError).contains("찾지 못했습니다"))
+
+        writeQuizBook()
+        await app.loadQuizBooks()
+        XCTAssertNil(app.quizError)
+    }
+
     // MARK: - 원본 문항 수가 달라졌을 때
 
     func testOpeningAfterQuestionsAddedReconcilesRecord() async throws {

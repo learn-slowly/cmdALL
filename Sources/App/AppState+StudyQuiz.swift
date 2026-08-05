@@ -84,7 +84,9 @@ extension AppState {
         }
         quizBooks = books.sorted { $0.title < $1.title }
         if quizBooks.isEmpty {
-            quizError = "문제집을 찾지 못했습니다. 설정의 학습 폴더에 문제집 마크다운이 있는지 확인해 주세요."
+            quizError = settings.quizFolders.isEmpty
+                ? "아직 문제집 폴더를 등록하지 않았습니다. 아래 \"문제집 폴더 추가…\"로 문제집이 있는 폴더를 골라 주세요."
+                : "등록한 폴더에서 문제집을 찾지 못했습니다. 다른 폴더를 골랐는지, 그 폴더에 문제집 마크다운이 있는지 확인해 주세요."
         }
     }
 

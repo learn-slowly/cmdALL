@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 /// 문제 풀기 화면 — 이미 만들어 둔 문제집(100제 등)을 눌러서 푼다.
 /// mediaedu-quiz의 문제 화면을 그대로 옮겼다: 보기를 누르면 즉시 채점(정답 초록·내 오답 빨강·
@@ -34,6 +35,7 @@ struct StudyQuizView: View {
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
+                Button("문제집 폴더 추가…") { addQuizFolder() }
                 Button("다시 훑기") { Task { await appState.loadQuizBooks() } }
                     .disabled(appState.quizBusy)
                 Button("닫기") { appState.closeStudyQuiz() }
@@ -91,6 +93,19 @@ struct StudyQuizView: View {
     private func bookSubtitle(_ book: QuizBook) -> String {
         guard book.isStarted else { return "\(book.itemCount)문항 · 아직 안 풂" }
         return "\(book.itemCount)문항 · 푼 것 \(book.solvedCount) · 오늘 볼 것 \(book.dueCount)"
+    }
+
+    /// 문제집이 있는 폴더 고르기 — 설정까지 가지 않아도 여기서 바로 등록한다.
+    private func addQuizFolder() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.allowsMultipleSelection = false
+        panel.prompt = "이 폴더 쓰기"
+        panel.message = "문제집 마크다운이 들어 있는 폴더를 고르세요. 원본은 읽기만 하고 고치지 않습니다."
+        if panel.runModal() == .OK, let url = panel.url {
+            appState.registerQuizFolder(url)
+        }
     }
 
     // MARK: - 푸는 화면
