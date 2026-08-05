@@ -14,6 +14,23 @@ extension AppState {
         return base.appendingPathComponent(QuizRecordNote.folderName, isDirectory: true)
     }
 
+    /// 설정 화면 "문제 풀기 — 폴더 추가". 등록하면 그 폴더도 문제집을 찾을 때 함께 훑는다.
+    @MainActor
+    func registerQuizFolder(_ url: URL) {
+        let path = url.standardizedFileURL.path
+        guard !settings.quizFolders.contains(path) else { return }
+        settings.quizFolders.append(path)
+        saveUserData()
+        Task { await loadQuizBooks() }
+    }
+
+    @MainActor
+    func unregisterQuizFolder(_ path: String) {
+        settings.quizFolders.removeAll { $0 == path }
+        saveUserData()
+        Task { await loadQuizBooks() }
+    }
+
     // MARK: - 화면 진입 · 목록
 
     func openStudyQuizView() {
@@ -199,6 +216,9 @@ extension AppState {
 
     /// 보기를 고른다 — **한 문항은 한 번만 채점된다**(고른 뒤에는 잠긴다, mediaedu와 같은 규칙).
     /// 맞으면 "앎", 틀리면 "모름"으로 그 자리에서 복습 기록에 반영한다.
+    ///
+    /// 기록장에 남기지 못하면 **고른 것을 되돌린다** — 화면에는 채점됐는데 파일에는 안 남아
+    /// 그 문항이 영영 잠기는 것을 막는다(재점검 2026-08-05에 잡은 결함).
     @MainActor
     func pickQuizChoice(itemNumber: Int, choice: Int) async {
         guard let index = quizItems.firstIndex(where: { $0.n == itemNumber }),
@@ -207,18 +227,28 @@ extension AppState {
         // 틀렸으면 해설을 바로 펼쳐 준다(왜 틀렸는지가 그 자리에서 궁금하다).
         let correct = quizItems[index].isCorrect
         if !correct { quizItems[index].explanationShown = true }
-        await saveQuizGrade(index: index, outcome: correct ? .knew : .forgot)
+
+        guard await saveQuizGrade(index: index, outcome: correct ? .knew : .forgot) else {
+            quizItems[index].picked = nil
+            quizItems[index].explanationShown = false
+            return
+        }
     }
 
     /// 채점 결과를 기록장에 남긴다 — 그 문항 앵커 한 줄만 바꾸고 백업 1부를 남긴다.
     /// 그 사이 파일이 바뀌었으면 포기하고 안내한다(복습 채점과 같은 규약).
+    /// 돌려주는 값: 실제로 저장했는지.
     @MainActor
-    private func saveQuizGrade(index: Int, outcome: ReviewOutcome) async {
-        guard let recordURL = quizRecordURL else { return }
+    @discardableResult
+    private func saveQuizGrade(index: Int, outcome: ReviewOutcome) async -> Bool {
+        guard let recordURL = quizRecordURL else {
+            quizError = "기록장이 없어 채점을 저장하지 못했습니다. 문제집을 다시 열어 주세요."
+            return false
+        }
         let item = quizItems[index]
         guard let content = try? String(contentsOf: recordURL, encoding: .utf8) else {
             quizError = "기록장을 읽지 못했습니다: \(recordURL.lastPathComponent)"
-            return
+            return false
         }
         let expected = QuizRecordNote.formatAnchorLine(QuizRecord(n: item.n, state: item.state))
         let newState = ReviewScheduler.grade(item.state, outcome: outcome)
@@ -226,7 +256,7 @@ extension AppState {
             in: content, number: item.n, expectedLineText: expected, newState: newState
         ) else {
             quizError = "기록장이 그 사이 바뀌어서 저장하지 못했습니다. 문제집을 다시 열어 주세요."
-            return
+            return false
         }
         do {
             // 백업 1부(§3.6) — 덮어쓰기 직전 원본 그대로. 실패해도 채점 자체는 막지 않는다.
@@ -235,9 +265,11 @@ extension AppState {
             try updated.write(to: recordURL, atomically: true, encoding: .utf8)
         } catch {
             quizError = "저장 실패: \(error.localizedDescription)"
-            return
+            return false
         }
         quizItems[index].state = newState
+        quizError = nil
+        return true
     }
 
     @MainActor

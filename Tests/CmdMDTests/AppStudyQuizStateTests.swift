@@ -255,6 +255,132 @@ final class AppStudyQuizStateTests: XCTestCase {
         XCTAssertFalse(app.quizItems.first { $0.n == 2 }?.explanationShown ?? true)
     }
 
+    // MARK: - 재점검(2026-08-05) — 이어 붙임
+
+    /// 채점을 저장하지 못하면 **고른 것을 되돌린다** — 화면에는 채점됐는데 파일에는 안 남아
+    /// 그 문항이 영영 잠기는 것을 막는다.
+    func testFailedSaveUnlocksTheQuestion() async throws {
+        let source = writeQuizBook()
+        await app.openQuizBook(source)
+        try "망가진 기록장".write(to: recordURL(for: source), atomically: true, encoding: .utf8)
+
+        await app.pickQuizChoice(itemNumber: 1, choice: 1)
+
+        let item = try XCTUnwrap(app.quizItems.first { $0.n == 1 })
+        XCTAssertNil(item.picked, "저장 못 했으면 고른 것을 되돌려야 한다")
+        XCTAssertFalse(item.isSolved, "다시 풀 수 있어야 한다")
+        XCTAssertFalse(item.explanationShown)
+        XCTAssertNotNil(app.quizError)
+        XCTAssertEqual(app.quizSolvedCount, 0)
+    }
+
+    /// 저장에 성공하면 이전 오류 문구가 남아 있지 않아야 한다.
+    func testSuccessfulSaveClearsPreviousError() async {
+        let source = writeQuizBook()
+        await app.openQuizBook(source)
+        app.quizError = "이전 오류"
+        await app.pickQuizChoice(itemNumber: 1, choice: 2)
+        XCTAssertNil(app.quizError)
+    }
+
+    /// 기록장은 복습 캐시가 학습 노트로 오인하면 안 된다(같은 학습 폴더 밑에 생긴다).
+    func testRecordNoteIsNotPickedUpByReviewIndex() async {
+        let source = writeQuizBook()
+        await app.openQuizBook(source)          // 기록장 생성
+
+        let before = await app.studyIndex.count()
+        await app.rebuildStudyIndex()
+        let after = await app.studyIndex.count()
+        XCTAssertEqual(after, before, "기록장이 복습 대상으로 잡혔다")
+        XCTAssertEqual(app.studyDueCount, 0)
+    }
+
+    /// 교재를 열면 리더 모드로 넘어가는데, 풀던 문제집 상태는 그대로여야 한다.
+    func testOpeningAnotherModeKeepsQuizSession() async {
+        let source = writeQuizBook()
+        app.openStudyQuizView()
+        await app.openQuizBook(source)
+        await app.pickQuizChoice(itemNumber: 1, choice: 2)
+
+        app.mainMode = .reader                  // 교재 열기·다른 모드 이동과 같은 상황
+        app.openStudyQuizView()
+
+        XCTAssertEqual(app.quizItems.count, 3)
+        XCTAssertEqual(app.quizOpenSource, source)
+        XCTAssertEqual(app.quizSolvedCount, 1, "풀던 판이 남아 있어야 한다")
+    }
+
+    /// 원본에서 문항이 줄어도 화면은 지금 원본만 보여주고, 기록장의 옛 기록은 남는다.
+    func testOpeningAfterQuestionsRemovedShowsCurrentOnly() async throws {
+        let source = writeQuizBook()
+        await app.openQuizBook(source)
+        await app.pickQuizChoice(itemNumber: 3, choice: 3)
+        app.closeQuizBook()
+
+        // 3번 문항과 그 해설을 지운다.
+        var md = try String(contentsOf: source, encoding: .utf8)
+        md = md.replacingOccurrences(of: """
+        **3.** 셋째 발문
+        ① 마
+        ② 바
+        ③ 사
+
+        """, with: "")
+        md = md.replacingOccurrences(of: "**3. ③** 셋째 해설. [[교재.pdf#page=12|📖 p.012]]", with: "")
+        try md.write(to: source, atomically: true, encoding: .utf8)
+
+        await app.openQuizBook(source)
+        XCTAssertEqual(app.quizItems.map(\.n), [1, 2], "화면은 지금 원본만")
+        let text = try String(contentsOf: recordURL(for: source), encoding: .utf8)
+        XCTAssertEqual(QuizRecordNote.parse(text)?.records.count, 3, "옛 기록은 지우지 않는다")
+    }
+
+    /// 문제집을 바꿔 열면 앞 문제집의 판·필터가 남지 않는다.
+    func testOpeningAnotherBookResetsRound() async {
+        let first = writeQuizBook()
+        let second = writeQuizBook(named: "문제집_1.1.2_100문항.md")
+        await app.openQuizBook(first)
+        await app.pickQuizChoice(itemNumber: 1, choice: 1)
+        app.quizFilter = .wrong
+
+        await app.openQuizBook(second)
+        XCTAssertEqual(app.quizOpenSource, second)
+        XCTAssertEqual(app.quizFilter, .all)
+        XCTAssertEqual(app.quizSolvedCount, 0)
+    }
+
+    /// 기록장 백업(.bak)은 문제집 목록에 뜨지 않는다.
+    func testBackupFileIsNotListedAsBook() async {
+        let source = writeQuizBook()
+        await app.openQuizBook(source)
+        await app.pickQuizChoice(itemNumber: 1, choice: 2)   // .bak 생성
+        app.closeQuizBook()
+
+        await app.loadQuizBooks()
+        XCTAssertEqual(app.quizBooks.count, 1)
+    }
+
+    /// 설정 화면에서 문제집 폴더를 등록·해제하면 목록이 따라 바뀐다.
+    func testRegisterAndUnregisterQuizFolder() async {
+        writeQuizBook()
+        app.settings.quizFolders = []
+        await app.loadQuizBooks()
+        XCTAssertTrue(app.quizBooks.isEmpty)
+
+        app.registerQuizFolder(quizFolder)
+        XCTAssertEqual(app.settings.quizFolders, [quizFolder.standardizedFileURL.path])
+        await app.loadQuizBooks()
+        XCTAssertEqual(app.quizBooks.count, 1)
+
+        app.registerQuizFolder(quizFolder)              // 같은 폴더를 또 넣어도 하나
+        XCTAssertEqual(app.settings.quizFolders.count, 1)
+
+        app.unregisterQuizFolder(quizFolder.standardizedFileURL.path)
+        XCTAssertTrue(app.settings.quizFolders.isEmpty)
+        await app.loadQuizBooks()
+        XCTAssertTrue(app.quizBooks.isEmpty)
+    }
+
     // MARK: - 원본 문항 수가 달라졌을 때
 
     func testOpeningAfterQuestionsAddedReconcilesRecord() async throws {

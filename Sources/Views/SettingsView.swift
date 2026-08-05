@@ -231,6 +231,36 @@ struct GeneralSettingsView: View {
                     .font(.caption)
             }
             Section {
+                if appState.settings.quizFolders.isEmpty {
+                    Text("등록한 폴더 없음 — 위 학습 폴더만 훑습니다.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(appState.settings.quizFolders, id: \.self) { path in
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text((path as NSString).lastPathComponent)
+                                    .font(.callout)
+                                Text(path)
+                                    .font(.caption).foregroundStyle(.secondary)
+                                    .lineLimit(1).truncationMode(.middle)
+                            }
+                            Spacer()
+                            Button(role: .destructive) { appState.unregisterQuizFolder(path) } label: {
+                                Image(systemName: "minus.circle")
+                            }
+                            .controlSize(.small)
+                        }
+                    }
+                }
+                Button("폴더 추가…") { addQuizFolder() }
+            } header: {
+                Text("문제 풀기")
+            } footer: {
+                Text("이미 만들어 둔 문제집(마크다운)을 찾을 폴더입니다. 예: 옵시디언 볼트의 \"100제\" 폴더. 원본은 읽기만 하고 고치지 않으며, 푼 기록은 학습 폴더 밑 \"문제집기록\"에 따로 남습니다.")
+                    .font(.caption)
+            }
+            Section {
                 SecureField("Todoist API 토큰", text: Binding(
                     get: { appState.settings.todoistAPIToken ?? "" },
                     set: { appState.settings.todoistAPIToken = $0.isEmpty ? nil : $0 }
@@ -360,6 +390,17 @@ struct GeneralSettingsView: View {
         panel.allowsMultipleSelection = false
         if panel.runModal() == .OK, let url = panel.url {
             appState.registerStudyFolder(url)
+        }
+    }
+
+    /// 문제집(이미 만들어 둔 마크다운)을 찾을 폴더를 손으로 추가.
+    private func addQuizFolder() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.allowsMultipleSelection = false
+        if panel.runModal() == .OK, let url = panel.url {
+            appState.registerQuizFolder(url)
         }
     }
 }
