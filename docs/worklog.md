@@ -1055,3 +1055,15 @@ SHA256SUMS.txt 발행. 오늘 작업(교재 진도 관리 + 다듬기 A~D + 한�
 계획 문서(`docs/superpowers/plans/2026-08-05-quiz-solving.md`)의 **Q3(동작) → Q4(화면) →
 Q5(재점검)**. 화면이 mediaedu-quiz 문제 화면 그 자체다 — 보기 눌러 즉시 채점(색·잠금),
 상단 진행 통계·막대, 형식 탭, 해설 접기, 교재 쪽 열기, 그 문제로 물어보기, 틀린 것만 다시.
+
+### v0.9.431 발행 (2026-08-05)
+
+레고 승인("배포해줘") 후 발행. **다만 이번 분은 앱 화면에 보이는 변화가 없다** — 오늘 만든
+가져오기 파서·기록장은 아직 들어가는 문(화면)이 없고, 100제 결함 74곳 수정은 볼트·사이트
+쪽이라 앱과 무관하다. 배포 전에 그 사실을 알리고 진행했다.
+
+버전 문자열 두 곳 동기화(`scripts/package_app.sh` Info.plist · `AppInfo.version` 폴백) →
+`scripts/test_package_app.sh` **PASS**(서명 `valid on disk`·DR 충족) → `swift test`
+**1,562개** 재확인 → main 푸시(`505d717`) + annotated 태그 `v0.9.431` 푸시 →
+`release.yml` CI 성공(2분 12초) — `cmdALL-0.9.431.dmg`(8MB)·`cmdALL-macos.zip`(6MB)·
+`SHA256SUMS.txt` 발행 확인.
