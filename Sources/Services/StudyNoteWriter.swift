@@ -70,7 +70,11 @@ enum StudyNoteWriter {
         }
         lines.append("A: \(question.answer)")
         lines.append("해설: \(question.explanation)")
-        lines.append("> 근거: \(bracketTag(question.locator)) \"\(question.quote)\"")
+        // 가져온 문제집처럼 교재 원문 발췌가 없는 경우엔 근거 줄을 아예 쓰지 않는다 —
+        // 빈 인용부호(`> 근거: [[p9]] ""`)는 근거가 있는 것처럼 보여 오해를 부른다.
+        if !question.quote.isEmpty {
+            lines.append("> 근거: \(bracketTag(question.locator)) \"\(question.quote)\"")
+        }
         return lines.joined(separator: "\n")
     }
     // MARK: - 대화 노트(S3, "노트로 남기기")
